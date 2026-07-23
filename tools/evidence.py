@@ -10,6 +10,7 @@ and Scarborough's Reading Rope (2001).
 """
 
 from typing import Any
+import re
 
 
 FRAMEWORK_MAP: dict[str, list[str]] = {

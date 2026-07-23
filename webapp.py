@@ -130,13 +130,97 @@ footer{text-align:center;padding:2rem;color:#999;font-size:.8rem}
     </div>
   </div>
 
-  <!-- QUICK TOOLS CARD -->
+  <!-- TOOL 2: Check Decodability -->
   <div class="card">
-    <h2>⚡ Quick Tools</h2>
-    <p style="color:#999;font-size:.85rem;margin-bottom:1rem">Additional tools for text analysis, evidence search, and standards alignment.</p>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.5rem">
-      <button onclick="window.open('https://github.com/kosburn0408/sor-mcp-server/blob/main/USER_GUIDE.md')" style="background:#2D2366">📖 Full User Guide</button>
-      <button onclick="window.open('https://github.com/kosburn0408/sor-mcp-server/blob/main/examples/README.md')" style="background:#2D2366">📋 Example Workflows</button>
+    <h2>📖 Check Decodability</h2>
+    <p style="color:#999;font-size:.85rem;margin-bottom:1rem">Paste text from a book and check which words use untaught phonics patterns.</p>
+    <form id="decodabilityForm">
+      <div class="form-group">
+        <label>Text to check</label>
+        <textarea id="decodeText" rows="3" style="width:100%;padding:.7rem;border:2px solid #e0dcd0;border-radius:8px;font-family:inherit;font-size:.9rem" placeholder="Paste a short passage here..."></textarea>
+      </div>
+      <div class="row">
+        <div class="form-group">
+          <label>Grade Level</label>
+          <select id="decodeGrade"><option value="K">K</option><option value="1st">1st</option><option value="2nd" selected>2nd</option><option value="3rd">3rd</option></select>
+        </div>
+        <div class="form-group">
+          <label>Target Skill</label>
+          <select id="decodeSkill">
+            <option value="cvc_mixed">CVC Short Vowels</option>
+            <option value="consonant_blends">Consonant Blends</option>
+            <option value="cvce_silent_e">Silent-e (CVCe)</option>
+            <option value="consonant_digraphs">Consonant Digraphs (sh,ch,th)</option>
+            <option value="vowel_teams">Vowel Teams (ai,ee,oa)</option>
+            <option value="r_controlled">R-Controlled (ar,or,er)</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit">🔍 Check Decodability</button>
+    </form>
+    <div class="result" id="decodeResult"></div>
+  </div>
+
+  <!-- TOOL 3: Vocabulary Classifier -->
+  <div class="card">
+    <h2>📚 Classify Vocabulary</h2>
+    <p style="color:#999;font-size:.85rem;margin-bottom:1rem">Paste a passage and get a Tier 1/2/3 word breakdown for pre-teaching.</p>
+    <form id="vocabForm">
+      <div class="form-group">
+        <label>Text to classify</label>
+        <textarea id="vocabText" rows="3" style="width:100%;padding:.7rem;border:2px solid #e0dcd0;border-radius:8px;font-family:inherit;font-size:.9rem" placeholder="Paste a passage for vocabulary analysis..."></textarea>
+      </div>
+      <button type="submit">📊 Classify Words</button>
+    </form>
+    <div class="result" id="vocabResult"></div>
+  </div>
+
+  <!-- TOOL 4: Evidence Search -->
+  <div class="card">
+    <h2>🔬 Evidence Search</h2>
+    <p style="color:#999;font-size:.85rem;margin-bottom:1rem">Search WWC and BEE research for evidence on reading topics.</p>
+    <form id="evidenceForm">
+      <div class="form-group">
+        <label>Topic</label>
+        <input type="text" id="evidenceTopic" placeholder="e.g. phonics, fluency, vocabulary, comprehension..." required>
+      </div>
+      <button type="submit">🔍 Search Evidence</button>
+    </form>
+    <div class="result" id="evidenceResult"></div>
+  </div>
+
+  <!-- TOOL 5: Standards Alignment -->
+  <div class="card">
+    <h2>🏛️ Standards Alignment</h2>
+    <p style="color:#999;font-size:.85rem;margin-bottom:1rem">Find Georgia GSE or CCSS standards for a reading skill.</p>
+    <form id="standardsForm">
+      <div class="row">
+        <div class="form-group">
+          <label>Skill Description</label>
+          <input type="text" id="standardsSkill" placeholder="e.g. decode words with consonant blends" required>
+        </div>
+        <div class="form-group">
+          <label>State</label>
+          <select id="standardsState">
+            <option value="GEORGIA" selected>Georgia GSE</option>
+            <option value="CCSS">Common Core</option>
+            <option value="TEXAS">Texas TEKS</option>
+            <option value="FLORIDA">Florida B.E.S.T.</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit">🔍 Find Standards</button>
+    </form>
+    <div class="result" id="standardsResult"></div>
+  </div>
+
+  <!-- HELP LINKS -->
+  <div class="card">
+    <h2>📋 Resources</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.5rem">
+      <button onclick="window.open('https://github.com/kosburn0408/sor-mcp-server/blob/main/USER_GUIDE.md')" style="background:#2D2366;font-size:.85rem">📖 Full User Guide</button>
+      <button onclick="window.open('https://github.com/kosburn0408/sor-mcp-server/blob/main/examples/README.md')" style="background:#2D2366;font-size:.85rem">📋 Example Workflows</button>
+      <button onclick="window.open('https://github.com/kosburn0408/sor-mcp-server')" style="background:#2D2366;font-size:.85rem">💻 GitHub Repo</button>
     </div>
   </div>
 
@@ -214,29 +298,87 @@ function renderResult(r) {
 }
 
 function renderMarkdownCard(card) {
-  // The server returns markdown — do basic HTML conversion
-  var md = typeof card === 'string' ? card : card.markdown || JSON.stringify(card);
-  var html = md
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^> (.+)$/gm, '<blockquote style="color:#888;font-style:italic;border-left:3px solid #FFD700;padding-left:1rem;margin:.5rem 0">$1</blockquote>')
-    .replace(/^🔵 (.+)$/gm, '<div class="script-line script-i">🔵 <strong>I DO:</strong> $1</div>')
-    .replace(/^🟡 (.+)$/gm, '<div class="script-line script-we">🟡 <strong>WE DO:</strong> $1</div>')
-    .replace(/^🟢 (.+)$/gm, '<div class="script-line script-you">🟢 <strong>YOU DO:</strong> $1</div>')
-    .replace(/^❌ (.+)$/gm, '<div class="feedback feedback-error">❌ $1</div>')
-    .replace(/^✅ (.+)$/gm, '<div class="feedback feedback-praise">✅ $1</div>')
-    .replace(/\n\n/g, '<br><br>')
-    .replace(/\n/g, '<br>');
+    var md = typeof card === 'string' ? card : card.markdown || JSON.stringify(card);
+    var html = md
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/^> (.+)$/gm, '<blockquote style="color:#888;font-style:italic;border-left:3px solid #FFD700;padding-left:1rem;margin:.5rem 0">$1</blockquote>')
+      .replace(/^🔵 (.+)$/gm, '<div class="script-line script-i">🔵 <strong>I DO:</strong> $1</div>')
+      .replace(/^🟡 (.+)$/gm, '<div class="script-line script-we">🟡 <strong>WE DO:</strong> $1</div>')
+      .replace(/^🟢 (.+)$/gm, '<div class="script-line script-you">🟢 <strong>YOU DO:</strong> $1</div>')
+      .replace(/^❌ (.+)$/gm, '<div class="feedback feedback-error">❌ $1</div>')
+      .replace(/^✅ (.+)$/gm, '<div class="feedback feedback-praise">✅ $1</div>')
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+    html = html.replace(/([a-z]+)\s*→\s*([a-z]+)(\s*→\s*[a-z]+)*/gi, function(m){
+      return '<span class="word-chain">' + m + '</span>';
+    });
+    return html;
+  }
 
-  // Convert word chains: "word1, word2, word3" → styled span
-  html = html.replace(/([a-z]+)\s*→\s*([a-z]+)(\s*→\s*[a-z]+)*/gi, function(match){
-    return '<span class="word-chain">' + match + '</span>';
+  // ── Tool 2: Check Decodability ──
+  document.getElementById('decodabilityForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    var data = {text: document.getElementById('decodeText').value, grade: document.getElementById('decodeGrade').value, skill: document.getElementById('decodeSkill').value};
+    if(!data.text.trim()) return alert('Please paste some text to check.');
+    var resp = await fetch('/api/decodability', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    var r = await resp.json();
+    var html = '<h3 style="margin-top:1rem">📊 Decodability Report</h3>';
+    html += '<div class="stats-grid"><div class="stat"><div class="stat-num">' + r.total_words + '</div><div class="stat-label">Total Words</div></div>';
+    html += '<div class="stat"><div class="stat-num">' + r.decodable_pct + '%</div><div class="stat-label">Decodable</div></div>';
+    html += '<div class="stat"><div class="stat-num">' + (r.off_scope_words||[]).length + '</div><div class="stat-label">Off-Scope</div></div>';
+    html += '<div class="stat"><div class="stat-num">' + (r.heart_words||[]).length + '</div><div class="stat-label">Heart Words</div></div></div>';
+    if(r.off_scope_words && r.off_scope_words.length) html += '<p style="color:#e74c3c"><strong>⚠️ Off-scope words:</strong> ' + r.off_scope_words.join(', ') + '</p>';
+    if(r.heart_words && r.heart_words.length) html += '<p style="color:#e67e22"><strong>💛 Heart words to pre-teach:</strong> ' + r.heart_words.join(', ') + '</p>';
+    document.getElementById('decodeResult').innerHTML = html;
+    document.getElementById('decodeResult').classList.add('show');
   });
 
-  return html;
-}
+  // ── Tool 3: Vocabulary Classifier ──
+  document.getElementById('vocabForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    var data = {text: document.getElementById('vocabText').value};
+    if(!data.text.trim()) return alert('Please paste some text.');
+    var resp = await fetch('/api/vocabulary', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    var r = await resp.json();
+    var html = '<h3 style="margin-top:1rem">📚 Vocabulary Breakdown</h3>';
+    var tiers = r.tier_counts || {};
+    html += '<div class="stats-grid"><div class="stat"><div class="stat-num">'+(tiers.tier_1||0)+'</div><div class="stat-label">Tier 1 (Basic)</div></div><div class="stat"><div class="stat-num">'+(tiers.tier_2||0)+'</div><div class="stat-label">Tier 2 (Academic)</div></div><div class="stat"><div class="stat-num">'+(tiers.tier_3||0)+'</div><div class="stat-label">Tier 3 (Domain)</div></div><div class="stat"><div class="stat-num">'+r.total_words+'</div><div class="stat-label">Total Words</div></div></div>';
+    if(r.recommendation) html += '<p style="margin-top:.5rem;padding:.8rem;background:#f0f4ff;border-radius:8px"><strong>📝 Recommendation:</strong> ' + r.recommendation + '</p>';
+    document.getElementById('vocabResult').innerHTML = html;
+    document.getElementById('vocabResult').classList.add('show');
+  });
+
+  // ── Tool 4: Evidence Search ──
+  document.getElementById('evidenceForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    var topic = document.getElementById('evidenceTopic').value;
+    var resp = await fetch('/api/evidence?topic=' + encodeURIComponent(topic));
+    var r = await resp.json();
+    var html = '<h3 style="margin-top:1rem">🔬 Research on "' + r.topic + '"</h3>';
+    html += '<p style="color:#888">' + r.total_papers + ' papers found' + (r.average_effect_size ? ' • Average effect size: d=' + r.average_effect_size : '') + '</p>';
+    (r.papers||[]).forEach(function(p){
+      html += '<div style="background:#fafaf7;padding:.8rem;margin:.5rem 0;border-radius:8px;border-left:3px solid #FFD700;padding-left:1rem"><strong>' + p.title + '</strong> (' + p.year + ')<br><span style="color:#FF6B35;font-weight:700">d=' + p.effect_size + '</span> — ' + p.source + '<br><span style="font-size:.85rem;color:#666">' + (p.finding||'').substring(0,150) + '...</span></div>';
+    });
+    document.getElementById('evidenceResult').innerHTML = html;
+    document.getElementById('evidenceResult').classList.add('show');
+  });
+
+  // ── Tool 5: Standards Alignment ──
+  document.getElementById('standardsForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    var data = {description: document.getElementById('standardsSkill').value, state: document.getElementById('standardsState').value};
+    var resp = await fetch('/api/standards', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    var r = await resp.json();
+    var html = '<h3 style="margin-top:1rem">🏛️ Standards Matches (' + r.total_matches + ')</h3>';
+    (r.matches||[]).forEach(function(m){
+      html += '<div style="background:#fafaf7;padding:.8rem;margin:.5rem 0;border-radius:8px;border-left:3px solid #2D2366;padding-left:1rem"><strong style="color:#2D2366">' + m.code + '</strong> <span style="color:#999;font-size:.8rem">' + m.state + ' Grade ' + m.grade + '</span><br>' + m.description + '</div>';
+    });
+    document.getElementById('standardsResult').innerHTML = html;
+    document.getElementById('standardsResult').classList.add('show');
+  });
 </script>
 </body>
 </html>"""
@@ -270,8 +412,29 @@ async def diagnose(data: dict):
 
 @app.get("/api/remediations")
 async def list_remediations():
-    """List all available remediation deficit codes."""
     return list_available_remediations()
+
+@app.post("/api/decodability")
+async def check_decodability(data: dict):
+    """Check text decodability against a target skill."""
+    from tools.decodability import check_decodability
+    return check_decodability(data.get("text", ""), data.get("grade", "2nd"))
+
+@app.post("/api/vocabulary")
+async def classify(data: dict):
+    """Classify vocabulary into Tier 1/2/3."""
+    return classify_text(data.get("text", ""))
+
+@app.get("/api/evidence")
+async def evidence(topic: str = ""):
+    """Search research evidence."""
+    return search_evidence(topic)
+
+@app.post("/api/standards")
+async def standards(data: dict):
+    """Find standards matching a skill description."""
+    from tools.evidence import align_standards
+    return align_standards(data.get("description", ""), data.get("state", "GEORGIA"))
 
 
 @app.get("/health")
