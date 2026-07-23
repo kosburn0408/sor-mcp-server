@@ -287,6 +287,8 @@ input:focus,select:focus{{border-color:#FF6B35;outline:none}}
 button{{background:linear-gradient(135deg,#FF6B35,#e05a2a);color:#fff;border:none;padding:.8rem 2rem;border-radius:50px;font-size:1rem;font-weight:700;cursor:pointer;width:100%;transition:transform .15s,box-shadow .15s}}
 button:hover{{transform:translateY(-1px);box-shadow:0 4px 12px rgba(255,107,53,.3)}}
 button:disabled{{opacity:.5;cursor:not-allowed}}
+.help-icon{{display:inline-block;cursor:help;color:#aaa;font-size:.85rem;margin-left:.2rem;font-style:normal}}
+.help-icon:hover{{color:#FF6B35}}
 .result{{display:none;margin-top:1.5rem}}
 .result.show{{display:block}}
 .profile-badge{{display:inline-block;padding:.25rem .75rem;border-radius:20px;font-weight:700;font-size:.8rem;margin-right:.5rem}}
@@ -387,18 +389,33 @@ textarea{{width:100%;padding:.7rem;border:2px solid #e0dcd0;border-radius:8px;fo
 
 <div class="container">
 
+  <!-- HERO — Teacher Value Proposition -->
+  <div class="card" style="background:linear-gradient(135deg,#1a1a3e,#2D2366);color:#fff;text-align:center;padding:2rem 1.5rem 1.5rem">
+    <p style="color:#FFD700;font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem;font-weight:600">Science of Reading Tools</p>
+    <h2 style="color:#fff;font-size:1.5rem;border:none;margin-bottom:.5rem;padding:0">Turn Assessment Scores into Action Plans</h2>
+    <p style="color:#b0aec8;font-size:.9rem;max-width:550px;margin:0 auto 1rem">Enter a student's DIBELS or Acadience scores — get a printable, research-backed remediation card with an I Do / We Do / You Do teaching script. No AI prompt engineering. No command line. Just scores → lesson plan.</p>
+    <button onclick="tryExample()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);width:auto;font-size:.85rem;padding:.5rem 1.2rem;display:inline-flex;align-items:center;gap:.4rem">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> Try an Example — See It in Action
+    </button>
+    <p style="font-size:.7rem;color:#7870a8;margin-top:.5rem">No student data collected. FERPA compliant.</p>
+  </div>
+
   <!-- DIAGNOSE CARD -->
   <div class="card">
     <h2>🔍 Diagnose a Student</h2>
     <form id="diagnoseForm">
       <div class="row">
         <div class="form-group">
-          <label>Decoding Score (0.0 – 1.0)</label>
-          <input type="number" id="decoding" step="0.01" min="0" max="1" placeholder="e.g. 0.38" required>
+          <label>Decoding Score (0.0 – 1.0)
+            <span class="help-icon" title="Enter the student's decoding accuracy from DIBELS NWF-CLS, Acadience, or CORE Phonics Survey. 0.38 = Well Below Benchmark. 0.60+ = At Benchmark.">ⓘ</span>
+          </label>
+          <input type="number" id="decoding" step="0.01" min="0" max="1" placeholder="e.g. 0.38 (DIBELS NWF-CLS)" required>
         </div>
         <div class="form-group">
-          <label>Language Comprehension (0.0 – 1.0)</label>
-          <input type="number" id="comprehension" step="0.01" min="0" max="1" placeholder="e.g. 0.85" required>
+          <label>Language Comprehension (0.0 – 1.0)
+            <span class="help-icon" title="Enter the student's oral language or listening comprehension score. DIBELS Maze, MAP Reading, or teacher observation. 0.80+ = Proficient.">ⓘ</span>
+          </label>
+          <input type="number" id="comprehension" step="0.01" min="0" max="1" placeholder="e.g. 0.85 (MAP Reading)" required>
         </div>
       </div>
       <div class="form-group">
@@ -524,7 +541,41 @@ textarea{{width:100%;padding:.7rem;border:2px solid #e0dcd0;border-radius:8px;fo
 <footer>
   <p>© 2026 EdTech Labs. All rights reserved. • <a href="https://github.com/kosburn0408/sor-mcp-server" style="color:#FF6B35">GitHub</a></p>
   <p style="font-size:.7rem;color:#bbb;margin-top:.5rem">🔒 FERPA Compliant • Student data never leaves this server</p>
+  <p style="font-size:.65rem;color:#bbb;margin-top:.3rem">
+    <a href="#" onclick="showPrivacy();return false" style="color:#999">Privacy Policy</a> • 
+    <a href="#" onclick="showAbout();return false" style="color:#999">About This Tool</a>
+  </p>
 </footer>
+
+<!-- Privacy Policy Modal -->
+<div id="privacyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center" onclick="this.style.display='none'">
+  <div style="background:#fff;max-width:550px;width:90%;padding:2rem;border-radius:12px;max-height:80vh;overflow-y:auto" onclick="event.stopPropagation()">
+    <h3 style="color:#2D2366;margin-bottom:1rem">🔒 Privacy Policy</h3>
+    <p style="font-size:.9rem;color:#555;line-height:1.6">The SoR Dashboard does <strong>not</strong> collect, store, or transmit any personally identifiable information (PII).</p>
+    <p style="font-size:.9rem;color:#555;line-height:1.6">When you enter student assessment scores, the data is processed entirely on this server. No names, IDs, or identifying information are requested or stored. All diagnostic computations happen in memory and are discarded after the response is sent.</p>
+    <p style="font-size:.9rem;color:#555;line-height:1.6"><strong>FERPA Compliance:</strong> This tool is designed to be FERPA-compliant by default. Since no educational records are created or maintained, and no PII is collected, the tool operates outside the scope of FERPA-protected data handling.</p>
+    <p style="font-size:.9rem;color:#555;line-height:1.6"><strong>Zero Data Retention:</strong> No session data, query history, or results are stored on disk or in any database. Every request is stateless.</p>
+    <button onclick="document.getElementById('privacyModal').style.display='none'" style="width:auto;margin-top:1rem">Close</button>
+  </div>
+</div>
+
+<!-- About Modal -->
+<div id="aboutModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center" onclick="this.style.display='none'">
+  <div style="background:#fff;max-width:550px;width:90%;padding:2rem;border-radius:12px;max-height:80vh;overflow-y:auto" onclick="event.stopPropagation()">
+    <h3 style="color:#2D2366;margin-bottom:1rem">📖 About This Tool</h3>
+    <p style="font-size:.9rem;color:#555;line-height:1.6">The <strong>Science of Reading Dashboard</strong> is an evidence-based literacy analysis tool built on the Model Context Protocol (MCP).</p>
+    <p style="font-size:.9rem;color:#555;line-height:1.6"><strong>Research Base:</strong> All diagnostic and remediation tools are grounded in the Simple View of Reading (Gough & Tunmer, 1986), Scarborough's Reading Rope (2001), and the National Reading Panel's Five Pillars (2000).</p>
+    <p style="font-size:.9rem;color:#555;line-height:1.6"><strong>Built by:</strong> <a href="https://edtechlabs.dev" style="color:#FF6B35">EdTech Labs</a> — Keith Osburn, CIO, Georgia Department of Education.</p>
+    <p style="font-size:.9rem;color:#555;line-height:1.6"><strong>Open source:</strong> The full source code and MCP server are available at <a href="https://github.com/kosburn0408/sor-mcp-server" style="color:#FF6B35">github.com/kosburn0408/sor-mcp-server</a>.</p>
+    <p style="font-size:.9rem;color:#555;line-height:1.6"><strong>Global MCP Hackathon 2026</strong> — Education & Public Good category submission.</p>
+    <button onclick="document.getElementById('aboutModal').style.display='none'" style="width:auto;margin-top:1rem">Close</button>
+  </div>
+</div>
+
+<script>
+function showPrivacy(){{ document.getElementById('privacyModal').style.display='flex'; }}
+function showAbout(){{ document.getElementById('aboutModal').style.display='flex'; }}
+</script>
 
 </div><!-- /main-content -->
 
@@ -732,6 +783,17 @@ window.addEventListener('resize', function() {{
   }}
   lastWidth = window.innerWidth;
 }});
+
+// ──────────────────────────────────────────────────
+// TRY AN EXAMPLE — fill demo data and submit
+// ──────────────────────────────────────────────────
+function tryExample(){{
+  document.getElementById('decoding').value = '0.38';
+  document.getElementById('comprehension').value = '0.85';
+  document.getElementById('grade').value = '2nd';
+  document.getElementById('diagnoseForm').dispatchEvent(new Event('submit'));
+  document.getElementById('diagnoseForm').scrollIntoView({{behavior:'smooth'}});
+}}
 
 // ──────────────────────────────────────────────────
 // DIAGNOSE FORM
