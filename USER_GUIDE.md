@@ -1,5 +1,35 @@
 # Science of Reading MCP Server — User Guide
 
+## What Is the Science of Reading?
+
+The Science of Reading (SoR) is a vast, interdisciplinary body of **scientifically-based research** about reading and issues related to reading and writing. It draws from cognitive psychology, neuroscience, linguistics, and education — spanning over five decades of peer-reviewed studies.
+
+This research has produced a clear, consistent finding: **reading is not natural — it must be explicitly taught.** The human brain is wired for speech, but not for reading. Every child must build the neural pathways that connect visual symbols (letters) to sounds (phonemes) to meaning.
+
+### The Five Pillars
+
+The National Reading Panel (2000) identified five essential, non-negotiable components of effective reading instruction:
+
+| Pillar | What It Is | Why It Matters |
+|---|---|---|
+| 🔤 **Phonemic Awareness** | Hearing and manipulating individual sounds in spoken words | The #1 predictor of reading success. Without it, phonics makes no sense. |
+| 📖 **Phonics** | Connecting sounds (phonemes) to written letters (graphemes) | Systematic phonics instruction has an effect size of d=0.41 — meaning it works for most children, and it's essential for struggling readers. |
+| 📈 **Fluency** | Reading accurately, at an appropriate rate, with expression | Fluency is the bridge between decoding and comprehension. If all mental energy goes to sounding out words, there's nothing left for meaning. |
+| 📚 **Vocabulary** | Knowing what words mean | Vocabulary in 1st grade predicts reading comprehension in 11th grade. The gap starts early and widens without intervention. |
+| 🧠 **Comprehension** | Understanding, remembering, and communicating what was read | This is the ultimate goal of all reading instruction. Every other pillar serves this one. |
+
+### Why This Matters Right Now
+
+**37% of American 4th graders read below the Basic level** on the NAEP (National Assessment of Educational Progress, 2024). That's not a curriculum problem — it's an implementation problem. The research is clear. What's missing is the bridge between what we know and what teachers can actually do at 8:15 on Monday morning.
+
+### What This Tool Does
+
+This MCP server **is that bridge.** It takes the body of SoR research — the frameworks, the effect sizes, the scope and sequences — and turns it into **printable, 5-minute lesson plans** that any teacher can use immediately. It validates that the texts you give students use only the phonics patterns they've been taught. It checks that your curriculum aligns with state standards and research evidence. And it does all of this without ever sending a student's name to an AI model.
+
+This is SoR research, operationalized.
+
+---
+
 ## Who This Is For
 
 This tool is built for **K-5 educators, reading specialists, and literacy coaches** who are transitioning to Structured Literacy and the Science of Reading. You don't need to be a programmer. You need to be someone who looks at a struggling reader and asks: *"What do I do tomorrow morning at 8:15 AM?"*
