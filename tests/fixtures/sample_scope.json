@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "name": "K-2 Foundational Skills Scope and Sequence",
+    "description": "Mock scope for testing the SoR MCP server",
+    "based_on": ["WWC Foundational Skills Practice Guide (2016)", "NRP Phonics (2000)"]
+  },
+  "grade_levels": {
+    "K": {
+      "strands": {
+        "phonology": {
+          "concepts": [
+            "Rhyming words",
+            "Syllable counting",
+            "Initial sound identification",
+            "Final sound identification",
+            "Phoneme blending (2-3 sounds)",
+            "Phoneme segmentation (2-3 sounds)"
+          ],
+          "phonemes": [
+            "/a/", "/e/", "/i/", "/o/", "/u/",
+            "/m/", "/s/", "/t/", "/p/", "/n/",
+            "/d/", "/k/", "/g/", "/b/", "/f/"
+          ],
+          "patterns": ["C", "V", "CV", "VC", "CVC"],
+          "syllable_types": ["closed"],
+          "sight_words": ["the", "a", "I", "to", "is", "my", "go", "me", "like", "on"],
+          "prerequisites": ["Print concepts", "Letter recognition"],
+          "next_steps": ["CVC words with digraphs", "Consonant blends introduction"]
+        },
+        "morphology": {
+          "concepts": ["Plural -s (spoken)"],
+          "prerequisites": ["Oral language development"],
+          "next_steps": ["Inflectional endings", "Compound words"]
+        }
+      }
+    },
+    "1": {
+      "strands": {
+        "phonology": {
+          "concepts": [
+            "CVC blending and segmenting fluency",
+            "Consonant digraphs (sh, ch, th, wh, ck)",
+            "Consonant blends (l-blends, r-blends, s-blends)",
+            "CVCe silent-e pattern",
+            "Open syllables (CV)"
+          ],
+          "phonemes": [
+            "/sh/", "/ch/", "/th/", "/wh/", "/ng/",
+            "/ā/", "/ē/", "/ī/", "/ō/", "/ū/"
+          ],
+          "patterns": ["CCVC", "CVCC", "CVCe", "digraphs", "blends", "ending_blends"],
+          "syllable_types": ["closed", "VCe", "open"],
+          "sight_words": ["of", "his", "had", "him", "her", "some", "as", "then", "could", "when"],
+          "prerequisites": ["K phoneme awareness", "CVC decoding"],
+          "next_steps": ["Vowel teams", "R-controlled vowels", "Multisyllabic words"]
+        },
+        "morphology": {
+          "concepts": ["Inflectional endings (-s, -es, -ed, -ing)", "Compound words"],
+          "prerequisites": ["K oral language"],
+          "next_steps": ["Prefix un-/re-", "Suffix -er/-est"]
+        }
+      }
+    },
+    "2": {
+      "strands": {
+        "phonology": {
+          "concepts": [
+            "Vowel teams (ai, ay, ee, ea, oa, oe)",
+            "R-controlled vowels (ar, or, er, ir, ur)",
+            "Diphthongs (oi, oy, ou, ow)",
+            "Silent letters (wr, kn, gn, mb)",
+            "Three-letter blends (scr, str, spr, spl)",
+            "Multisyllabic decoding (VC/CV)"
+          ],
+          "phonemes": [
+            "/oi/", "/oy/", "/ou/", "/ow/",
+            "/ar/", "/or/", "/er/"
+          ],
+          "patterns": [
+            "vowel_teams", "r_controlled", "diphthongs",
+            "silent_letters", "3-letter_blends", "common_suffixes",
+            "common_prefixes"
+          ],
+          "syllable_types": ["closed", "VCe", "open", "vowel_team", "r_controlled"],
+          "sight_words": ["always", "around", "because", "been", "before", "best", "both"],
+          "prerequisites": ["Grade 1 phonics", "Silent-e mastery"],
+          "next_steps": ["C+le syllables", "Advanced vowel teams"]
+        }
+      }
+    }
+  },
+  "remediation_codes": [
+    "cvc_short_a",
+    "cvc_mixed",
+    "cvce_silent_e",
+    "consonant_blends",
+    "consonant_digraphs",
+    "vowel_teams",
+    "r_controlled",
+    "phoneme_segmentation",
+    "prefix_un"
+  ],
+  "cueing_flag_phrases": [
+    "look at the picture",
+    "does it make sense",
+    "skip it and go on",
+    "three-cueing system",
+    "use context to figure out",
+    "what word would fit"
+  ]
+}
