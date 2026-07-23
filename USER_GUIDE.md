@@ -186,6 +186,55 @@ Run any text through `verify_decodable_text` and the anti-cueing guardrails will
 
 ---
 
+---
+
+## How a Teacher Actually Uses This
+
+This is not an app from the App Store. It's a **server** that runs in the background and responds to questions. Here are the three ways a teacher can access it:
+
+### Option A: Via an AI Agent (Recommended)
+
+Your district runs the server once. Teachers access it through an AI assistant:
+
+```
+Teacher: "Marcus scored 0.38 on decoding. What do I do?"
+   ↓
+AI Agent → evaluate_simple_view(decoding=0.38, grade="2nd")
+   ↓
+Server → Dyslexia profile → 3 remediation cards
+   ↓
+Teacher: Printable 5-minute lesson plan
+```
+
+**What you need:** An IT person to run `docker compose up -d` once. Nothing on your MacBook.
+
+### Option B: Web Dashboard (Coming Soon)
+
+A teacher-friendly website at `sor.edtechlabs.dev` — paste scores, click Diagnose, download printable PDFs. No command line. **In development.**
+
+### Option C: Direct Install (Tech-Savvy)
+
+```bash
+git clone https://github.com/kosburn0408/sor-mcp-server.git
+pip install -r requirements.txt
+python3 server.py --seed-only && python3 server.py
+```
+
+### Option D: Google Classroom / Canvas (Future)
+
+MCP support is coming to major LMS platforms (2026-2027). When it arrives, this server plugs directly into the tools you already use.
+
+| If You Are... | Use |
+|---|---|
+| 🍎 Classroom teacher | Option A (AI Agent) or Option B (Web Dashboard) |
+| 📋 Reading specialist | Option A (batch processing) |
+| 🏫 IT director | Docker on a server — one install for everyone |
+| 💻 Developer | Option C (direct API integration) |
+
+> **The bottom line:** You shouldn't need to install anything. The server works like Wi-Fi — invisible, always on, and you just get results.
+
+---
+
 ## Quick Start
 
 ### From Docker (Recommended)
