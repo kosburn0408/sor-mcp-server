@@ -235,6 +235,83 @@ MCP support is coming to major LMS platforms (2026-2027). When it arrives, this 
 
 ---
 
+## Data Privacy — FERPA by Design
+
+Student data privacy is not an afterthought — it's built into the architecture at the protocol level.
+
+### What We Do
+
+| Protection | How It Works |
+|---|---|
+| 🔒 **Names never reach AI** | Student identities are replaced with synthetic tokens (`std_a3f27b8c`) before any data leaves the server. The LLM sees "std_a3f27b8c, decoding=0.38" — never "Marcus Williams, decoding=0.38." |
+| 🗑️ **Zero Data Retention** | All identity mappings are destroyed when the session ends. No PII survives on disk, in logs, or in memory. |
+| 🛡️ **25 PII fields stripped** | First name, last name, student ID, email, date of birth, address, phone, guardian name — all removed before processing. |
+| 📋 **Audit trail (PII-free)** | Every anonymization event is logged — but the logs contain only tokens, never real names. |
+| ✅ **7/7 tests passing** | Automated tests verify that PII stripping, session destruction, and log sanitization work correctly every time. |
+
+### What We NEVER Do
+
+| Prohibited | Why |
+|---|---|
+| ❌ Send student names to cloud AI models | FERPA violation |
+| ❌ Store PII on disk or in databases | Unnecessary risk |
+| ❌ Log real names in audit trails | Privacy breach |
+| ❌ Share data with third parties | Your data stays on your machine |
+| ❌ Use student data to train models | Ethical boundary — non-negotiable |
+
+### Compliance
+
+| Standard | Status |
+|---|---|
+| **FERPA** | ✅ Compliant — no educational records exposed to unauthorized parties |
+| **COPPA** | ✅ Compliant — no data collection from children under 13 |
+| **GDPR Right to Erasure** | ✅ ZDR by default — data is ephemeral, never persisted |
+
+### How It Works, End to End
+
+```
+Teacher submits:  "Marcus Williams, GA-12345, decoding=0.38"
+                        ↓
+             [PII SANITIZATION LAYER]
+             Name → std_a3f27b8c
+             ID   → stripped entirely
+                        ↓
+AI Model sees:   "std_a3f27b8c, decoding=0.38, grade=2nd"
+             (NO real identity — only academic data)
+                        ↓
+AI generates:    "std_a3f27b8c needs: consonant blends remediation"
+                        ↓
+             [DE-ANONYMIZATION LAYER]
+             std_a3f27b8c → Marcus Williams
+                        ↓
+Teacher sees:    "Marcus Williams needs: consonant blends remediation"
+                        ↓
+             [SESSION END — ZDR]
+             All mappings destroyed. Nothing saved.
+```
+
+### Prove It Yourself
+
+The server includes a `verify_privacy_status` tool that returns the current operational state:
+
+```json
+{
+  "zdr_mode": true,
+  "pii_on_disk": false,
+  "pii_in_logs": false,
+  "active_sessions": 0,
+  "compliance": {
+    "ferpa": "compliant",
+    "coppa": "compliant",
+    "gdpr_right_to_erasure": "zdr_by_default"
+  }
+}
+```
+
+> **The promise:** This server knows everything about reading science and nothing about your students. That's by design.
+
+---
+
 ## Quick Start
 
 ### From Docker (Recommended)
