@@ -1,0 +1,74 @@
+# Science of Reading MCP Server — Docker Compose
+#
+# Two service profiles:
+#   - stdio (default): for MCP client attachment via subprocess
+#   - sse: HTTP/SSE transport for development and debugging
+#
+# Usage:
+#   docker compose build                    # build the image
+#   docker compose run --rm sor-seed        # seed database only
+#   docker compose up sor-sse               # HTTP/SSE dev server on :8080
+#   docker compose exec sor-stdio python3 -c "..."  # run queries directly
+
+services:
+  # Stdio transport — used by MCP clients that spawn this as a subprocess.
+  # Not run as a daemon; the MCP client manages lifecycle.
+  sor-stdio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: science-of-reading-mcp:latest
+    container_name: sor-mcp-stdio
+    profiles: ["full"]
+    environment:
+      - SOR_DB_PATH=/data/sor_evidence.duckdb
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - sor_data:/data
+    stdin_open: true   # required for stdio transport
+    tty: false
+    restart: "no"
+
+  # SSE/HTTP transport — for development, debugging, and health checks.
+  # Exposes the server over HTTP on port 8080.
+  sor-sse:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: science-of-reading-mcp:latest
+    container_name: sor-mcp-sse
+    profiles: ["dev", "sse"]
+    ports:
+      - "${SOR_HTTP_PORT:-8080}:8080"
+    environment:
+      - SOR_DB_PATH=/data/sor_evidence.duckdb
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - sor_data:/data
+    command: ["python3", "server.py", "--http", "8080"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/sse')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Database seed — one-shot service to populate DuckDB and exit
+  sor-seed:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: science-of-reading-mcp:latest
+    container_name: sor-mcp-seed
+    profiles: ["tools", "seed"]
+    environment:
+      - SOR_DB_PATH=/data/sor_evidence.duckdb
+    volumes:
+      - sor_data:/data
+    command: ["python3", "server.py", "--seed-only"]
+
+volumes:
+  sor_data:
+    driver: local
+    name: sor-duckdb-data

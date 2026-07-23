@@ -1,0 +1,8 @@
+# Science of Reading MCP Server
+# Evidence-based literacy analysis aligned to SoR research
+
+mcp>=1.0.0
+duckdb>=0.10.0
+pyyaml>=6.0
+pydantic>=2.0
+pytest>=7.0
