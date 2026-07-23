@@ -1,6 +1,18 @@
 # Example Workflows
 
-Copy-paste-ready scenarios. Replace the sample data with your own.
+**For developers and tech-savvy educators** who have cloned the repository and set up the Python environment. If you're a classroom teacher looking for a no-code experience, the web dashboard at `sor.edtechlabs.dev` (coming soon) will let you paste scores and get results without touching a command line.
+
+Each example below assumes:
+
+```bash
+# You've already done this:
+git clone https://github.com/kosburn0408/sor-mcp-server.git
+cd sor-mcp-server
+pip install -r requirements.txt
+python3 server.py --seed-only
+```
+
+Then run any example with `python3` — replace the sample data with your own.
 
 ---
 
