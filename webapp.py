@@ -31,8 +31,9 @@ FRONTEND = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SoR Dashboard — Science of Reading Tools</title>
+<title>EdTech Labs — SoR Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232D2366'/><text x='16' y='23' text-anchor='middle' font-size='20'>🧠</text></svg>">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',sans-serif;background:#f5f2ed;color:#2d1f0e;line-height:1.6}
@@ -86,7 +87,7 @@ footer{text-align:center;padding:2rem;color:#999;font-size:.8rem}
 </head>
 <body>
 <header>
-  <h1>📖 SoR Dashboard</h1>
+  <h1>🧠 EdTech Labs</h1>
   <p>Science of Reading — Diagnostic & Remediation Tools</p>
 </header>
 
@@ -227,7 +228,7 @@ footer{text-align:center;padding:2rem;color:#999;font-size:.8rem}
 </div>
 
 <footer>
-  <p>Science of Reading MCP Server v2.0 • MIT Licensed • <a href="https://github.com/kosburn0408/sor-mcp-server" style="color:#FF6B35">GitHub</a></p>
+  <p>© 2026 EdTech Labs. All rights reserved. • <a href="https://github.com/kosburn0408/sor-mcp-server" style="color:#FF6B35">GitHub</a></p>
   <p style="font-size:.7rem;color:#bbb;margin-top:.5rem">🔒 FERPA Compliant • Student data never leaves this server</p>
 </footer>
 

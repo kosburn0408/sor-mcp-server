@@ -21,7 +21,7 @@ FROM python:3.11-slim-bookworm
 LABEL org.opencontainers.image.title="Science of Reading MCP Server"
 LABEL org.opencontainers.image.description="Evidence-based literacy analysis MCP server aligned to the Science of Reading"
 LABEL org.opencontainers.image.source="https://github.com/nousresearch/agentic-edu"
-LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.licenses="All Rights Reserved"
 
 # Create non-root user with home /app
 RUN groupadd -r sor && useradd -r -g sor -d /app -s /sbin/nologin sor

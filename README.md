@@ -3,7 +3,7 @@
 [![MCP](https://img.shields.io/badge/MCP-1.26+-blue)](https://modelcontextprotocol.io)
 [![Python](https://img.shields.io/badge/Python-3.11+-green)](https://python.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-blue)](https://docker.com)
-[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+[![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-lightgrey)](LICENSE)
 
 Evidence-based literacy analysis MCP server aligned to the **Science of Reading** research. Provides text analysis tools backed by What Works Clearinghouse, Best Evidence Encyclopedia, and National Reading Panel findings — all embedded in a DuckDB analytical database.
 
@@ -151,4 +151,4 @@ mcp-servers/science-of-reading/
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+Copyright © 2026 EdTech Labs. All rights reserved.

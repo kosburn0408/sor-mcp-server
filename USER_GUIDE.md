@@ -411,4 +411,4 @@ Every tool response references the underlying research:
 
 ## License
 
-MIT — use freely in your classroom, district, or product. Student data stays on your machine — always.
+© 2026 EdTech Labs. All rights reserved. Student data stays on your machine — always.
