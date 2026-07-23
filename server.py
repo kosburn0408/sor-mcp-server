@@ -1,54 +1,45 @@
 #!/usr/bin/env python3
-"""Science of Reading MCP Server — Production-Grade Architecture.
+"""Science of Reading MCP Server — Production-Grade API Bridge.
 
-A Model Context Protocol server providing evidence-based literacy analysis
-tools aligned to the Science of Reading research base.
+A Model Context Protocol server bridging LLMs to the Science of Reading API
+at sor.edtechlabs.dev. Provides tools for phonics scope queries, decodability
+verification, orthographic mapping, and competency standards lookup.
 
 Protocol: MCP (JSON-RPC 2.0 over stdio)
 Transport: stdio (subprocess-based, secure by default — no network exposure)
-Database: DuckDB (embedded analytical database, no separate server needed)
+API Client: async httpx with retry, caching, and exponential backoff
 
 Architecture:
-  src/core/       — Meta-tool router, structured error codes
-  src/tools/      — Domain tools (diagnostics, remediation, decodability, standards, privacy)
-  src/prompts/    — MCP Prompt primitives (I Do/We Do/You Do, decodable passage, multisyllabic)
-  src/resources/  — MCP Resource primitives (frameworks, word lists)
-  src/schemas/    — Pydantic v2 models for all I/O
+  src/config.py      — Pydantic BaseSettings (env-prefixed SOR_)
+  src/client/        — Async httpx client with retry/cache/backoff
+  src/schemas/       — Pydantic v2 models for API request/response
+  src/tools/         — MCP tools bridging to API endpoints
+  src/prompts/       — MCP prompt primitives
+  src/resources/     — MCP resource primitives (frameworks, word lists)
+  src/errors.py      — Structured MCP error codes
 
-Tools exposed:
-  query_sor_curriculum        — Dynamic meta-tool router
-  analyze_lexile              — Text complexity and Lexile scoring
-  check_decodability          — Decodable text percentage by grade
-  verify_decodable_text       — Anti-cueing decodability verifier (NEW)
-  classify_vocabulary         — Tier 1/2/3 word classification
-  search_evidence             — WWC/BEE research paper lookup
-  list_frameworks             — Theoretical framework reference
-  list_assessments            — Evidence-based assessment lookup
-  align_standards             — CASE framework standards alignment
-  align_standards_case        — CASE/JSON-LD standards (NEW)
-  match_word                  — Single-word tier lookup
-  evaluate_simple_view        — Simple View of Reading diagnostic
-  get_instructional_remediation — Remediation card for a reading deficit
-  recommend_decodable_resources — Decodable text constrained to mastered skills
-  list_remediations           — List all available remediation deficit codes
+Four API tools:
+  get_phonics_scope      — Phonics scope and sequence (cached)
+  verify_decodable_text  — Decodability verification with anti-cueing
+  map_orthography        — Phoneme-grapheme syllable mapping
+  lookup_competency      — CASE/state standards competency lookup
 
-Theoretical frameworks embedded:
-  - Simple View of Reading (Gough & Tunmer, 1986)
-  - Scarborough's Reading Rope (2001)
-  - National Reading Panel Five Pillars (2000)
-  - What Works Clearinghouse Foundational Skills Practice Guide (2016)
-  - Beck, McKeown & Kucan Three-Tier Vocabulary (2013)
+Two MCP prompts:
+  generate_aligned_decodable — LLM-instructed decodable passage generator
+  explicit_phonics_routine   — I Do/We Do/You Do explicit phonics script
+
+MCP resources:
+  frameworks — Scarborough's Rope, Simple View, Syllable Rules
+  word_lists — Heart words, Dolch, Fry by grade
 
 Usage:
-  python server.py                          # stdio (for MCP clients)
-  python server.py --seed-only              # seed database and exit
-  python server.py --http 8080              # HTTP/SSE transport (dev/debug)
+  python server.py              # stdio transport (production)
+  python server.py --http 8080  # HTTP/SSE transport (dev)
 """
 
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -60,409 +51,219 @@ if str(PKG_ROOT) not in sys.path:
 
 from mcp.server.fastmcp import FastMCP
 
-# Initialize server (stdio by default)
+from src.config import Settings
+from src.client.sor_client import SoRClient
+
+# ── Load settings ───────────────────────────────────────────────────────
+settings = Settings()
+
+# ── Create FastMCP server ───────────────────────────────────────────────
 mcp = FastMCP(
     name="Science of Reading",
     instructions=(
         "The Science of Reading MCP server provides evidence-based literacy analysis "
-        "tools grounded in reading research. It supports text complexity analysis "
-        "(Lexile), decodability checking with anti-cueing guardrails, vocabulary tier "
-        "classification, research evidence lookup, standards alignment (CASE/JSON-LD), "
-        "and explicit phonics routine generation — all backed by DuckDB-embedded "
-        "data from What Works Clearinghouse, Best Evidence Encyclopedia, and the "
-        "National Reading Panel.\n\n"
+        "tools grounded in reading research. It bridges to the sor.edtechlabs.dev API "
+        "for phonics scope queries, decodability verification with anti-cueing guardrails, "
+        "orthographic mapping (phoneme-grapheme-syllable), and CASE/state standards "
+        "competency lookup.\n\n"
         "Theoretical frameworks: Simple View of Reading, Scarborough's Reading Rope, "
         "Five Pillars of Reading (Phonemic Awareness, Phonics, Fluency, Vocabulary, "
         "Comprehension).\n\n"
-        "Meta-tool: use query_sor_curriculum as the primary entry point for "
-        "curriculum routing — it dispatches to the appropriate tool internally."
+        "All tools use async httpx with retry, caching, and exponential backoff "
+        "against the upstream API."
     ),
     website_url="https://github.com/kosburn0408/sor-mcp-server",
 )
 
-
-def _ensure_db() -> None:
-    """Ensure the DuckDB database exists and is seeded."""
-    from db.database import ensure_database
-    db_path, is_new = ensure_database()
-    if is_new:
-        sys.stderr.write(f"[SoR] Database created and seeded at {db_path}\n")
-    else:
-        sys.stderr.write(f"[SoR] Database loaded from {db_path}\n")
+# ── Create API client (shared across tools) ─────────────────────────────
+_client: SoRClient | None = None
 
 
-def register_tools(server: FastMCP) -> None:
-    """Register all tools on the given FastMCP server instance.
+def get_client() -> SoRClient:
+    """Get or create the shared SoRClient instance."""
+    global _client
+    if _client is None:
+        _client = SoRClient(settings)
+    return _client
 
-    Tools are registered from src/tools/ modules with thin wrappers.
-    The meta-tool router is registered as the primary entry point.
-    """
 
-    # ── Meta-Tool Router ─────────────────────────────────────────────────
-    @server.tool(
-        name="query_sor_curriculum",
-        description=(
-            "Dynamic meta-tool router for Science of Reading curriculum queries. "
-            "Single entry point that routes to the appropriate internal tool. "
-            "Returns compact JSON with strand, grade, concepts, prerequisites, "
-            "and next steps — designed to keep system prompt context lean.\n\n"
-            "Parameters: grade_level (K-5), strand (phonology|morphology|vocabulary|"
-            "fluency|comprehension), target_phoneme (optional), syllable_type "
-            "(optional), standard_state (optional for CASE alignment)."
-        ),
+# ── Tool Registration ───────────────────────────────────────────────────
+
+
+@mcp.tool(
+    name="get_phonics_scope",
+    description=(
+        "Fetch the phonics scope and sequence for a given grade and unit from "
+        "sor.edtechlabs.dev. Returns target phonemes, taught graphemes, heart words, "
+        "and unit objectives. Results are cached for 5 minutes.\n\n"
+        "Parameters: grade_level (K-5), unit (default '1')."
+    ),
+)
+async def get_phonics_scope_tool(
+    grade_level: str,
+    unit: str = "1",
+) -> dict[str, Any]:
+    """Fetch phonics scope from the API."""
+    from src.tools.phonics import get_phonics_scope
+    return await get_phonics_scope(
+        grade_level=grade_level,
+        unit=unit,
+        client=get_client(),
+        settings=settings,
     )
-    async def query_sor_curriculum_tool(
-        grade_level: str,
-        strand: str | None = None,
-        target_phoneme: str | None = None,
-        syllable_type: str | None = None,
-        standard_state: str | None = None,
-    ) -> dict[str, Any]:
-        from src.core.router import query_sor_curriculum
-        return query_sor_curriculum(
-            grade_level=grade_level,
-            strand=strand,
-            target_phoneme=target_phoneme,
-            syllable_type=syllable_type,
-            standard_state=standard_state,
-        )
 
-    # ── Diagnostics ─────────────────────────────────────────────────────
-    @server.tool(
-        name="analyze_lexile",
-        description=(
-            "Analyze text complexity and estimate Lexile score. "
-            "Computes word count, sentence length, rare word ratio, and maps to "
-            "approximate grade level. Based on the Simple View of Reading."
-        ),
+
+@mcp.tool(
+    name="verify_decodable_text",
+    description=(
+        "Verify text decodability against a phonics scope with anti-cueing guardrails. "
+        "Checks every word against the cumulative phonics scope, identifies heart words, "
+        "flags off-scope patterns, detects 3-cueing/MSV strategies, and suggests "
+        "decodable substitutions. Returns structured error codes.\n\n"
+        "Parameters: text (passage), grade_level (K-5), unit (default '1')."
+    ),
+)
+async def verify_decodable_text_tool(
+    text: str,
+    grade_level: str,
+    unit: str = "1",
+) -> dict[str, Any]:
+    """Verify text decodability via the API."""
+    from src.tools.decodability import verify_decodable_text
+    return await verify_decodable_text(
+        text=text,
+        grade_level=grade_level,
+        unit=unit,
+        client=get_client(),
+        settings=settings,
     )
-    async def analyze_lexile(text: str) -> dict[str, Any]:
-        from src.tools.diagnostics import analyze_lexile as _analyze
-        return _analyze(text)
 
-    @server.tool(
-        name="evaluate_simple_view",
-        description=(
-            "Evaluate a student using the Simple View of Reading. "
-            "Returns reading profile (typical/dyslexia/hyperlexic/garden_variety), "
-            "deficit codes, and auto-attached remediation cards when decoding < 0.60."
-        ),
+
+@mcp.tool(
+    name="map_orthography",
+    description=(
+        "Map words to their orthographic structure: phoneme sequence, grapheme "
+        "sequence, syllable breaks, and syllable types (closed, open, VCe, "
+        "r-controlled, vowel team, C+le). Based on structured literacy and "
+        "Orton-Gillingham syllable division rules.\n\n"
+        "Parameters: words (list of up to 50 words)."
+    ),
+)
+async def map_orthography_tool(
+    words: list[str],
+) -> dict[str, Any]:
+    """Map words to orthographic structure via the API."""
+    from src.tools.orthography import map_orthography
+    return await map_orthography(
+        words=words,
+        client=get_client(),
+        settings=settings,
     )
-    async def evaluate_simple_view(
-        decoding: float,
-        language_comprehension: float,
-        grade: str = "1st",
-    ) -> dict[str, Any]:
-        from src.tools.diagnostics import evaluate_simple_view as _eval
-        return _eval(decoding, language_comprehension, grade)
 
-    # ── Decodability ────────────────────────────────────────────────────
-    @server.tool(
-        name="check_decodability",
-        description=(
-            "Check what percentage of words in a text are decodable at a given "
-            "grade level (K, 1, 2, 3). Uses cumulative phonics patterns and sight "
-            "word knowledge expected at each grade."
-        ),
+
+@mcp.tool(
+    name="lookup_competency",
+    description=(
+        "Look up CASE framework and state academic standards for a phonics skill. "
+        "Returns CASE GUIDs, state standard codes, grade levels, and full descriptions. "
+        "Results are cached for 5 minutes.\n\n"
+        "Parameters: skill (e.g., 'consonant_blends', 'silent_e', 'digraphs'), "
+        "state (GA, CCSS, TX, FL, NY; default 'GA')."
+    ),
+)
+async def lookup_competency_tool(
+    skill: str,
+    state: str = "GA",
+) -> dict[str, Any]:
+    """Look up competency standards via the API."""
+    from src.tools.standards import lookup_competency
+    return await lookup_competency(
+        skill=skill,
+        state=state,
+        client=get_client(),
+        settings=settings,
     )
-    async def check_decodability_tool(
-        text: str,
-        grade: str = "1",
-    ) -> dict[str, Any]:
-        from tools.decodability import check_decodability
-        return check_decodability(text, grade)
 
-    @server.tool(
-        name="verify_decodable_text",
-        description=(
-            "Production-grade decodability verifier with anti-cueing guardrails. "
-            "Checks every word against a cumulative phonics scope, identifies heart "
-            "words, flags off-scope patterns, and detects 3-cueing/MSV strategies. "
-            "Returns structured error codes (ERR_CUEING_DETECTED, ERR_OFF_SCOPE_PHONEME, "
-            "ERR_UNTAUGHT_PATTERN)."
-        ),
+
+# ── Prompt Registration ─────────────────────────────────────────────────
+
+
+@mcp.prompt(
+    name="generate_aligned_decodable",
+    description=(
+        "Generate a Science of Reading-aligned decodable passage. Instructs the LLM "
+        "to: (1) fetch the phonics scope, (2) draft a 4-6 sentence story using only "
+        "taught graphemes and heart words, (3) verify decodability, (4) self-correct "
+        "off-scope words, (5) return the final passage with decodability score."
+    ),
+)
+async def generate_aligned_decodable_prompt(
+    grade: str,
+    unit: str,
+    topic: str = "reading",
+) -> str:
+    """Generate a decodable passage prompt."""
+    from src.prompts.decodable import generate_aligned_decodable
+    return await generate_aligned_decodable(
+        grade=grade,
+        unit=unit,
+        topic=topic,
     )
-    async def verify_decodable_text_tool(
-        text: str,
-        target_skill: str,
-        scope_sequence: str = "[]",
-        grade_level: str = "1",
-        enable_anti_cueing: bool = True,
-    ) -> dict[str, Any]:
-        import json
-        from src.tools.decodability import verify_decodable_text
 
-        try:
-            scope = json.loads(scope_sequence) if scope_sequence else []
-        except (json.JSONDecodeError, TypeError):
-            scope = scope_sequence.split(",") if scope_sequence else []
 
-        return verify_decodable_text(
-            text=text,
-            target_skill=target_skill,
-            scope_sequence=scope if isinstance(scope, list) else [],
-            grade_level=grade_level,
-            enable_anti_cueing=enable_anti_cueing,
-        )
-
-    # ── Vocabulary ──────────────────────────────────────────────────────
-    @server.tool(
-        name="classify_vocabulary",
-        description=(
-            "Classify all words in a text into Beck, McKeown & Kucan's three-tier "
-            "framework: Tier 1 (basic), Tier 2 (high-utility academic), Tier 3 "
-            "(domain-specific)."
-        ),
+@mcp.prompt(
+    name="explicit_phonics_routine",
+    description=(
+        "Generate an explicit phonics routine with I Do/We Do/You Do script and "
+        "multisensory cues. Aligned to National Reading Panel recommendations for "
+        "systematic, explicit phonics instruction (effect size 0.41)."
+    ),
+)
+async def explicit_phonics_routine_prompt(
+    target_phoneme: str,
+    grade: str = "1",
+    multisensory: str = "finger tapping",
+) -> str:
+    """Generate an explicit phonics routine prompt."""
+    from src.prompts.phonics import explicit_phonics_routine
+    return await explicit_phonics_routine(
+        target_phoneme=target_phoneme,
+        grade=grade,
+        multisensory=multisensory,
     )
-    async def classify_vocabulary(
-        text: str,
-        domain: str = "literacy",
-    ) -> dict[str, Any]:
-        from tools.vocabulary import classify_text
-        return classify_text(text, domain)
-
-    @server.tool(
-        name="match_word",
-        description=(
-            "Look up a single word's vocabulary tier, grade-level frequency, and "
-            "decodability status in the corpus database."
-        ),
-    )
-    async def match_word(
-        word: str,
-        grade: int | None = None,
-    ) -> dict[str, Any]:
-        from tools.vocabulary import match_word_vocabulary
-        return match_word_vocabulary(word, grade)
-
-    # ── Evidence ────────────────────────────────────────────────────────
-    @server.tool(
-        name="search_evidence",
-        description=(
-            "Search the evidence database for WWC, BEE, and NRP research papers "
-            "related to a reading topic."
-        ),
-    )
-    async def search_evidence_tool(topic: str) -> dict[str, Any]:
-        from tools.evidence import search_evidence
-        return search_evidence(topic)
-
-    @server.tool(
-        name="list_frameworks",
-        description="List all theoretical frameworks in the database.",
-    )
-    async def list_frameworks_tool() -> dict[str, Any]:
-        from tools.evidence import list_frameworks
-        return list_frameworks()
-
-    @server.tool(
-        name="list_assessments",
-        description="List evidence-based reading assessments by type.",
-    )
-    async def list_assessments_tool(
-        assessment_type: str | None = None,
-    ) -> dict[str, Any]:
-        from tools.evidence import list_assessments
-        return list_assessments(assessment_type)
-
-    # ── Standards ───────────────────────────────────────────────────────
-    @server.tool(
-        name="align_standards",
-        description=(
-            "Find academic standards that align with a text or skill description. "
-            "Supports CCSS, TEXAS, FLORIDA, NY, GEORGIA."
-        ),
-    )
-    async def align_standards_tool(
-        description: str,
-        state: str = "CCSS",
-        grade: str | None = None,
-    ) -> dict[str, Any]:
-        from tools.evidence import align_standards
-        return align_standards(description, state, grade)
-
-    @server.tool(
-        name="align_standards_case",
-        description=(
-            "CASE/JSON-LD standards alignment with 1EdTech CASE CFItem GUIDs. "
-            "Outputs interoperable JSON-LD metadata blocks mapped to state "
-            "competency codes (CCSS, TEXAS, FLORIDA, NY, GEORGIA)."
-        ),
-    )
-    async def align_standards_case_tool(
-        text_description: str,
-        state: str = "CCSS",
-        grade: str | None = None,
-        output_format: str = "summary",
-    ) -> dict[str, Any]:
-        from src.tools.standards import align_standards_case
-        return align_standards_case(text_description, state, grade, output_format)
-
-    # ── Comprehension ──────────────────────────────────────────────────
-    @server.tool(
-        name="assess_comprehension",
-        description="Assess comprehension by analyzing question types against text complexity.",
-    )
-    async def assess_comprehension_tool(
-        text: str,
-        questions: str,
-        grade: str = "3",
-    ) -> dict[str, Any]:
-        from src.tools.diagnostics import analyze_lexile
-        text_analysis = analyze_lexile(text)
-
-        question_list = [q.strip() for q in questions.split("\n") if q.strip()]
-        if not question_list:
-            question_list = [q.strip() for q in questions.split("?") if q.strip()]
-            question_list = [q + "?" for q in question_list]
-
-        literal_keywords = {"who", "what", "when", "where", "which", "list", "name", "identify", "find"}
-        inferential_keywords = {"why", "how", "because", "compare", "contrast", "explain", "infer", "predict"}
-        evaluative_keywords = {"evaluate", "judge", "opinion", "do you think", "should", "best", "agree"}
-
-        question_analysis = []
-        for i, q in enumerate(question_list):
-            q_lower = q.lower()
-            if any(kw in q_lower for kw in evaluative_keywords):
-                q_type = "evaluative"
-            elif any(kw in q_lower for kw in inferential_keywords):
-                q_type = "inferential"
-            elif any(kw in q_lower for kw in literal_keywords):
-                q_type = "literal"
-            else:
-                q_type = "inferential"
-            question_analysis.append({"index": i + 1, "question": q, "type": q_type})
-
-        type_counts = {"literal": 0, "inferential": 0, "evaluative": 0}
-        for qa in question_analysis:
-            type_counts[qa["type"]] += 1
-
-        total_q = len(question_list)
-        literal_pct = round(type_counts["literal"] / total_q * 100) if total_q else 0
-        inferential_pct = round(type_counts["inferential"] / total_q * 100) if total_q else 0
-        evaluative_pct = round(type_counts["evaluative"] / total_q * 100) if total_q else 0
-
-        if grade in ("K", "1", "2"):
-            target_lit, target_inf, target_eval = 60, 30, 10
-        elif grade in ("3", "4"):
-            target_lit, target_inf, target_eval = 40, 40, 20
-        else:
-            target_lit, target_inf, target_eval = 30, 40, 30
-
-        return {
-            "text_complexity": {
-                "lexile": text_analysis.get("lexile_score"),
-                "grade_level": text_analysis.get("grade_level"),
-                "word_count": text_analysis.get("word_count"),
-            },
-            "questions": {
-                "total": total_q,
-                "breakdown": {
-                    "literal": {"count": type_counts["literal"], "percentage": literal_pct},
-                    "inferential": {"count": type_counts["inferential"], "percentage": inferential_pct},
-                    "evaluative": {"count": type_counts["evaluative"], "percentage": evaluative_pct},
-                },
-                "analysis": question_analysis,
-            },
-            "grade_targets": {"literal": target_lit, "inferential": target_inf, "evaluative": target_eval},
-            "recommendation": "See question type breakdown above for analysis.",
-            "framework_note": (
-                "Simple View of Reading: comprehension questions should assess both "
-                "decoding accuracy and linguistic understanding."
-            ),
-        }
-
-    # ── Remediation ────────────────────────────────────────────────────
-    @server.tool(
-        name="get_instructional_remediation",
-        description=(
-            "Generate a complete instructional remediation card. Returns: "
-            "Micro-PD, I Do/We Do/You Do script, multisensory cue, word chain, "
-            "corrective feedback. Deterministic — no LLM hallucinations."
-        ),
-    )
-    async def get_remediation(
-        deficit_code: str,
-        grade_level: str = "1st",
-    ) -> dict[str, Any]:
-        from src.tools.remediation import get_instructional_remediation as get_card
-        card = get_card(deficit_code, grade_level)
-        return {"card": card.model_dump(), "markdown": card.to_markdown()}
-
-    @server.tool(
-        name="recommend_decodable_resources",
-        description="Recommend decodable passages constrained to mastered skills.",
-    )
-    async def recommend_resources(
-        mastered_skills: str,
-        target_phoneme: str,
-        topic_interest: str = "",
-    ) -> dict[str, Any]:
-        from tools.decodable_resources import recommend_decodable_resources as rec
-        skills = [s.strip() for s in mastered_skills.split(",") if s.strip()]
-        topic = topic_interest.strip() or None
-        return rec(skills, target_phoneme, topic).model_dump()
-
-    @server.tool(
-        name="list_remediations",
-        description="List all available remediation deficit codes and skill names.",
-    )
-    async def list_remediations() -> dict[str, Any]:
-        from src.tools.remediation import list_available_remediations as list_r
-        return list_r()
-
-    # ── Privacy / FERPA ────────────────────────────────────────────────
-    @server.tool(
-        name="verify_privacy_status",
-        description="Verify FERPA compliance: confirms ZDR mode is active.",
-    )
-    async def verify_privacy_status() -> dict[str, Any]:
-        from tools.privacy_sanitizer import get_pii_manager
-        return get_pii_manager().get_status()
-
-    @server.tool(
-        name="create_privacy_session",
-        description="Create a new FERPA-compliant privacy session for student data.",
-    )
-    async def create_privacy_session(label: str = "") -> dict[str, Any]:
-        from tools.privacy_sanitizer import get_pii_manager
-        sid = get_pii_manager().create_session(label)
-        return {"session_id": sid, "zdr": True}
-
-    @server.tool(
-        name="anonymize_student_data",
-        description="Strip PII from student records and replace with synthetic tokens.",
-    )
-    async def anonymize_student_data(
-        students_json: str,
-        privacy_session_id: str,
-    ) -> dict[str, Any]:
-        import json as _json
-        from tools.privacy_sanitizer import get_pii_manager
-        records = _json.loads(students_json)
-        if isinstance(records, dict):
-            records = [records]
-        for r in records:
-            r["_session_id"] = privacy_session_id
-        mgr = get_pii_manager()
-        cleaned = mgr.anonymize_batch(records)
-        return {"students": cleaned, "session_id": privacy_session_id, "total_sanitized": len(cleaned)}
-
-    @server.tool(
-        name="destroy_privacy_session",
-        description="Destroy a privacy session and ALL PII mappings (Zero Data Retention).",
-    )
-    async def destroy_privacy_session(session_id: str) -> dict[str, Any]:
-        from tools.privacy_sanitizer import get_pii_manager
-        get_pii_manager().destroy_session(session_id)
-        return {"session_id": session_id, "destroyed": True, "zdr_enforced": True}
 
 
-# Register tools on the default stdio server
-register_tools(mcp)
+# ── Resource Registration ───────────────────────────────────────────────
 
 
-# ── Main ─────────────────────────────────────────────────────────────────
+@mcp.resource("sor://frameworks")
+def get_frameworks_resource() -> str:
+    """Return SoR theoretical frameworks (Scarborough's Rope, Simple View, etc.)."""
+    from src.resources.frameworks import list_frameworks_resource
+    import json
+    return json.dumps(list_frameworks_resource(), indent=2)
+
+
+@mcp.resource("sor://frameworks/syllable-rules")
+def get_syllable_rules_resource() -> str:
+    """Return syllable division rules (VC/CV, V/CV, VC/V, V/V, C+le)."""
+    from src.resources.frameworks import SYLLABLE_DIVISION_RULES, DIVISION_PROCEDURE_RULES
+    import json
+    return json.dumps({
+        "syllable_types": SYLLABLE_DIVISION_RULES,
+        "division_rules": DIVISION_PROCEDURE_RULES,
+    }, indent=2)
+
+
+@mcp.resource("sor://word-lists")
+def get_word_lists_resource() -> str:
+    """Return heart words, Dolch, Fry, and high-frequency word lists."""
+    from src.resources.word_lists import list_word_lists
+    import json
+    return json.dumps(list_word_lists(), indent=2)
+
+
+# ── Main ───────────────────────────────────────────────────────────────────
 
 
 def parse_args() -> argparse.Namespace:
@@ -470,16 +271,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Science of Reading MCP Server",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  server.py                          # stdio transport (production)
-  server.py --http 8080              # HTTP/SSE transport (dev)
-  server.py --seed-only              # seed database and exit
+        epilog="""Examples:
+  python server.py              # stdio transport (production)
+  python server.py --http 8080  # HTTP/SSE transport (dev)
         """,
     )
     parser.add_argument("--http", type=int, metavar="PORT", help="Run with HTTP/SSE transport")
-    parser.add_argument("--seed-only", action="store_true", help="Seed DB and exit")
-    parser.add_argument("--db-path", type=str, default=None, help="Path to DuckDB file")
     return parser.parse_args()
 
 
@@ -487,27 +284,37 @@ def main() -> None:
     """Entry point."""
     args = parse_args()
 
-    if args.db_path:
-        os.environ["SOR_DB_PATH"] = args.db_path
-
-    _ensure_db()
-
-    if args.seed_only:
-        print("Database seeded. Exiting.")
-        return
-
     if args.http:
         global mcp
         mcp = FastMCP(
             name="Science of Reading",
             host="0.0.0.0",
             port=args.http,
-            instructions="Evidence-based literacy analysis tools grounded in Science of Reading research.",
+            instructions=(
+                "Evidence-based literacy analysis tools bridging to sor.edtechlabs.dev API. "
+                "Tools: get_phonics_scope, verify_decodable_text, map_orthography, "
+                "lookup_competency. Prompts: generate_aligned_decodable, "
+                "explicit_phonics_routine."
+            ),
         )
-        register_tools(mcp)
+        # Re-register tools on the new instance
+        _register_all(mcp)
         mcp.run(transport="sse")
     else:
         mcp.run(transport="stdio")
+
+
+def _register_all(server: FastMCP) -> None:
+    """Re-register all tools/prompts/resources on a given server instance."""
+    server.tool(name="get_phonics_scope")(get_phonics_scope_tool)
+    server.tool(name="verify_decodable_text")(verify_decodable_text_tool)
+    server.tool(name="map_orthography")(map_orthography_tool)
+    server.tool(name="lookup_competency")(lookup_competency_tool)
+    server.prompt(name="generate_aligned_decodable")(generate_aligned_decodable_prompt)
+    server.prompt(name="explicit_phonics_routine")(explicit_phonics_routine_prompt)
+    server.resource("sor://frameworks")(get_frameworks_resource)
+    server.resource("sor://frameworks/syllable-rules")(get_syllable_rules_resource)
+    server.resource("sor://word-lists")(get_word_lists_resource)
 
 
 if __name__ == "__main__":

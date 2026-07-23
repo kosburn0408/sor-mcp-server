@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "science-of-reading": {
+      "command": "python",
+      "args": ["server.py"],
+      "env": {
+        "SOR_API_BASE_URL": "https://sor.edtechlabs.dev/api/v1",
+        "SOR_API_KEY": "",
+        "SOR_CACHE_TTL_SECONDS": "300",
+        "SOR_REQUEST_TIMEOUT": "10.0",
+        "SOR_MAX_RETRIES": "3"
+      }
+    }
+  }
+}
