@@ -119,7 +119,7 @@ def match_word_tool(word: str, grade: str | None = None) -> dict[str, Any]:
 
 @mcp.tool(
     name="search_evidence",
-    description="Query WWC/BEE/NRP research database by topic with effect sizes and findings.",
+    description="Query WWC/BEE/NRP research database by topic with effect sizes, findings, and publication links.",
 )
 def search_evidence_tool(topic: str) -> dict[str, Any]:
     from src.tools.evidence import search_evidence
@@ -146,7 +146,7 @@ def list_assessments_tool(tool_type: str | None = None) -> dict[str, Any]:
 
 @mcp.tool(
     name="align_standards",
-    description="Map text/skills description to academic standards (CCSS, TEKS, B.E.S.T., NY, GA).",
+    description="Map text/skills description to academic standards across 50 state frameworks with Standards Satchel (CASE®) deep links.",
 )
 def align_standards_tool(description: str, state: str = "GA", grade: str | None = None) -> dict[str, Any]:
     from src.tools.evidence import align_standards
@@ -213,6 +213,32 @@ async def explicit_phonics_routine_prompt(
     return await explicit_phonics_routine(target_phoneme=target_phoneme, grade=grade, multisensory=multisensory)
 
 
+@mcp.prompt(
+    name="vocabulary_tier_routine",
+    description="Generate an explicit Tier 2 vocabulary pre-teaching routine based on Isabel Beck's 3-Tier model.",
+)
+def vocabulary_tier_routine_prompt(
+    words: str,
+    grade: str = "2nd",
+    topic: str = "general reading",
+) -> str:
+    from src.prompts.vocabulary import build_vocabulary_routine
+    return build_vocabulary_routine(words=words, grade=grade, topic=topic)
+
+
+@mcp.prompt(
+    name="standards_alignment_routine",
+    description="Generate a lesson plan alignment plan integrated with Standards Satchel (Rosetta) CASE network deep links.",
+)
+def standards_alignment_routine_prompt(
+    skill: str,
+    state: str = "GA",
+    grade: str = "1st",
+) -> str:
+    from src.prompts.standards import build_standards_prompt
+    return build_standards_prompt(skill=skill, state=state, grade=grade)
+
+
 # ── Resources ──────────────────────────────────────────────────────────
 
 
@@ -245,6 +271,26 @@ def get_assessments_resource() -> str:
     from src.tools.evidence import list_assessments
     import json
     return json.dumps(list_assessments(), indent=2)
+
+
+@mcp.resource("sor://standards-satchel")
+def get_standards_satchel_resource() -> str:
+    import json
+    return json.dumps({
+        "portal_url": "https://rosetta.commongoodlt.com/",
+        "provider": "Common Good Learning Tools",
+        "specification": "1EdTech CASE® (Competencies and Academic Standards Exchange)",
+        "supported_states": 50,
+        "deep_link_pattern": "https://rosetta.commongoodlt.com/#/search?q={code}",
+        "case_api_pattern": "https://rosetta.commongoodlt.com/ims/case/v1p1/CFItems/{code}",
+    }, indent=2)
+
+
+@mcp.resource("sor://evidence/meta-analyses")
+def get_meta_analyses_resource() -> str:
+    from src.tools.evidence import search_evidence
+    import json
+    return json.dumps(search_evidence("phonics"), indent=2)
 
 
 # ── CLI & Main ─────────────────────────────────────────────────────────
@@ -304,11 +350,15 @@ def _register_all(server: FastMCP) -> None:
 
     server.prompt(name="generate_aligned_decodable")(generate_aligned_decodable_prompt)
     server.prompt(name="explicit_phonics_routine")(explicit_phonics_routine_prompt)
+    server.prompt(name="vocabulary_tier_routine")(vocabulary_tier_routine_prompt)
+    server.prompt(name="standards_alignment_routine")(standards_alignment_routine_prompt)
 
     server.resource("sor://frameworks")(get_frameworks_resource)
     server.resource("sor://frameworks/syllable-rules")(get_syllable_rules_resource)
     server.resource("sor://word-lists")(get_word_lists_resource)
     server.resource("sor://assessments")(get_assessments_resource)
+    server.resource("sor://standards-satchel")(get_standards_satchel_resource)
+    server.resource("sor://evidence/meta-analyses")(get_meta_analyses_resource)
 
 
 if __name__ == "__main__":

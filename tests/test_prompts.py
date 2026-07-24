@@ -1,4 +1,4 @@
-"""Tests for MCP prompts — decodable passage generator and phonics routine."""
+"""Tests for MCP prompts — decodable passage generator, phonics routine, vocabulary tier routine, and standards alignment."""
 
 from __future__ import annotations
 
@@ -6,6 +6,8 @@ import pytest
 
 from src.prompts.decodable import generate_aligned_decodable, DECODABLE_PASSAGE_PROMPT
 from src.prompts.phonics import explicit_phonics_routine, EXPLICIT_PHONICS_PROMPT
+from src.prompts.vocabulary import build_vocabulary_routine, VOCABULARY_TIER_PROMPT
+from src.prompts.standards import build_standards_prompt, STANDARDS_ALIGNMENT_PROMPT
 
 
 # ── generate_aligned_decodable ─────────────────────────────────────────
@@ -100,3 +102,28 @@ async def test_phonics_routine_framework_alignment() -> None:
     assert "Simple View of Reading" in result
     assert "National Reading Panel" in result
     assert "Scarborough" in result
+
+
+# ── vocabulary_tier_routine ───────────────────────────────────────────
+
+
+def test_vocabulary_tier_routine_builder() -> None:
+    """Builds Tier 2 vocabulary prompt with word list and grade."""
+    result = build_vocabulary_routine(["analyze", "contrast"], grade="3rd", topic="science passage")
+    assert "analyze, contrast" in result
+    assert "3rd" in result
+    assert "science passage" in result
+    assert "Beck 3-Tier Model" in result
+
+
+# ── standards_alignment_routine ───────────────────────────────────────
+
+
+def test_standards_alignment_routine_builder() -> None:
+    """Builds standards alignment prompt with Rosetta deep-link references."""
+    result = build_standards_prompt("decode words with silent e", state="GA", grade="1st")
+    assert "decode words with silent e" in result
+    assert "GA" in result
+    assert "1st" in result
+    assert "rosetta.commongoodlt.com" in result
+    assert "CASE v1.1" in result

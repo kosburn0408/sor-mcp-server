@@ -3,25 +3,31 @@
 [![MCP](https://img.shields.io/badge/MCP-1.26+-blue)](https://modelcontextprotocol.io)
 [![Python](https://img.shields.io/badge/Python-3.11+-green)](https://python.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-blue)](https://docker.com)
-[![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-lightgrey)](LICENSE)
+[![Web App](https://img.shields.io/badge/Web%20App-sor.edtechlabs.dev-purple)](https://sor.edtechlabs.dev)
+[![Standards](https://img.shields.io/badge/Standards-50%20States%20(CASE®)-orange)](https://rosetta.commongoodlt.com)
 
-Production-grade **Science of Reading** Model Context Protocol (MCP) server. Bridges LLMs to evidence-based literacy research (Simple View of Reading, Scarborough's Reading Rope, Five Pillars, WWC Practice Guides) via a hybrid execution engine (**Remote API + Local DuckDB OLAP database**).
+Production-grade **Science of Reading** Model Context Protocol (MCP) server & Material Design 3 Web Dashboard. Bridges LLMs and K-5 teachers to evidence-based literacy research (Simple View of Reading, Scarborough's Reading Rope, Five Pillars, WWC Practice Guides) via a hybrid execution engine (**Remote API + Local DuckDB OLAP database**).
 
----
-
-## Theoretical Frameworks
-
-| Framework | Key Insight |
-|---|---|
-| **Simple View of Reading** (Gough & Tunmer, 1986) | Reading comprehension = Decoding × Linguistic Comprehension |
-| **Scarborough's Reading Rope** (2001) | Skilled reading weaves together Word Recognition and Language Comprehension strands |
-| **Five Pillars** (NRP, 2000) | Phonemic Awareness, Phonics, Fluency, Vocabulary, Comprehension |
-| **WWC Practice Guides** (2010, 2016) | Evidence-based recommendations for K-3 foundational skills and comprehension |
-| **Three-Tier Vocabulary** (Beck, McKeown & Kucan, 2013) | Tier 1 (basic), Tier 2 (academic), Tier 3 (domain-specific) |
+🌐 **Live Web Application:** [https://sor.edtechlabs.dev](https://sor.edtechlabs.dev)
 
 ---
 
-## Exposed MCP Tools (14 Tools)
+## Theoretical Frameworks & Key Capabilities
+
+| Framework | Key Insight | Web & MCP Capability |
+|---|---|---|
+| **Simple View of Reading** (Gough & Tunmer, 1986) | Reading comprehension = Decoding × Linguistic Comprehension | `evaluate_simple_view` diagnostic + auto-generated printable I Do/We Do/You Do remediation cards |
+| **Scarborough's Reading Rope** (2001) | Skilled reading weaves together Word Recognition and Language Comprehension strands | Interactive Scarborough Rope breakdown & MTSS Tier 1/2/3 framework guides |
+| **Five Pillars** (NRP, 2000) | Phonemic Awareness, Phonics, Fluency, Vocabulary, Comprehension | Scope & sequence verification with `verify_decodable_text` and anti-cueing guardrails |
+| **Three-Tier Vocabulary** (Beck, McKeown & Kucan, 2013) | Tier 1 (basic), Tier 2 (academic), Tier 3 (domain-specific) | `classify_vocabulary` tool + explicit Tier 2 pre-teaching routine prompt |
+| **Standards Satchel CASE® Exchange** (Common Good Learning Tools) | Machine-readable standards across 50 state frameworks | `align_standards` with per-standard deep links (`rosetta.commongoodlt.com`) & CASE REST API URIs |
+| **WWC & BEE Evidence Base** (IES / WWC Practice Guides) | Standardized effect sizes ($d$) across randomized controlled trials | `search_evidence` with direct publication links and DOI references (`https://doi.org/...`) |
+
+---
+
+## Exposed MCP Server API (14 Tools, 4 Prompts, 6 Resources)
+
+### MCP Tools (14)
 
 | Tool | Description |
 |---|---|
@@ -32,19 +38,47 @@ Production-grade **Science of Reading** Model Context Protocol (MCP) server. Bri
 | `analyze_lexile` | Estimate Lexile score, word count, sentence complexity, and grade level |
 | `classify_vocabulary` | Classify text into Beck Tier 1/2/3 with instructional recommendations |
 | `match_word` | Single-word lookup in vocabulary corpus (tier, decodability, frequency) |
-| `search_evidence` | Query WWC/BEE/NRP research database by topic with effect sizes |
+| `search_evidence` | Query WWC/BEE/NRP research database by topic with effect sizes and DOIs |
 | `list_frameworks` | Enumerate theoretical frameworks and the 5 Pillars of Reading |
 | `list_assessments` | Browse evidence-based assessment tools (screener, diagnostic, PM, outcome) |
-| `align_standards` | Map text/skill description to CCSS, TEKS, B.E.S.T., NY, or GA standards |
+| `align_standards` | Map skill descriptions to 50 U.S. state frameworks with CASE® deep links |
 | `evaluate_simple_view` | Evaluate student profile using the Simple View of Reading diagnostic formula |
 | `get_instructional_remediation` | Get structured I Do / We Do / You Do explicit remediation cards |
 | `sanitize_pii` | FERPA-compliant PII anonymization before LLM processing |
+
+### MCP Prompts (4)
+
+| Prompt | Description |
+|---|---|
+| `generate_aligned_decodable` | Generate a Science of Reading-aligned decodable passage |
+| `explicit_phonics_routine` | Generate an explicit phonics routine with I Do/We Do/You Do script |
+| `vocabulary_tier_routine` | Generate an explicit Tier 2 vocabulary pre-teaching routine (Beck Model) |
+| `standards_alignment_routine` | Generate a lesson plan alignment plan with Standards Satchel CASE URIs |
+
+### MCP Resources (6)
+
+| Resource URI | Description |
+|---|---|
+| `sor://frameworks` | Theoretical frameworks (Simple View, Scarborough's Rope, 5 Pillars) |
+| `sor://frameworks/syllable-rules` | Orton-Gillingham 6 syllable types and division procedure rules |
+| `sor://word-lists` | Grade-level decodable word lists and high-frequency heart words |
+| `sor://assessments` | Categorized reading assessment instruments (DIBELS, Acadience, MAP) |
+| `sor://standards-satchel` | Common Good Learning Tools Standards Satchel CASE network metadata |
+| `sor://evidence/meta-analyses` | WWC/BEE research studies with effect sizes and publication DOIs |
 
 ---
 
 ## Quick Start
 
-### Local (Python)
+### Web Application (FastAPI + Material Design 3)
+
+```bash
+# Run FastAPI teacher web dashboard (Port 8093)
+python3 webapp.py
+```
+Access locally at `http://localhost:8093` or live at `https://sor.edtechlabs.dev`.
+
+### Local MCP Server (stdio mode)
 
 ```bash
 # Install dependencies
@@ -53,14 +87,14 @@ pip install -r requirements.txt
 # Verify / seed embedded database
 python3 server.py --seed-only
 
-# Run as MCP server (stdio mode)
+# Run as MCP server (stdio transport)
 python3 server.py
 
 # Force local offline DuckDB mode
 python3 server.py --offline
 ```
 
-### Docker
+### Docker Deployment
 
 ```bash
 # Build container
@@ -71,13 +105,6 @@ docker compose run --rm sor-seed
 
 # Run HTTP/SSE server (Port 8080)
 docker compose up sor-sse
-```
-
-### Web Dashboard
-
-```bash
-# Run FastAPI teacher web dashboard (Port 8093)
-python3 webapp.py
 ```
 
 ---
@@ -92,41 +119,9 @@ SoR MCP Server (FastMCP)
     │   ├── Primary: Upstream API (sor.edtechlabs.dev)
     │   └── Fallback: Local Embedded DuckDB (sor_evidence.duckdb)
     ├── 14 Tools Exposed
-    ├── 4 MCP Resources (sor://frameworks, sor://word-lists, etc.)
-    └── 2 MCP Prompts (generate_aligned_decodable, explicit_phonics_routine)
-```
-
----
-
-## Directory Structure
-
-```
-sor-mcp-server/
-├── server.py              # Main FastMCP server (14 tools, prompts, resources)
-├── webapp.py              # FastAPI teacher web dashboard
-├── pyproject.toml         # Package definition and build configuration
-├── requirements.txt       # Unified Python dependencies
-├── src/
-│   ├── client/            # Async httpx API client with caching & retries
-│   ├── config.py          # Pydantic environment configuration
-│   ├── core/              # Meta-tool router & error definitions
-│   ├── prompts/           # Decodable & phonics prompt builders
-│   ├── resources/         # Framework & word list resources
-│   ├── schemas/           # Pydantic v2 data models
-│   └── tools/             # Consolidated SoR analysis tools
-│       ├── decodability.py
-│       ├── diagnostics.py
-│       ├── evidence.py
-│       ├── orthography.py
-│       ├── phonics.py
-│       ├── privacy.py
-│       ├── remediation.py
-│       └── vocabulary.py
-├── db/
-│   ├── database.py        # Connection manager for DuckDB
-│   ├── schema.sql         # DuckDB schema
-│   └── seed.py            # Evidence & standards seed data
-└── tests/                 # Full Pytest test suite (67 tests)
+    ├── 4 MCP Prompts
+    ├── 6 MCP Resources
+    └── Privacy Layer (FERPA ZDR Anonymizer)
 ```
 
 ---

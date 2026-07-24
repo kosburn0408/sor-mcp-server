@@ -18,16 +18,6 @@ The National Reading Panel (2000) identified five essential, non-negotiable comp
 | 📚 **Vocabulary** | Knowing what words mean | Vocabulary in 1st grade predicts reading comprehension in 11th grade. The gap starts early and widens without intervention. |
 | 🧠 **Comprehension** | Understanding, remembering, and communicating what was read | This is the ultimate goal of all reading instruction. Every other pillar serves this one. |
 
-### Why This Matters Right Now
-
-**37% of American 4th graders read below the Basic level** on the NAEP (National Assessment of Educational Progress, 2024). That's not a curriculum problem — it's an implementation problem. The research is clear. What's missing is the bridge between what we know and what teachers can actually do at 8:15 on Monday morning.
-
-### What This Tool Does
-
-This MCP server **is that bridge.** It takes the body of SoR research — the frameworks, the effect sizes, the scope and sequences — and turns it into **printable, 5-minute lesson plans** that any teacher can use immediately. It validates that the texts you give students use only the phonics patterns they've been taught. It checks that your curriculum aligns with state standards and research evidence. And it does all of this without ever sending a student's name to an AI model.
-
-This is SoR research, operationalized.
-
 ---
 
 ## Who This Is For
@@ -42,159 +32,30 @@ This tool is built for **K-5 educators, reading specialists, and literacy coache
 | 📋 **Reading Specialist / Interventionist** | Pulls 6 students, batch-diagnoses, gets differentiated word chains and decodable passages for each group |
 | 🏫 **Literacy Coach** | Demonstrates explicit phonics routines during PLCs, aligns Tier 2 interventions to WWC evidence |
 | 💻 **EdTech Developer** | Integrates the MCP server into their reading app or assessment platform |
-| 🏛️ **District Curriculum Director** | Maps purchased curriculum to state standards using CASE GUID alignment, verifies scope and sequence compliance |
-
-### When to Use This Tool
-
-| Context | What You Do |
-|---|---|
-| 📊 **After universal screening** | Enter DIBELS/Acadience scores → get reading profile + remediation plan |
-| 📝 **Planning small groups** | Generate differentiated word chains and decodable passages per group |
-| 🤔 **"Why can't he read this?"** | Run `verify_decodable_text` to see exactly which words use untaught phonics patterns |
-| 📚 **Evaluating curriculum** | Check if a purchased program's scope and sequence aligns to research and state standards |
-| 🎓 **PLC / professional development** | Generate explicit I Do/We Do/You Do scripts for demo lessons |
-| 📄 **Writing IEP goals** | Get CASE-aligned standard references and evidence citations for goal justifications |
-
----
-
-## User Stories
-
-### Story 1: The 2nd Grade Teacher Who Just Got DIBELS Scores
-
-> *"Marcus scored Well Below Benchmark on NWF-CLS. His decoding score is 0.38. What do I do?"*
-
-**Before this tool:** You'd spend 45 minutes Googling "consonant blend interventions," find a TPT worksheet, and hope it targets the right skill.
-
-**With this tool:**
-
-1. Run the diagnostic:
-   ```
-   evaluate_simple_view(decoding=0.38, comprehension=0.75, grade="2nd")
-   ```
-
-2. The server auto-detects: **Dyslexia profile** → deficit codes: `cvc_mixed`, `consonant_blends`, `consonant_digraphs`
-
-3. Three remediation cards are generated automatically. You print them.
-
-4. Monday's 8:15 AM small group: **5-minute Consonant Blends routine** — complete script, word chain, multisensory cue, and corrective feedback language.
-
-**Result:** Marcus gets targeted instruction the next morning, not next week.
-
----
-
-### Story 2: The Reading Specialist With 6 Intervention Groups
-
-> *"I have 6 students across 3 grade levels with different deficits. I need differentiated materials."*
-
-**Before:** Hours of manual differentiation. Some kids get materials that don't actually match their scope and sequence.
-
-**With this tool:**
-
-1. Batch-diagnose all 6 students in one call
-2. For each student, generate:
-   - A **word chain** at their exact phonics level
-   - A **decodable passage** using only their mastered phonemes
-   - A **heart word list** for the sight words they haven't learned yet
-3. Run `verify_decodable_text` on every passage to guarantee no untaught patterns slip through
-
-**Result:** Six differentiated reading groups, each with scope-and-sequence-verified materials, in under 5 minutes.
-
----
-
-### Story 3: The Literacy Coach Running a PLC on Explicit Phonics
-
-> *"I need to demonstrate the I Do/We Do/You Do model for silent-e. My teachers are skeptical that it works."*
-
-**With this tool:**
-
-1. Request: `explicit_phonics_routine(target="silent_e", grade_level="2nd")`
-2. The server generates a complete script with:
-   - **Micro-PD** (2-sentence research basis — "NRP Phonics, d=0.48")
-   - **I DO** (Teacher models with think-aloud: "Watch me: cap → cape!")
-   - **WE DO** (Guided practice: "Let's try together: kit→kite, hop→hope")
-   - **YOU DO** (Independent: "Now you: can→cane, pin→pine")
-   - **Multisensory cue** (Magic E Wand — index card with 'e')
-   - **Corrective feedback** ("I see a silent-e. What does it tell the vowel to do?")
-
-3. Print and bring to PLC. Demo it live.
-
-**Result:** Teachers see the structure, try it next day, and Marcus starts decoding CVCe words.
-
----
-
-### Story 4: The Curriculum Director Evaluating a New Reading Program
-
-> *"This publisher says their program is 'Science of Reading aligned.' Is it?"*
-
-**With this tool:**
-
-1. Run `verify_decodable_text` on a sample passage from the program
-2. The verifier flags:
-   - 🔴 **Off-scope words** — words using phonics patterns not yet taught
-   - 🟡 **Heart words** — sight words that should be explicitly introduced, not expected to be decoded
-   - 🔴 **Cueing detected** — any text that encourages guessing from pictures or context
-3. Run `align_standards` to check if their scope maps to Georgia GSE
-4. Run `search_evidence` to see what the research actually says about their approach
-
-**Result:** You go into the adoption meeting with data, not opinions.
-
----
-
-## For Someone New to the Science of Reading
-
-If you're just starting your SoR journey, this tool helps you learn while you teach:
-
-### Learn the Five Pillars
-
-Ask: `list_frameworks()`
-
-The server returns the National Reading Panel's five pillars — the foundation of structured literacy:
-
-| Pillar | What It Means | Try This Tool |
-|---|---|---|
-| 🔤 **Phonemic Awareness** | Hearing individual sounds in words | `verify_decodable_text` — see how sounds map to print |
-| 📖 **Phonics** | Connecting sounds to letters | `get_phonics_scope(grade_level="1")` |
-| 📈 **Fluency** | Reading accurately with expression | `evaluate_simple_view` — decoding score feeds fluency |
-| 📚 **Vocabulary** | Knowing what words mean | `classify_vocabulary` — Tier 1/2/3 word breakdown |
-| 🧠 **Comprehension** | Understanding what you read | `analyze_lexile` — text complexity for comprehension |
-
-### Understand the Simple View of Reading
-
-The most important formula in literacy: **Reading = Decoding × Language Comprehension**
-
-Send any two scores (0.0–1.0) and the server tells you exactly what's happening:
-
-```
-Decoding: 0.95, Comprehension: 0.90 → "Typical reader — on track"
-Decoding: 0.40, Comprehension: 0.85 → "Dyslexia profile — focus on phonics"
-Decoding: 0.90, Comprehension: 0.35 → "Hyperlexic — focus on vocabulary and background knowledge"
-Decoding: 0.35, Comprehension: 0.35 → "Garden variety — prioritize decoding first"
-```
-
-### Avoid the 3-Cueing Mistake
-
-The server actively blocks strategies that reading research has discredited:
-
-| Strategy | Why It's Blocked |
-|---|---|
-| ❌ "Look at the picture for clues" | Teaches guessing, not decoding |
-| ❌ "What word would make sense here?" | MSV — Meaning, Structure, Visual cueing |
-| ❌ "Skip it and come back" | Avoids the decoding work entirely |
-| ✅ "Sound it out, left to right" | Phoneme-grapheme correspondence — this is the goal |
-
-Run any text through `verify_decodable_text` and the anti-cueing guardrails will flag problematic content.
-
----
+| 🏛️ **District Curriculum Director** | Maps purchased curriculum to state standards across 50 states using CASE GUID alignment, verifies scope and sequence compliance |
 
 ---
 
 ## How a Teacher Actually Uses This
 
-This is not an app from the App Store. It's a **server** that runs in the background and responds to questions. Here are the three ways a teacher can access it:
+### Option A: Web Dashboard (Recommended for Teachers)
 
-### Option A: Via an AI Agent (Recommended)
+A teacher-friendly Google Material Design 3 web application is live at:
+👉 **[https://sor.edtechlabs.dev](https://sor.edtechlabs.dev)**
 
-Your district runs the server once. Teachers access it through an AI assistant:
+- **No installation or command line needed.**
+- **6 Dedicated Segmented Tabs:**
+  1. 🩺 **Diagnose Student:** Input DIBELS/Acadience/MAP scores to generate printable small-group remediation cards.
+  2. 📖 **Check Decodability:** Check passages against phonics scopes and flag high-frequency Heart Words.
+  3. 📚 **Classify Vocabulary:** Highlight Tier 2 academic words using Isabel Beck's 3-Tier model.
+  4. 🔬 **Evidence Search:** Query WWC/BEE research studies with effect sizes ($d$) and direct paper publication links.
+  5. 🏛️ **Standards Alignment:** Search standards across **all 50 U.S. states** with deep links to [Standards Satchel](https://rosetta.commongoodlt.com/) by Common Good Learning Tools.
+  6. 🎓 **Teacher Guide:** Interactive accordion directions with Scarborough's Reading Rope diagrams.
+- **Context-Aware Left Pull-Out Drawer:** Click **`Topic & Research Guide`** at any time to view theoretical research and tool vocabulary dynamically populated for whichever tab you are currently viewing.
+
+### Option B: Via an AI Agent (MCP Server)
+
+Your district or local setup runs the MCP server once. Teachers access it through an AI assistant (Antigravity, Claude, or Hermes):
 
 ```
 Teacher: "Marcus scored 0.38 on decoding. What do I do?"
@@ -206,13 +67,7 @@ Server → Dyslexia profile → 3 remediation cards
 Teacher: Printable 5-minute lesson plan
 ```
 
-**What you need:** An IT person to run `docker compose up -d` once. Nothing on your MacBook.
-
-### Option B: Web Dashboard (Coming Soon)
-
-A teacher-friendly website at `sor.edtechlabs.dev` — paste scores, click Diagnose, download printable PDFs. No command line. **In development.**
-
-### Option C: Direct Install (Tech-Savvy)
+### Option C: Direct Install (Tech-Savvy / Developers)
 
 ```bash
 git clone https://github.com/kosburn0408/sor-mcp-server.git
@@ -220,121 +75,21 @@ pip install -r requirements.txt
 python3 server.py --seed-only && python3 server.py
 ```
 
-### Option D: Google Classroom / Canvas (Future)
-
-MCP support is coming to major LMS platforms (2026-2027). When it arrives, this server plugs directly into the tools you already use.
-
-| If You Are... | Use |
-|---|---|
-| 🍎 Classroom teacher | Option A (AI Agent) or Option B (Web Dashboard) |
-| 📋 Reading specialist | Option A (batch processing) |
-| 🏫 IT director | Docker on a server — one install for everyone |
-| 💻 Developer | Option C (direct API integration) |
-
-> **The bottom line:** You shouldn't need to install anything. The server works like Wi-Fi — invisible, always on, and you just get results.
-
 ---
 
 ## Data Privacy — FERPA by Design
 
-Student data privacy is not an afterthought — it's built into the architecture at the protocol level.
+Student data privacy is built into the architecture at the protocol level.
 
-### What We Do
-
-| Protection | How It Works |
-|---|---|
-| 🔒 **Names never reach AI** | Student identities are replaced with synthetic tokens (`std_a3f27b8c`) before any data leaves the server. The LLM sees "std_a3f27b8c, decoding=0.38" — never "Marcus Williams, decoding=0.38." |
-| 🗑️ **Zero Data Retention** | All identity mappings are destroyed when the session ends. No PII survives on disk, in logs, or in memory. |
-| 🛡️ **25 PII fields stripped** | First name, last name, student ID, email, date of birth, address, phone, guardian name — all removed before processing. |
-| 📋 **Audit trail (PII-free)** | Every anonymization event is logged — but the logs contain only tokens, never real names. |
-| ✅ **7/7 tests passing** | Automated tests verify that PII stripping, session destruction, and log sanitization work correctly every time. |
-
-### What We NEVER Do
-
-| Prohibited | Why |
-|---|---|
-| ❌ Send student names to cloud AI models | FERPA violation |
-| ❌ Store PII on disk or in databases | Unnecessary risk |
-| ❌ Log real names in audit trails | Privacy breach |
-| ❌ Share data with third parties | Your data stays on your machine |
-| ❌ Use student data to train models | Ethical boundary — non-negotiable |
-
-### Compliance
-
-| Standard | Status |
-|---|---|
-| **FERPA** | ✅ Compliant — no educational records exposed to unauthorized parties |
-| **COPPA** | ✅ Compliant — no data collection from children under 13 |
-| **GDPR Right to Erasure** | ✅ ZDR by default — data is ephemeral, never persisted |
-
-### How It Works, End to End
-
-```
-Teacher submits:  "Marcus Williams, GA-12345, decoding=0.38"
-                        ↓
-             [PII SANITIZATION LAYER]
-             Name → std_a3f27b8c
-             ID   → stripped entirely
-                        ↓
-AI Model sees:   "std_a3f27b8c, decoding=0.38, grade=2nd"
-             (NO real identity — only academic data)
-                        ↓
-AI generates:    "std_a3f27b8c needs: consonant blends remediation"
-                        ↓
-             [DE-ANONYMIZATION LAYER]
-             std_a3f27b8c → Marcus Williams
-                        ↓
-Teacher sees:    "Marcus Williams needs: consonant blends remediation"
-                        ↓
-             [SESSION END — ZDR]
-             All mappings destroyed. Nothing saved.
-```
-
-### Prove It Yourself
-
-The server includes a `verify_privacy_status` tool that returns the current operational state:
-
-```json
-{
-  "zdr_mode": true,
-  "pii_on_disk": false,
-  "pii_in_logs": false,
-  "active_sessions": 0,
-  "compliance": {
-    "ferpa": "compliant",
-    "coppa": "compliant",
-    "gdpr_right_to_erasure": "zdr_by_default"
-  }
-}
-```
-
-> **The promise:** This server knows everything about reading science and nothing about your students. That's by design.
+- 🔒 **Names never reach AI:** Student identities are replaced with synthetic tokens (`std_a3f27b8c`).
+- 🗑️ **Zero Data Retention (ZDR):** Identity mappings are destroyed when the session ends.
+- 🛡️ **25 PII fields stripped:** First name, last name, student ID, email, date of birth — all removed before processing.
 
 ---
 
-## Quick Start
+## MCP Server Capabilities (14 Tools, 4 Prompts, 6 Resources)
 
-### From Docker (Recommended)
-
-```bash
-git clone https://github.com/kosburn0408/sor-mcp-server.git
-cd sor-mcp-server
-docker compose up -d
-```
-
-### From pip
-
-```bash
-pip install -r requirements.txt
-python3 server.py --seed-only
-python3 server.py
-```
-
----
-
-## Tool Reference
-
-### Diagnostic Tools
+### Tools (14)
 
 | Tool | Input | Output |
 |---|---|---|
@@ -342,70 +97,37 @@ python3 server.py
 | `evaluate_simple_view` | decoding, comprehension scores | Reading profile + auto-remediation |
 | `analyze_lexile` | Text | Lexile score + grade level |
 | `classify_vocabulary` | Text | Tier 1/2/3 word breakdown |
-
-### Verification Tools
-
-| Tool | Input | Output |
-|---|---|---|
 | `verify_decodable_text` | Text, scope | % decodable, off-scope words, cueing flags |
-| `search_evidence` | Topic | WWC/BEE/NRP papers with effect sizes |
-| `align_standards_case` | Skill description, state | CASE GUIDs + state standard codes |
-
-### Remediation Tools
-
-| Tool | Input | Output |
-|---|---|---|
+| `search_evidence` | Topic | WWC/BEE/NRP papers with effect sizes & DOIs |
+| `align_standards` | Skill description, state | CASE GUIDs + 50-state standard codes & Rosetta deep links |
 | `get_instructional_remediation` | deficit_code, grade | Full remediation card (I Do/We Do/You Do) |
-| `explicit_phonics_routine` | Target skill, grade | Structured teaching script |
-| `decodable_passage_builder` | Mastered phonemes, target | Skill-constrained passage |
-| `multisyllabic_decoding_routine` | Word list, syllable type | Syllable division + mapping |
+| `map_orthography` | Word list | Phonemes, graphemes, syllable division |
+| `get_phonics_scope` | Grade, unit | Target phonemes, graphemes, heart words |
+| `lookup_competency` | Skill, state | CASE framework alignment |
+| `match_word` | Word, grade | Single word corpus lookup |
+| `list_frameworks` | — | Enumerates 5 Pillars and Reading Rope |
+| `list_assessments` | tool_type | Assessment instruments database |
+| `sanitize_pii` | Data dict | FERPA-sanitized student data |
 
-### Privacy Tools
+### MCP Prompts (4)
 
-| Tool | Input | Output |
+| Prompt | Input | Output |
 |---|---|---|
-| `create_privacy_session` | Label | Session ID for anonymous tracking |
-| `anonymize_student_data` | Student records JSON | PII-free academic data |
-| `destroy_privacy_session` | Session ID | Confirms ZDR enforcement |
-| `verify_privacy_status` | — | FERPA compliance status |
+| `generate_aligned_decodable` | grade, unit, topic | Science of Reading decodable passage |
+| `explicit_phonics_routine` | target_phoneme, grade | Scripted I Do / We Do / You Do lesson |
+| `vocabulary_tier_routine` | words, grade, topic | Isabel Beck Tier 2 pre-teaching routine |
+| `standards_alignment_routine` | skill, state, grade | Lesson plan standard alignment with CASE URIs |
 
----
+### MCP Resources (6)
 
-## Error Codes
-
-The server returns structured error codes instead of stack traces:
-
-| Code | Meaning |
+| Resource URI | Content |
 |---|---|
-| `ERR_OFF_SCOPE_PHONEME` | This phoneme isn't in the scope and sequence for this grade |
-| `ERR_INVALID_GRADE_BAND` | Grade must be K–5 |
-| `ERR_CUEING_DETECTED` | Content uses 3-cueing/MSV strategies — blocked |
-| `ERR_HEART_WORD_AS_DECODABLE` | This word is a heart word, not fully decodable at this level |
-| `ERR_INVALID_SYLLABLE_TYPE` | Unknown syllable type — use: closed, open, VCe, r-controlled, vowel team, C+le |
-| `ERR_UNTAUGHT_PATTERN` | This pattern hasn't been taught in the provided scope and sequence |
-| `ERR_MISSING_SCOPE` | A scope and sequence is required for this verification |
-
----
-
-## Research Basis
-
-Every tool response references the underlying research:
-
-| Framework | What It Says |
-|---|---|
-| **Simple View of Reading** (Gough & Tunmer, 1986) | Reading = Decoding × Language Comprehension |
-| **Scarborough's Reading Rope** (2001) | Reading weaves word recognition + language comprehension strands |
-| **National Reading Panel** (2000) | Five pillars: Phonemic Awareness, Phonics, Fluency, Vocabulary, Comprehension |
-| **WWC Practice Guides** | Evidence-based recommendations from IES What Works Clearinghouse |
-| **BEE Meta-Analyses** | Effect sizes from Johns Hopkins Best Evidence Encyclopedia |
-
----
-
-## Getting Help
-
-- **GitHub Issues:** [kosburn0408/sor-mcp-server/issues](https://github.com/kosburn0408/sor-mcp-server/issues)
-- **Example workflows:** See the `examples/` directory in the repository
-- **Hackathon submission:** Global MCP Hackathon 2026 — Education/Public Good category
+| `sor://frameworks` | Theoretical frameworks (Simple View, Reading Rope, 5 Pillars) |
+| `sor://frameworks/syllable-rules` | Orton-Gillingham 6 syllable types and division procedures |
+| `sor://word-lists` | Decodable word lists and high-frequency heart words |
+| `sor://assessments` | Reading assessment instruments catalog |
+| `sor://standards-satchel` | Standards Satchel (Rosetta) CASE network metadata |
+| `sor://evidence/meta-analyses` | WWC/BEE research studies with effect sizes and DOIs |
 
 ---
 
