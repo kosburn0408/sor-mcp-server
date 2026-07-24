@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import time, uvicorn
 
-app = FastAPI(title="SoR Dashboard", version="3.5")
+app = FastAPI(title="SoR Dashboard", version="3.6")
 
 # ── Static Files Mount ──────────────────────────────────────────────────────
 base_dir = Path(__file__).resolve().parent
@@ -100,7 +100,7 @@ def _query_research(base: Path):
 
         papers = []
         for row in conn.execute(
-            "SELECT id, title, authors, year, framework, finding, effect_size, source "
+            "SELECT id, title, authors, year, framework, finding, effect_size, source, url "
             "FROM research_papers ORDER BY id"
         ).fetchall():
             papers.append({
@@ -112,6 +112,7 @@ def _query_research(base: Path):
                 "finding": row[5] or "",
                 "effect_size": round(row[6], 2) if row[6] else None,
                 "source": row[7],
+                "url": row[8] or "",
             })
 
         conn.close()
@@ -140,6 +141,7 @@ def _build_pillar_findings(papers):
             "year": p["year"],
             "effect_size": p["effect_size"],
             "source": p["source"],
+            "url": p["url"],
             "finding": p["finding"][:200] if p["finding"] else "",
         })
     return findings
@@ -819,7 +821,7 @@ footer {{
   <div class="tab-pane" id="tab-evidence">
     <div class="m3-card">
       <div class="m3-card-title"><i class="fa-solid fa-microscope"></i> Evidence & Research Search</div>
-      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Query What Works Clearinghouse (WWC) and Best Evidence Encyclopedia (BEE) meta-analyses for literacy interventions and effect sizes.</p>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Query What Works Clearinghouse (WWC) and Best Evidence Encyclopedia (BEE) meta-analyses for literacy interventions and effect sizes with direct links to full research papers.</p>
       <form id="evidenceForm">
         <div class="form-group">
           <label>Topic or Skill Area</label>
@@ -991,7 +993,7 @@ footer {{
           <ol style="padding-left:1.4rem;line-height:1.7;color:#333">
             <li>Click the <strong>Evidence Search</strong> tab.</li>
             <li>Type any skill area such as <code>phonemic awareness</code>, <code>fluency</code>, <code>phonics</code>, or <code>comprehension</code>.</li>
-            <li>Review effect sizes ($d$), source studies, and practical classroom takeaways.</li>
+            <li>Review effect sizes ($d$), source studies, and click <strong>Read Full Paper / Study</strong> to view the original study or IES practice guide.</li>
           </ol>
         </div>
       </div>
@@ -1088,8 +1090,10 @@ function renderResearchSidebar() {{
     html += '<div style="background:var(--md-sys-color-surface-variant);padding:0.75rem;border-radius:10px;margin-bottom:0.6rem">';
     html += '<div style="font-weight:700;font-size:0.85rem;color:#1C1B1F">' + p.title + '</div>';
     html += '<div style="font-size:0.75rem;color:var(--md-sys-color-secondary)">' + p.authors + ' (' + p.year + ')</div>';
-    if(p.effect_size) html += '<span class="profile-badge profile-typical" style="font-size:0.65rem;padding:0.1rem 0.4rem;margin-top:0.3rem">d=' + p.effect_size + '</span>';
-    html += '</div>';
+    html += '<div style="margin-top:0.4rem;display:flex;align-items:center;justify-content:space-between">';
+    if(p.effect_size) html += '<span class="profile-badge profile-typical" style="font-size:0.65rem;padding:0.1rem 0.4rem">d=' + p.effect_size + '</span>';
+    if(p.url) html += '<a href="' + p.url + '" target="_blank" style="font-size:0.75rem;color:var(--md-sys-color-primary);font-weight:700"><i class="fa-solid fa-arrow-up-right-from-square"></i> Read Paper</a>';
+    html += '</div></div>';
   }});
   document.getElementById('researchSidebarContent').innerHTML = html;
 }}
@@ -1261,11 +1265,31 @@ document.getElementById('evidenceForm').addEventListener('submit', async functio
   var topic = document.getElementById('evidenceTopic').value;
   var resp = await fetch('/api/evidence?topic=' + encodeURIComponent(topic));
   var r = await resp.json();
+
   var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">🔬 Research Evidence for "' + r.topic + '"</h3>';
   html += '<p style="color:var(--md-sys-color-secondary);margin-bottom:1rem">' + r.total_papers + ' studies found' + (r.average_effect_size ? ' • Average effect size: d=' + r.average_effect_size : '') + '</p>';
+
   (r.papers||[]).forEach(function(p){{
-    html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.1rem;margin:.7rem 0;border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong style="color:#1C1B1F;font-size:1rem">' + p.title + '</strong> (' + p.year + ')<br><span style="color:var(--md-sys-color-tertiary);font-weight:700">Effect Size d=' + p.effect_size + '</span> — <span style="color:var(--md-sys-color-primary);font-weight:600">' + p.source + '</span><br><p style="font-size:.9rem;color:#444;margin-top:.4rem">' + (p.finding||'') + '</p></div>';
+    html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.2rem;margin:.8rem 0;border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.6rem">';
+    html += '<div><strong style="color:#1C1B1F;font-size:1.05rem">' + p.title + '</strong> <span style="color:var(--md-sys-color-secondary);font-size:0.85rem">(' + p.authors + ', ' + p.year + ')</span></div>';
+    if (p.url) {{
+      html += '<a href="' + p.url + '" target="_blank" class="hub-btn" style="padding:0.4rem 0.9rem;font-size:0.78rem;background:var(--md-sys-color-primary);color:#fff;font-weight:700" title="Open full research paper / study document"><i class="fa-solid fa-arrow-up-right-from-square"></i> Read Full Study (' + p.source + ')</a>';
+    }}
+    html += '</div>';
+
+    if (p.effect_size) {{
+      html += '<div style="margin-top:0.5rem"><span class="profile-badge profile-typical" style="font-size:0.75rem;padding:0.15rem 0.6rem"><i class="fa-solid fa-chart-line"></i> Effect Size d = ' + p.effect_size + '</span> <span style="color:var(--md-sys-color-primary);font-weight:600;font-size:0.85rem;margin-left:0.4rem">' + p.source + '</span></div>';
+    }}
+
+    html += '<p style="font-size:.95rem;color:#333;margin-top:.6rem">' + (p.finding||'') + '</p>';
+
+    if (p.url) {{
+      html += '<div style="font-size:0.78rem;color:var(--md-sys-color-secondary);margin-top:0.6rem;display:flex;align-items:center;gap:0.6rem"><i class="fa-solid fa-file-pdf" style="color:var(--md-sys-color-primary)"></i> <span>Direct Publication Link: <a href="' + p.url + '" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline">' + p.url + '</a></span></div>';
+    }}
+    html += '</div>';
   }});
+
   document.getElementById('evidenceResult').innerHTML = html;
   document.getElementById('evidenceResult').classList.add('show');
 }});
@@ -1356,7 +1380,7 @@ async def standards(data: dict):
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "sor-dashboard", "version": "3.5"}
+    return {"status": "healthy", "service": "sor-dashboard", "version": "3.6"}
 
 
 if __name__ == "__main__":
