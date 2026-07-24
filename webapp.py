@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import time, uvicorn
 
-app = FastAPI(title="SoR Dashboard", version="3.0")
+app = FastAPI(title="SoR Dashboard", version="3.1")
 
 # ── Static Files Mount ──────────────────────────────────────────────────────
 base_dir = Path(__file__).resolve().parent
@@ -954,7 +954,7 @@ footer {{
           <p style="margin-bottom:0.8rem"><strong>Goal:</strong> Attach official state framework standard codes to your reading intervention plans.</p>
           <ol style="padding-left:1.4rem;line-height:1.7;color:#333">
             <li>Click the <strong>Standards Alignment</strong> tab.</li>
-            <li>Enter your reading goal or skill (e.g. <em>decode words with consonant blends</em>).</li>
+            <li>Enter your reading goal or skill (e.g. <em>decode words with silent e</em>).</li>
             <li>Select your state framework (Georgia GSE, CCSS, Texas TEKS, Florida B.E.S.T.).</li>
             <li>Copy the official standard code directly into your lesson plan.</li>
           </ol>
@@ -1131,13 +1131,22 @@ document.getElementById('decodabilityForm').addEventListener('submit', async fun
   if(!data.text.trim()) return alert('Please paste a passage to check.');
   var resp = await fetch('/api/decodability', {{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(data)}});
   var r = await resp.json();
+  if(r.error_code || r.error) {{
+    alert('Analysis Error: ' + (r.error_message || r.error || r.message));
+    return;
+  }}
+  var totalWords = r.total_words || 0;
+  var pct = r.decodable_pct !== undefined ? r.decodable_pct : 0;
+  var offScope = r.off_scope_words || [];
+  var heartWords = r.heart_words || [];
+
   var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">📊 Decodability Report</h3>';
-  html += '<div class="stats-grid"><div class="stat"><div class="stat-num">' + r.total_words + '</div><div class="stat-label">Total Words</div></div>';
-  html += '<div class="stat"><div class="stat-num">' + r.decodable_pct + '%</div><div class="stat-label">Decodable</div></div>';
-  html += '<div class="stat"><div class="stat-num">' + (r.off_scope_words||[]).length + '</div><div class="stat-label">Off-Scope</div></div>';
-  html += '<div class="stat"><div class="stat-num">' + (r.heart_words||[]).length + '</div><div class="stat-label">Heart Words</div></div></div>';
-  if(r.off_scope_words && r.off_scope_words.length) html += '<p style="color:#D32F2F;margin-top:.8rem"><strong>⚠️ Off-scope words:</strong> ' + r.off_scope_words.join(', ') + '</p>';
-  if(r.heart_words && r.heart_words.length) html += '<p style="color:#E65100;margin-top:.4rem"><strong>💛 Heart words to pre-teach:</strong> ' + r.heart_words.join(', ') + '</p>';
+  html += '<div class="stats-grid"><div class="stat"><div class="stat-num">' + totalWords + '</div><div class="stat-label">Total Words</div></div>';
+  html += '<div class="stat"><div class="stat-num">' + pct + '%</div><div class="stat-label">Decodable</div></div>';
+  html += '<div class="stat"><div class="stat-num">' + offScope.length + '</div><div class="stat-label">Off-Scope</div></div>';
+  html += '<div class="stat"><div class="stat-num">' + heartWords.length + '</div><div class="stat-label">Heart Words</div></div></div>';
+  if(offScope.length) html += '<p style="color:#D32F2F;margin-top:.8rem"><strong>⚠️ Off-scope words:</strong> ' + offScope.join(', ') + '</p>';
+  if(heartWords.length) html += '<p style="color:#E65100;margin-top:.4rem"><strong>💛 Heart words to pre-teach:</strong> ' + heartWords.join(', ') + '</p>';
   document.getElementById('decodeResult').innerHTML = html;
   document.getElementById('decodeResult').classList.add('show');
 }});
@@ -1240,7 +1249,7 @@ async def standards(data: dict):
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "sor-dashboard", "version": "3.0"}
+    return {"status": "healthy", "service": "sor-dashboard", "version": "3.1"}
 
 
 if __name__ == "__main__":

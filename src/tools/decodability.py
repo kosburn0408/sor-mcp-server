@@ -19,7 +19,7 @@ MANDATORY_HEART_WORDS: set[str] = {
     "and", "up", "at", "see", "he", "do", "you", "an", "can", "no", "am", "said", "was",
     "are", "have", "has", "of", "his", "had", "him", "her", "some", "as", "then", "could",
     "when", "were", "them", "ask", "over", "just", "from", "any", "how", "know", "put",
-    "every", "old", "by", "after", "think", "let", "going", "walk", "again", "may",
+    "every", "old", "by", "after", "think", "let", "going", "walk", "again", "may", "who", "where", "what"
 }
 
 PHONICS_PATTERNS: dict[str, list[str]] = {
@@ -44,6 +44,7 @@ PHONICS_PATTERNS: dict[str, list[str]] = {
         r"^(spr|str|scr|spl|shr|thr)",
         r"(ing|ed|er|est|ly|ful|less|ness|ment)",
         r"^(un|re|pre|mis|dis)",
+        r"(ar|or|er|ir|ur)",
     ],
     "3": [
         r"(tion|sion|ture|cious|tious)",
@@ -60,16 +61,27 @@ def check_decodability(text: str, grade_level: str = "1", target_skill: str = "c
     if not text or not text.strip():
         return {"error_code": "ERR_INVALID_INPUT", "message": "Text is empty"}
 
-    grade = grade_level.upper().strip()
-    if grade not in {"K", "1", "2", "3", "4", "5"}:
-        return format_api_error(SoRAPIErrorCode.ERR_INVALID_GRADE_BAND, grade=grade_level)
+    # Normalize grade strings e.g. "2nd" -> "2", "1st" -> "1", "Grade 3" -> "3"
+    raw_grade = str(grade_level).strip().upper()
+    grade_map = {
+        "K": "K", "KINDERGARTEN": "K",
+        "1": "1", "1ST": "1", "GRADE 1": "1",
+        "2": "2", "2ND": "2", "GRADE 2": "2",
+        "3": "3", "3RD": "3", "GRADE 3": "3",
+        "4": "4", "4TH": "4", "GRADE 4": "4",
+        "5": "5", "5TH": "5", "GRADE 5": "5",
+    }
+    grade = grade_map.get(raw_grade, "")
+    if not grade:
+        match = re.search(r"[K1-5]", raw_grade)
+        grade = match.group(0) if match else "2"
 
     words = re.findall(r"[a-zA-Z]+(?:'[a-zA-Z]+)?", text.lower())
     if not words:
         return {"error_code": "ERR_INVALID_INPUT", "message": "No valid words found"}
 
     grade_order = ["K", "1", "2", "3", "4", "5"]
-    max_idx = grade_order.index(grade) if grade in grade_order else 1
+    max_idx = grade_order.index(grade) if grade in grade_order else 2
     active_patterns: list[str] = []
     for g in grade_order[: max_idx + 1]:
         active_patterns.extend(PHONICS_PATTERNS.get(g, []))
@@ -103,12 +115,13 @@ def check_decodability(text: str, grade_level: str = "1", target_skill: str = "c
         "decodable_pct": pct,
         "total_words": total,
         "decodable_count": decodable_count,
-        "off_scope_words": list(set(off_scope)),
+        "off_scope_words": sorted(list(set(off_scope))),
         "heart_words": heart_words_found,
         "instructional_level": level,
         "cueing_flags": [],
         "substitutions": {},
-        "grade_level": grade_level,
+        "grade_level": grade,
+        "target_skill": target_skill,
         "source": "local_scope_engine",
     }
 
@@ -121,9 +134,9 @@ async def verify_decodable_text(
     settings: Settings | None = None,
 ) -> dict[str, Any]:
     """Verify text decodability asynchronously via API with local fallback."""
-    valid_grades = {"K", "1", "2", "3", "4", "5"}
-    if grade_level not in valid_grades:
-        return format_api_error(SoRAPIErrorCode.ERR_INVALID_GRADE_BAND, grade=grade_level)
+    raw_grade = str(grade_level).strip().upper()
+    grade_map = {"K": "K", "1ST": "1", "1": "1", "2ND": "2", "2": "2", "3RD": "3", "3": "3", "4TH": "4", "4": "4", "5TH": "5", "5": "5"}
+    grade = grade_map.get(raw_grade, "2")
 
     if not text or not text.strip():
         return format_api_error(SoRAPIErrorCode.ERR_INVALID_INPUT, detail="text is empty")
@@ -134,10 +147,9 @@ async def verify_decodable_text(
             detail=f"text exceeds 5000 character limit ({len(text)} chars)",
         )
 
-    # Try client API if available
     if client is not None:
         try:
-            result = await client.verify_decodable_text(text, grade_level, unit)
+            result = await client.verify_decodable_text(text, grade, unit)
             level = "independent" if result.decodable_pct >= 95 else ("instructional" if result.decodable_pct >= 90 else "frustration")
             return {
                 "status": "ok",
@@ -150,14 +162,14 @@ async def verify_decodable_text(
                 "warnings": [],
                 "instructional_level": level,
                 "recommendation": _get_recommendation(level, result.decodable_pct),
-                "grade_level": grade_level,
+                "grade_level": grade,
                 "unit": unit,
                 "source": "sor.edtechlabs.dev",
             }
         except Exception:
-            pass  # Fall through to local engine
+            pass
 
-    local_res = check_decodability(text, grade_level)
+    local_res = check_decodability(text, grade)
     if "error_code" in local_res:
         return local_res
     pct = local_res["decodable_pct"]
