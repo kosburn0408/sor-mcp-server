@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import time, uvicorn
 
-app = FastAPI(title="SoR Dashboard", version="3.6")
+app = FastAPI(title="SoR Dashboard", version="3.7")
 
 # ── Static Files Mount ──────────────────────────────────────────────────────
 base_dir = Path(__file__).resolve().parent
@@ -214,11 +214,33 @@ h1, h2, h3, h4, .font-heading {{
   padding: 0.8rem 1.8rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.2rem;
   position: sticky;
   top: 0;
   z-index: 500;
   box-shadow: var(--md-elevation-1);
+}}
+
+.drawer-trigger-btn {{
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border: none;
+  padding: 0.55rem 1.1rem;
+  border-radius: var(--md-shape-corner-full);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(103,80,164,0.15);
+}}
+.drawer-trigger-btn:hover {{
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  transform: translateY(-1px);
 }}
 
 .app-bar-brand {{
@@ -620,19 +642,56 @@ input:focus, select:focus, textarea:focus {{
 .spinner {{ display: none; text-align: center; padding: 2rem; color: var(--md-sys-color-primary); font-weight: 600; }}
 .spinner.show {{ display: block; }}
 
-/* ── Sidebar ── */
+/* ── Context-Aware Pull-Out Left Drawer ── */
 .sidebar-backdrop {{
-  position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 800; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 800; opacity: 0; pointer-events: none; transition: opacity 0.3s;
 }}
 .sidebar-backdrop.open {{ opacity: 1; pointer-events: auto; }}
 
 .sidebar {{
-  position: fixed; top: 0; left: 0; height: 100vh; width: 360px; max-width: 85vw;
+  position: fixed; top: 0; left: 0; height: 100vh; width: 420px; max-width: 90vw;
   background: var(--md-sys-color-surface); color: #1C1B1F; z-index: 900; overflow-y: auto;
-  transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateX(-100%); transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--md-elevation-3); border-right: 1px solid var(--md-sys-color-surface-variant);
 }}
 .sidebar.open {{ transform: translateX(0); }}
+
+.drawer-section {{
+  background: var(--md-sys-color-surface-variant);
+  border-radius: var(--md-shape-corner-medium);
+  padding: 1.2rem;
+  margin-bottom: 1.2rem;
+  border-left: 4px solid var(--md-sys-color-primary);
+}}
+.drawer-section-title {{
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--md-sys-color-primary);
+  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}}
+.drawer-concept-item {{
+  background: var(--md-sys-color-surface);
+  border-radius: var(--md-shape-corner-small);
+  padding: 0.75rem 0.9rem;
+  margin: 0.5rem 0;
+  border: 1px solid rgba(121, 116, 126, 0.12);
+}}
+.drawer-concept-term {{
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #1C1B1F;
+}}
+.drawer-concept-def {{
+  font-size: 0.86rem;
+  color: #49454F;
+  margin-top: 0.2rem;
+  line-height: 1.5;
+}}
 
 footer {{
   text-align: center;
@@ -656,18 +715,25 @@ footer {{
 <!-- Sidebar Backdrop -->
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
-<!-- Sidebar Panel -->
+<!-- Context-Aware Dynamic Pull-Out Left Drawer -->
 <aside class="sidebar" id="sidebar">
-  <div style="padding:1.5rem;border-bottom:1px solid var(--md-sys-color-surface-variant);background:var(--md-sys-color-primary-container)">
-    <h2 style="color:var(--md-sys-color-on-primary-container);font-size:1.2rem;font-weight:700">🔬 Science of Reading Evidence</h2>
-    <div style="font-size:0.8rem;color:var(--md-sys-color-secondary);margin-top:0.2rem">Research Papers & Theoretical Models</div>
+  <div style="padding:1.4rem;border-bottom:1px solid var(--md-sys-color-surface-variant);background:var(--md-sys-color-primary-container);display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <h2 style="color:var(--md-sys-color-on-primary-container);font-size:1.15rem;font-weight:700" id="drawerTitle">🔬 Topic & Research Guide</h2>
+      <div style="font-size:0.75rem;color:var(--md-sys-color-secondary);margin-top:0.15rem">Contextual Science of Reading Research & Concepts</div>
+    </div>
+    <button onclick="closeSidebar()" style="background:transparent;border:none;font-size:1.3rem;color:var(--md-sys-color-on-primary-container);cursor:pointer;padding:0.4rem" title="Close Drawer"><i class="fa-solid fa-xmark"></i></button>
   </div>
 
-  <div style="padding:1.2rem" id="researchSidebarContent"></div>
+  <div style="padding:1.4rem" id="sidebarDynamicContent"></div>
 </aside>
 
 <!-- Top App Bar -->
 <header class="app-bar">
+  <button class="drawer-trigger-btn" id="sidebarToggle" title="Open Topic & Research Guide">
+    <i class="fa-solid fa-bars-staggered"></i>
+    <span>Topic & Research Guide</span>
+  </button>
   <div class="app-bar-brand">
     <div class="app-bar-icon"><i class="fa-solid fa-brain"></i></div>
     <div>
@@ -675,9 +741,6 @@ footer {{
       <div class="app-bar-subtitle">Science of Reading Teacher Workspace</div>
     </div>
   </div>
-  <button class="hub-btn" id="sidebarToggle" title="Open Research & Evidence Hub">
-    <i class="fa-solid fa-flask"></i> Research Hub
-  </button>
 </header>
 
 <!-- M3 Segmented Navigation Tabs -->
@@ -1035,6 +1098,124 @@ var FRAMEWORKS = {FRAMEWORKS_JSON};
 var PAPERS = {PAPERS_JSON};
 var PILLAR_FINDINGS = {PILLAR_FINDINGS_JSON};
 
+// Context-Aware Content Dictionary for Left Pull-Out Drawer
+var CONTEXT_GUIDES = {{
+  'tab-diagnose': {{
+    title: '🩺 Simple View & Student Diagnostic Guide',
+    research: {{
+      title: 'Gough & Tunmer (1986); Hoover & Gough (1990)',
+      summary: 'The Simple View of Reading states that Reading Comprehension (R) is the product of Decoding (D) and Language Comprehension (LC): R = D x LC. Both components are required for reading competence.',
+      doi: 'https://doi.org/10.1007/BF02648824'
+    }},
+    concepts: [
+      {{ term: 'Decoding Score (D)', def: 'Measures pseudoword and word reading accuracy (e.g. DIBELS NWF-CLS or Acadience). Range: 0.0 to 1.0.' }},
+      {{ term: 'Language Comprehension (LC)', def: 'Measures listening comprehension or cloze maze performance (e.g. DIBELS Maze or MAP). Range: 0.0 to 1.0.' }},
+      {{ term: 'Dyslexia / Decoding Deficit', def: 'Weak decoding (D < 0.6) with strong listening comprehension (LC >= 0.6). Requires explicit phonics & orthographic mapping.' }},
+      {{ term: 'Hyperlexia / Specific Comprehension Deficit', def: 'Strong decoding (D >= 0.6) with weak listening comprehension (LC < 0.6). Requires vocabulary & syntax support.' }},
+      {{ term: 'Garden-Variety / Dual Deficit', def: 'Weaknesses in both decoding and comprehension. Requires multi-component tier 2/3 intervention.' }},
+      {{ term: 'Scripted I Do / We Do / You Do', def: 'Gradual release framework ensuring teacher modeling, guided practice, and independent application.' }}
+    ]
+  }},
+  'tab-decodable': {{
+    title: '📖 Decodability & Phonics Scope Guide',
+    research: {{
+      title: 'Linnea Ehri (2005) & National Reading Panel (2000)',
+      summary: 'Systematic explicit phonics instruction significantly improves reading proficiency (d = 0.44-0.74). Decodable text supports orthographic mapping during the full alphabetic phase.',
+      doi: 'https://doi.org/10.3102/00346543071003393'
+    }},
+    concepts: [
+      {{ term: 'Decodable Text', def: 'Reading passages carefully matched to previously taught sound-spelling correspondences to prevent guessing.' }},
+      {{ term: 'Target Phonics Skill', def: 'The explicit grapheme-phoneme pattern currently being taught (e.g. Silent-e, Consonant Blends, Vowel Teams).' }},
+      {{ term: 'Off-Scope Words', def: 'Words in the text that contain untaught phonics patterns which students cannot yet decode systematically.' }},
+      {{ term: 'Heart Words', def: 'High-frequency words with temporary or permanent irregular spelling parts pre-taught using orthographic mapping.' }},
+      {{ term: 'Orthographic Mapping', def: 'The cognitive process of bonding spellings to pronunciations and meanings in memory.' }}
+    ]
+  }},
+  'tab-vocab': {{
+    title: '📚 Three-Tier Vocabulary Guide',
+    research: {{
+      title: 'Beck, McKeown & Kucan (2013); Marulis & Neuman (2010)',
+      summary: 'Explicit instruction targeting Tier 2 academic vocabulary produces very large effect sizes (d = 0.88) for word learning and text comprehension across disciplines.',
+      doi: 'https://doi.org/10.3102/0034654310377077'
+    }},
+    concepts: [
+      {{ term: 'Tier 1 (Basic Words)', def: 'High-frequency conversational words acquired naturally through oral language (e.g. clock, happy, run).' }},
+      {{ term: 'Tier 2 (High-Utility Academic)', def: 'Cross-domain academic words critical for written text comprehension (e.g. analyze, contrast, evidence, structure).' }},
+      {{ term: 'Tier 3 (Domain-Specific)', def: 'Low-frequency technical terms specific to content areas (e.g. photosynthesis, isotope, stanza).' }},
+      {{ term: 'Instructional Leverage', def: 'Pre-teaching Tier 2 words yields the highest transfer of comprehension skills across grade levels.' }}
+    ]
+  }},
+  'tab-evidence': {{
+    title: '🔬 Evidence & Effect Sizes Guide',
+    research: {{
+      title: 'What Works Clearinghouse (WWC) & Best Evidence Encyclopedia',
+      summary: 'Meta-analyses evaluate intervention efficacy using standardized effect sizes (Cohen\'s d) across randomized controlled trials (RCTs).',
+      doi: 'https://ies.ed.gov/ncee/wwc/'
+    }},
+    concepts: [
+      {{ term: 'Effect Size (Cohen\'s d)', def: 'Quantifies intervention impact: d < 0.20 (small), d = 0.40 (1 yr growth hinge point), d >= 0.50 (large), d >= 0.80 (very large).' }},
+      {{ term: 'Randomized Controlled Trial (RCT)', def: 'Experimental design randomly assigning students to control vs intervention groups.' }},
+      {{ term: 'WWC Practice Guides', def: 'Consensus panel recommendations synthesized from high-tier empirical research.' }}
+    ]
+  }},
+  'tab-standards': {{
+    title: '🏛️ State Standards & CASE® Network Guide',
+    research: {{
+      title: '1EdTech CASE® Specification & Standards Satchel (CGLT)',
+      summary: 'Machine-readable standards enable seamless alignment between literacy tools, state frameworks, and district LMS platforms.',
+      doi: 'https://rosetta.commongoodlt.com/'
+    }},
+    concepts: [
+      {{ term: 'Standards Satchel (Rosetta)', def: 'Machine-readable framework portal hosted by Common Good Learning Tools.' }},
+      {{ term: 'CASE® Format', def: 'Competencies & Academic Standards Exchange open standard for interoperable learning objectives.' }},
+      {{ term: 'Crosswalk Mapping', def: 'Algorithmic alignment connecting state frameworks (GSE, TEKS, B.E.S.T.) to Common Core (CCSS).' }},
+      {{ term: 'Deep-Linking URIs', def: 'Direct URLs targeting specific standard GUID items for Google Classroom & lesson plan export.' }}
+    ]
+  }},
+  'tab-guide': {{
+    title: '🎓 Science of Reading Implementation Guide',
+    research: {{
+      title: 'Scarborough\'s Reading Rope (2001) & MTSS Framework',
+      summary: 'Reading proficiency requires weaving together Word Recognition (automaticity) and Language Comprehension (strategic processing).',
+      doi: 'https://doi.org/10.1598/0872075028'
+    }},
+    concepts: [
+      {{ term: 'Word Recognition Strands', def: 'Phonological awareness, decoding, sight recognition (become increasingly automatic).' }},
+      {{ term: 'Language Comprehension Strands', def: 'Background knowledge, vocabulary, syntax, verbal reasoning, literacy knowledge (become strategic).' }},
+      {{ term: 'MTSS Tier 1 / 2 / 3', def: 'Universal core instruction (Tier 1), targeted small groups (Tier 2), and intensive diagnostic intervention (Tier 3).' }}
+    ]
+  }}
+}};
+
+function updateDrawerContent(tabId) {{
+  var guide = CONTEXT_GUIDES[tabId] || CONTEXT_GUIDES['tab-diagnose'];
+  document.getElementById('drawerTitle').innerText = guide.title;
+
+  var html = '';
+  // Section 1: Research Basis
+  html += '<div class="drawer-section">';
+  html += '<div class="drawer-section-title"><i class="fa-solid fa-flask"></i> Theoretical & Research Basis</div>';
+  html += '<strong style="font-size:0.9rem;color:#1C1B1F">' + guide.research.title + '</strong>';
+  html += '<p style="font-size:0.86rem;color:#444;margin-top:0.3rem">' + guide.research.summary + '</p>';
+  if (guide.research.doi) {{
+    html += '<a href="' + guide.research.doi + '" target="_blank" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:var(--md-sys-color-primary);font-weight:700;margin-top:0.5rem;text-decoration:underline"><i class="fa-solid fa-arrow-up-right-from-square"></i> Read Original Citation / Research Source</a>';
+  }}
+  html += '</div>';
+
+  // Section 2: Concepts & Tool Vocabulary
+  html += '<div class="drawer-section" style="border-left-color:var(--md-sys-color-tertiary)">';
+  html += '<div class="drawer-section-title" style="color:var(--md-sys-color-tertiary)"><i class="fa-solid fa-book-bookmark"></i> Tool Concepts & Key Vocabulary</div>';
+  guide.concepts.forEach(function(c) {{
+    html += '<div class="drawer-concept-item">';
+    html += '<div class="drawer-concept-term">' + c.term + '</div>';
+    html += '<div class="drawer-concept-def">' + c.def + '</div>';
+    html += '</div>';
+  }});
+  html += '</div>';
+
+  document.getElementById('sidebarDynamicContent').innerHTML = html;
+}}
+
 function switchTab(tabId) {{
   var tabs = document.querySelectorAll('.m3-tab-btn');
   var panes = document.querySelectorAll('.tab-pane');
@@ -1047,6 +1228,7 @@ function switchTab(tabId) {{
     selectedTab.classList.add('active');
     selectedPane.classList.add('active');
   }}
+  updateDrawerContent(tabId);
 }}
 
 function toggleGuide(id) {{
@@ -1083,22 +1265,8 @@ document.addEventListener('keydown', function(e) {{
   if(e.key === 'Escape' && isOpen) closeSidebar();
 }});
 
-function renderResearchSidebar() {{
-  var html = '';
-  html += '<h3 style="color:var(--md-sys-color-primary);font-size:0.9rem;margin-bottom:0.6rem">Key Research Papers</h3>';
-  PAPERS.forEach(function(p) {{
-    html += '<div style="background:var(--md-sys-color-surface-variant);padding:0.75rem;border-radius:10px;margin-bottom:0.6rem">';
-    html += '<div style="font-weight:700;font-size:0.85rem;color:#1C1B1F">' + p.title + '</div>';
-    html += '<div style="font-size:0.75rem;color:var(--md-sys-color-secondary)">' + p.authors + ' (' + p.year + ')</div>';
-    html += '<div style="margin-top:0.4rem;display:flex;align-items:center;justify-content:space-between">';
-    if(p.effect_size) html += '<span class="profile-badge profile-typical" style="font-size:0.65rem;padding:0.1rem 0.4rem">d=' + p.effect_size + '</span>';
-    if(p.url) html += '<a href="' + p.url + '" target="_blank" style="font-size:0.75rem;color:var(--md-sys-color-primary);font-weight:700"><i class="fa-solid fa-arrow-up-right-from-square"></i> Read Paper</a>';
-    html += '</div></div>';
-  }});
-  document.getElementById('researchSidebarContent').innerHTML = html;
-}}
-
-renderResearchSidebar();
+// Initialize drawer content with default active tab
+updateDrawerContent('tab-diagnose');
 
 function tryExample() {{
   switchTab('tab-diagnose');
@@ -1380,7 +1548,7 @@ async def standards(data: dict):
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "sor-dashboard", "version": "3.6"}
+    return {"status": "healthy", "service": "sor-dashboard", "version": "3.7"}
 
 
 if __name__ == "__main__":
