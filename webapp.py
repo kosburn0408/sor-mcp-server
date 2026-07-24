@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import time, uvicorn
 
-app = FastAPI(title="SoR Dashboard", version="3.3")
+app = FastAPI(title="SoR Dashboard", version="3.4")
 
 # ── Static Files Mount ──────────────────────────────────────────────────────
 base_dir = Path(__file__).resolve().parent
@@ -1213,12 +1213,46 @@ document.getElementById('vocabForm').addEventListener('submit', async function(e
   if(!data.text.trim()) return alert('Please paste some text.');
   var resp = await fetch('/api/vocabulary', {{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(data)}});
   var r = await resp.json();
-  var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">📚 Vocabulary Breakdown</h3>';
-  var tiers = r.tier_counts || {{}};
-  html += '<div class="stats-grid"><div class="stat"><div class="stat-num">'+(tiers.tier_1||0)+'</div><div class="stat-label">Tier 1 (Basic)</div></div><div class="stat"><div class="stat-num">'+(tiers.tier_2||0)+'</div><div class="stat-label">Tier 2 (Academic)</div></div><div class="stat"><div class="stat-num">'+(tiers.tier_3||0)+'</div><div class="stat-label">Tier 3 (Domain)</div></div><div class="stat"><div class="stat-num">'+r.total_words+'</div><div class="stat-label">Total Words</div></div></div>';
-  if(r.recommendation) html += '<p style="margin-top:.8rem;padding:1.2rem;background:var(--md-sys-color-surface-variant);border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong>📝 Recommendation:</strong> ' + r.recommendation + '</p>';
-  document.getElementById('vocabResult').innerHTML = html;
-  document.getElementById('vocabResult').classList.show ? document.getElementById('vocabResult').classList.add('show') : document.getElementById('vocabResult').classList.add('show');
+
+  if (r.error) {{
+    alert('Vocabulary Analysis Error: ' + r.error);
+    return;
+  }}
+
+  var summary = r.tier_summary || {{}};
+  var t1Count = summary.tier_1 ? summary.tier_1.count : (r.tier_counts ? r.tier_counts.tier_1 : 0);
+  var t2Count = summary.tier_2 ? summary.tier_2.count : (r.tier_counts ? r.tier_counts.tier_2 : 0);
+  var t3Count = summary.tier_3 ? summary.tier_3.count : (r.tier_counts ? r.tier_counts.tier_3 : 0);
+  var totalWords = r.total_words || 0;
+
+  var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">📚 Three-Tier Vocabulary Breakdown</h3>';
+  html += '<div class="stats-grid">';
+  html += '<div class="stat"><div class="stat-num">' + t1Count + '</div><div class="stat-label">Tier 1 (Basic)</div></div>';
+  html += '<div class="stat"><div class="stat-num">' + t2Count + '</div><div class="stat-label">Tier 2 (Academic)</div></div>';
+  html += '<div class="stat"><div class="stat-num">' + t3Count + '</div><div class="stat-label">Tier 3 (Domain)</div></div>';
+  html += '<div class="stat"><div class="stat-num">' + totalWords + '</div><div class="stat-label">Total Words</div></div>';
+  html += '</div>';
+
+  if (r.tier_2_words && r.tier_2_words.length > 0) {{
+    var t2List = r.tier_2_words.map(function(w){{ return '<strong>' + w.word + '</strong> (x' + w.count + ')'; }}).join(', ');
+    html += '<p style="color:var(--md-sys-color-primary);margin-top:0.8rem;padding:0.9rem;background:var(--md-sys-color-primary-container);border-radius:var(--md-shape-corner-medium)"><strong>🎯 Tier 2 (Academic) Words to Pre-Teach:</strong> ' + t2List + '</p>';
+  }} else {{
+    html += '<p style="color:var(--md-sys-color-secondary);margin-top:0.8rem;padding:0.9rem;background:var(--md-sys-color-surface-variant);border-radius:var(--md-shape-corner-medium)">ℹ️ No Tier 2 academic words found in this passage. Most words are conversational (Tier 1) or specific terms (Tier 3).</p>';
+  }}
+
+  if (r.tier_3_words && r.tier_3_words.length > 0) {{
+    var t3List = r.tier_3_words.map(function(w){{ return '<em>' + w.word + '</em>'; }}).join(', ');
+    html += '<p style="color:var(--md-sys-color-tertiary);margin-top:0.6rem"><strong>🏷️ Tier 3 (Domain / Content) Words:</strong> ' + t3List + '</p>';
+  }}
+
+  var rec = r.recommendation || r.instructional_recommendation;
+  if (rec) {{
+    html += '<p style="margin-top:.8rem;padding:1.2rem;background:var(--md-sys-color-surface-variant);border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong>📝 Recommendation:</strong> ' + rec + '</p>';
+  }}
+
+  var resultEl = document.getElementById('vocabResult');
+  resultEl.innerHTML = html;
+  resultEl.classList.add('show');
 }});
 
 document.getElementById('evidenceForm').addEventListener('submit', async function(e){{
@@ -1306,7 +1340,7 @@ async def standards(data: dict):
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "sor-dashboard", "version": "3.3"}
+    return {"status": "healthy", "service": "sor-dashboard", "version": "3.4"}
 
 
 if __name__ == "__main__":

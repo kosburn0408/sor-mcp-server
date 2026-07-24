@@ -105,10 +105,20 @@ def classify_text(text: str, domain: str | None = None) -> dict[str, Any]:
     t2_count = sum(w["count"] for w in tier2)
     t3_count = sum(w["count"] for w in tier3)
 
+    rec = (
+        f"Focus direct instruction on the {len(tier2)} Tier 2 words identified. "
+        "Tier 2 words provide the highest instructional leverage across domains."
+    )
+
     return {
         "total_words": total_words,
         "unique_words": len(word_counts),
         "domain": domain or "general",
+        "tier_counts": {
+            "tier_1": t1_count,
+            "tier_2": t2_count,
+            "tier_3": t3_count,
+        },
         "tier_summary": {
             "tier_1": {"count": t1_count, "pct": round(t1_count / total_words * 100, 1)},
             "tier_2": {"count": t2_count, "pct": round(t2_count / total_words * 100, 1)},
@@ -117,10 +127,8 @@ def classify_text(text: str, domain: str | None = None) -> dict[str, Any]:
         "tier_1_words": tier1,
         "tier_2_words": tier2,
         "tier_3_words": tier3,
-        "instructional_recommendation": (
-            f"Focus direct instruction on the {len(tier2)} Tier 2 words identified. "
-            "Tier 2 words provide the highest instructional leverage across domains."
-        ),
+        "recommendation": rec,
+        "instructional_recommendation": rec,
     }
 
 
@@ -130,15 +138,7 @@ def classify_vocabulary(text: str, domain: str | None = None) -> dict[str, Any]:
 
 
 def match_word(word: str, grade: str | None = None) -> dict[str, Any]:
-    """Look up a single word in the vocabulary corpus.
-
-    Args:
-        word: Word to search.
-        grade: Optional grade filter.
-
-    Returns:
-        Dict with tier, decodability, frequency, and grade level.
-    """
+    """Look up a single word in the vocabulary corpus."""
     word_clean = word.strip().lower()
     try:
         from db.database import get_connection
