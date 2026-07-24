@@ -34,11 +34,23 @@ def settings() -> Settings:
 
 
 @pytest.fixture
-async def async_client(settings: Settings) -> SoRClient:
-    """Create and yield an SoRClient (cleans up after test).
+def clean_decodable_text() -> str:
+    return "The cat sat on the mat. The man had a hat."
 
-    Use this for standalone async test functions, NOT for class-based tests.
-    """
+
+@pytest.fixture
+def sample_decodable_text() -> str:
+    return "Sam is a cat. Sam sat on a mat."
+
+
+@pytest.fixture
+def cued_text() -> str:
+    return "Look at the picture and guess the word."
+
+
+@pytest.fixture
+async def async_client(settings: Settings) -> SoRClient:
+    """Create and yield an SoRClient (cleans up after test)."""
     c = SoRClient(settings)
     try:
         yield c
@@ -144,32 +156,15 @@ COMPETENCY_RESPONSE: list[dict[str, Any]] = [
 @pytest.fixture
 def mock_api(respx_mock: respx.MockRouter) -> respx.MockRouter:
     """Set up respx routes for all four API endpoints with realistic responses."""
-    # Phonics scope
-    respx_mock.get(
-        f"{MOCK_BASE}/phonics/scope",
-    ).mock(return_value=Response(200, json=PHONICS_SCOPE_RESPONSE))
-
-    # Decodability verification
-    respx_mock.post(
-        f"{MOCK_BASE}/decodability/verify",
-    ).mock(return_value=Response(200, json=DECODABILITY_RESPONSE))
-
-    # Orthography mapping
-    respx_mock.get(
-        f"{MOCK_BASE}/orthography/map",
-    ).mock(return_value=Response(200, json=ORTHOGRAPHY_RESPONSE))
-
-    # Competency lookup
-    respx_mock.get(
-        f"{MOCK_BASE}/standards/competency",
-    ).mock(return_value=Response(200, json=COMPETENCY_RESPONSE))
-
+    respx_mock.get(f"{MOCK_BASE}/phonics/scope").mock(return_value=Response(200, json=PHONICS_SCOPE_RESPONSE))
+    respx_mock.post(f"{MOCK_BASE}/decodability/verify").mock(return_value=Response(200, json=DECODABILITY_RESPONSE))
+    respx_mock.get(f"{MOCK_BASE}/orthography/map").mock(return_value=Response(200, json=ORTHOGRAPHY_RESPONSE))
+    respx_mock.get(f"{MOCK_BASE}/standards/competency").mock(return_value=Response(200, json=COMPETENCY_RESPONSE))
     return respx_mock
 
 
 @pytest.fixture
 def flaky_api(respx_mock: respx.MockRouter) -> respx.MockRouter:
-    """Set up routes that fail twice then succeed on the third attempt."""
     route = respx_mock.get(f"{MOCK_BASE}/phonics/scope")
     route.side_effect = [
         Response(503, json={"error": "Service Unavailable"}),
@@ -181,17 +176,8 @@ def flaky_api(respx_mock: respx.MockRouter) -> respx.MockRouter:
 
 @pytest.fixture
 def error_api(respx_mock: respx.MockRouter) -> respx.MockRouter:
-    """Set up routes that return 4xx/5xx errors."""
-    respx_mock.get(f"{MOCK_BASE}/phonics/scope").mock(
-        return_value=Response(404, json={"error": "Unit not found"})
-    )
-    respx_mock.post(f"{MOCK_BASE}/decodability/verify").mock(
-        return_value=Response(401, json={"error": "Unauthorized"})
-    )
-    respx_mock.get(f"{MOCK_BASE}/orthography/map").mock(
-        return_value=Response(500, json={"error": "Internal Server Error"})
-    )
-    respx_mock.get(f"{MOCK_BASE}/standards/competency").mock(
-        return_value=Response(403, json={"error": "Forbidden"})
-    )
+    respx_mock.get(f"{MOCK_BASE}/phonics/scope").mock(return_value=Response(404, json={"error": "Unit not found"}))
+    respx_mock.post(f"{MOCK_BASE}/decodability/verify").mock(return_value=Response(401, json={"error": "Unauthorized"}))
+    respx_mock.get(f"{MOCK_BASE}/orthography/map").mock(return_value=Response(500, json={"error": "Internal Server Error"}))
+    respx_mock.get(f"{MOCK_BASE}/standards/competency").mock(return_value=Response(403, json={"error": "Forbidden"}))
     return respx_mock

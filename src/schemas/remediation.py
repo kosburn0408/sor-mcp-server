@@ -1,14 +1,8 @@
-"""Pydantic models for Science of Reading MCP server.
+"""Pydantic models for Science of Reading remediation and decodable resources."""
 
-Structured output schemas for instructional remediation, decodable resources,
-and diagnostic-to-remediation pipeline.
-"""
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
-
-
-# ── Remediation Models ──────────────────────────────────────────────────────
 
 
 class MicroPD(BaseModel):
@@ -91,9 +85,6 @@ class RemediationCard(BaseModel):
         )
 
 
-# ── Decodable Resources Models ──────────────────────────────────────────────
-
-
 class DecodablePassage(BaseModel):
     """A short decodable passage constrained to mastered skills."""
     title: str
@@ -110,9 +101,6 @@ class DecodableRecommendation(BaseModel):
     passages: list[DecodablePassage] = Field(default_factory=list)
     teacher_notes: str = ""
     scope_warning: str = ""
-
-
-# ── Diagnostic → Remediation Pipeline ───────────────────────────────────────
 
 
 class SimpleViewResult(BaseModel):

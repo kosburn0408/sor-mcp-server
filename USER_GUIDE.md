@@ -133,7 +133,7 @@ This tool is built for **K-5 educators, reading specialists, and literacy coache
    - 🔴 **Off-scope words** — words using phonics patterns not yet taught
    - 🟡 **Heart words** — sight words that should be explicitly introduced, not expected to be decoded
    - 🔴 **Cueing detected** — any text that encourages guessing from pictures or context
-3. Run `align_standards_case` to check if their scope maps to Georgia GSE
+3. Run `align_standards` to check if their scope maps to Georgia GSE
 4. Run `search_evidence` to see what the research actually says about their approach
 
 **Result:** You go into the adoption meeting with data, not opinions.
@@ -153,7 +153,7 @@ The server returns the National Reading Panel's five pillars — the foundation 
 | Pillar | What It Means | Try This Tool |
 |---|---|---|
 | 🔤 **Phonemic Awareness** | Hearing individual sounds in words | `verify_decodable_text` — see how sounds map to print |
-| 📖 **Phonics** | Connecting sounds to letters | `query_sor_curriculum(strand="phonology")` |
+| 📖 **Phonics** | Connecting sounds to letters | `get_phonics_scope(grade_level="1")` |
 | 📈 **Fluency** | Reading accurately with expression | `evaluate_simple_view` — decoding score feeds fluency |
 | 📚 **Vocabulary** | Knowing what words mean | `classify_vocabulary` — Tier 1/2/3 word breakdown |
 | 🧠 **Comprehension** | Understanding what you read | `analyze_lexile` — text complexity for comprehension |

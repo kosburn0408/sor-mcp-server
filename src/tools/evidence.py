@@ -1,17 +1,13 @@
-"""Evidence-based research lookup tool.
+"""Evidence-based research & standards tools.
 
-Queries the embedded research database for WWC (What Works Clearinghouse),
-BEE (Best Evidence Encyclopedia), and NRP (National Reading Panel) findings.
-
-Theoretical basis: Evidence-based practice requires grounding instructional
-decisions in rigorous research. This tool maps queries to the five pillars
-of reading (NRP, 2000), the Simple View of Reading (Gough & Tunmer, 1986),
-and Scarborough's Reading Rope (2001).
+Grounds reading instruction decisions in WWC, BEE, and NRP empirical research
+embedded in DuckDB, with optional upstream API fallbacks.
 """
 
-from typing import Any
-import re
+from __future__ import annotations
 
+import re
+from typing import Any
 
 FRAMEWORK_MAP: dict[str, list[str]] = {
     "phonemic awareness": ["phonemic_awareness"],
@@ -38,27 +34,21 @@ def search_evidence(topic: str) -> dict[str, Any]:
     research papers with effect sizes and findings.
 
     Args:
-        topic: A natural language query (e.g., 'phonics', 'fluency',
-               'simple view of reading', 'phonemic awareness').
+        topic: Natural language topic query (e.g. 'phonics', 'fluency').
 
     Returns:
-        Dictionary with matching papers, framework context, and summary statistics.
+        Dict with matching papers, framework context, and effect size interpretation.
     """
     if not topic or not topic.strip():
         return {"error": "No topic provided for search", "results": []}
 
     topic_lower = topic.lower().strip()
 
-    # Determine which framework to search
     frameworks: list[str] = []
     for key, values in FRAMEWORK_MAP.items():
         if key in topic_lower:
             frameworks.extend(values)
             break
-
-    if not frameworks:
-        # Fall back to full-text search across all fields
-        frameworks = []
 
     from db.database import get_connection
     conn = get_connection()
@@ -96,14 +86,12 @@ def search_evidence(topic: str) -> dict[str, Any]:
             "url": row[8],
         })
 
-    # Compute summary stats
     if papers:
         effect_sizes = [p["effect_size"] for p in papers if p["effect_size"] is not None]
         avg_effect = round(sum(effect_sizes) / len(effect_sizes), 2) if effect_sizes else None
     else:
         avg_effect = None
 
-    # Get relevant frameworks for context
     framework_contexts = _get_framework_context(frameworks)
 
     return {
@@ -123,16 +111,17 @@ def _get_framework_context(frameworks: list[str]) -> list[dict[str, str]]:
     conn = get_connection()
 
     context = []
-    # Always include core frameworks for reference
     core = ["Simple View of Reading", "Scarborough's Reading Rope", "National Reading Panel Report"]
-    if frameworks:
-        for fw_name in core:
+    for fw_name in core:
+        try:
             row = conn.execute(
                 "SELECT name, description FROM theoretical_frameworks WHERE name = ?",
                 [fw_name],
             ).fetchone()
             if row:
                 context.append({"name": row[0], "description": row[1]})
+        except Exception:
+            pass
 
     return context
 
@@ -142,13 +131,13 @@ def _interpret_effect_size(d: float) -> str:
     if d < 0:
         return "Negative effect — intervention was harmful or counterproductive."
     elif d < 0.20:
-        return f"Small effect (d={d}) — statistically significant but may have limited practical impact. Consider cost-benefit."
+        return f"Small effect (d={d}) — statistically significant but may have limited practical impact."
     elif d < 0.50:
-        return f"Moderate effect (d={d}) — likely to produce meaningful improvement. WWC threshold for 'effective' is typically d≥0.25."
+        return f"Moderate effect (d={d}) — likely to produce meaningful improvement."
     elif d < 0.80:
-        return f"Large effect (d={d}) — strong evidence of effectiveness. This level of impact is educationally meaningful."
+        return f"Large effect (d={d}) — strong evidence of effectiveness."
     else:
-        return f"Very large effect (d={d}) — exceptional impact. Verify study quality and replicability."
+        return f"Very large effect (d={d}) — exceptional impact."
 
 
 def list_frameworks() -> dict[str, Any]:
@@ -186,15 +175,7 @@ def list_frameworks() -> dict[str, Any]:
 
 
 def list_assessments(tool_type: str | None = None) -> dict[str, Any]:
-    """List evidence-based reading assessments.
-
-    Args:
-        tool_type: Optional filter by assessment type
-                   ('screener', 'diagnostic', 'progress_monitoring', 'outcome').
-
-    Returns:
-        Dictionary with assessment details.
-    """
+    """List evidence-based reading assessments."""
     from db.database import get_connection
     conn = get_connection()
 
@@ -222,7 +203,6 @@ def list_assessments(tool_type: str | None = None) -> dict[str, Any]:
             "url": row[6],
         })
 
-    # Group by type
     by_type: dict[str, int] = {}
     for a in assessments:
         by_type[a["type"]] = by_type.get(a["type"], 0) + 1
@@ -232,34 +212,21 @@ def list_assessments(tool_type: str | None = None) -> dict[str, Any]:
         "by_type": by_type,
         "assessments": assessments,
         "assessment_framework_note": (
-            "Effective reading instruction uses a Multi-Tiered System of Supports "
-            "(MTSS/RTI) framework: universal screening → diagnostic assessment → "
-            "progress monitoring → outcome evaluation. WWC recommends using "
-            "screening data to identify at-risk students and progress monitoring "
-            "to evaluate intervention effectiveness."
+            "Effective reading instruction uses an MTSS framework: "
+            "universal screening → diagnostic assessment → progress monitoring → outcome evaluation."
         ),
     }
 
 
-def align_standards(text_description: str, state: str = "CCSS", grade: str | None = None) -> dict[str, Any]:
-    """Find standards that align with a text or skill description.
-
-    Args:
-        text_description: Natural language description of the text or skill.
-        state: State standards code ('CCSS', 'TEXAS', 'FLORIDA', 'NY').
-        grade: Optional grade filter ('K' through '5').
-
-    Returns:
-        Matching standards with framework alignment.
-    """
-    if not text_description or not text_description.strip():
+def align_standards(description: str, state: str = "GA", grade: str | None = None) -> dict[str, Any]:
+    """Find academic standards aligned to a text or skill description."""
+    if not description or not description.strip():
         return {"error": "No description provided", "matches": []}
 
     from db.database import get_connection
     conn = get_connection()
 
-    # Try to map the description to a framework pillar
-    desc_lower = text_description.lower()
+    desc_lower = description.lower()
     matched_frameworks = []
     for key, values in FRAMEWORK_MAP.items():
         if key in desc_lower:
@@ -272,14 +239,13 @@ def align_standards(text_description: str, state: str = "CCSS", grade: str | Non
             FROM standards
             WHERE state = ? AND framework IN ({placeholders})
         """
-        params = [state] + matched_frameworks
+        params: list[Any] = [state] + matched_frameworks
     else:
         query = """
             SELECT state, grade, code, description, framework
             FROM standards
             WHERE state = ? AND LOWER(description) LIKE ?
         """
-        # Extract keywords for search
         keywords = " ".join(re.findall(r"[a-zA-Z]{4,}", desc_lower))
         params = [state, f"%{keywords[:50]}%"]
 
@@ -290,9 +256,8 @@ def align_standards(text_description: str, state: str = "CCSS", grade: str | Non
     rows = conn.execute(query, params).fetchall()
 
     if not rows:
-        # Broader search — return all standards for the state+grade
         fallback_query = "SELECT state, grade, code, description, framework FROM standards WHERE state = ?"
-        fallback_params = [state]
+        fallback_params: list[Any] = [state]
         if grade:
             fallback_query += " AND grade = ?"
             fallback_params.append(grade)
@@ -309,21 +274,9 @@ def align_standards(text_description: str, state: str = "CCSS", grade: str | Non
         })
 
     return {
-        "description": text_description,
+        "description": description,
         "state": state,
         "grade_filter": grade,
         "total_matches": len(matches),
         "matches": matches,
-        "framework_note": (
-            "Standards alignment supports the Simple View of Reading by ensuring "
-            "instruction addresses both word recognition and language comprehension "
-            "strands. Scarborough's Rope: each standard maps to one or more "
-            "interconnected reading strands."
-        ),
     }
-
-
-if __name__ == "__main__":
-    import json, re
-    result = search_evidence("phonics instruction")
-    print(json.dumps(result, indent=2))

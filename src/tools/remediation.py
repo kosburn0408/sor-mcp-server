@@ -18,7 +18,7 @@ from __future__ import annotations
 from typing import Any
 
 # Reuse existing Pydantic models from the original tools.schemas
-from tools.schemas import (
+from src.schemas.remediation import (
     CorrectiveFeedback,
     MicroPD,
     MultisensoryCue,

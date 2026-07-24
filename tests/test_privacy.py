@@ -13,7 +13,7 @@ from pathlib import Path
 TOOLS_DIR = Path(__file__).resolve().parent.parent / "tools"
 sys.path.insert(0, str(TOOLS_DIR.parent))
 
-from tools.privacy_sanitizer import (  # noqa: E402
+from src.tools.privacy import (  # noqa: E402
     PII_FIELDS,
     PIIManager,
     get_pii_manager,
@@ -108,7 +108,7 @@ def test_no_pii_in_logs() -> None:
     log_privacy_event("test_event", "success", "PII-free detail only")
     log_privacy_event("anonymization", "success", "Student std_abc123 sanitized")
 
-    from tools.privacy_sanitizer import _audit
+    from src.tools.privacy import _audit
     summary = _audit.get_summary()
 
     events_str = json.dumps(summary["recent_events"])

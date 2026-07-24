@@ -51,8 +51,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(RateLimitMiddleware)
-from tools.evidence import search_evidence
-from tools.vocabulary import classify_text
+from src.tools.evidence import search_evidence
+from src.tools.vocabulary import classify_text
 from src.tools.remediation import get_instructional_remediation, list_available_remediations
 from src.tools.diagnostics import evaluate_simple_view
 # ── Sidebar Data Loader ─────────────────────────────────────────────────────

@@ -5,7 +5,9 @@
 [![Docker](https://img.shields.io/badge/Docker-ready-blue)](https://docker.com)
 [![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-lightgrey)](LICENSE)
 
-Evidence-based literacy analysis MCP server aligned to the **Science of Reading** research. Provides text analysis tools backed by What Works Clearinghouse, Best Evidence Encyclopedia, and National Reading Panel findings — all embedded in a DuckDB analytical database.
+Production-grade **Science of Reading** Model Context Protocol (MCP) server. Bridges LLMs to evidence-based literacy research (Simple View of Reading, Scarborough's Reading Rope, Five Pillars, WWC Practice Guides) via a hybrid execution engine (**Remote API + Local DuckDB OLAP database**).
+
+---
 
 ## Theoretical Frameworks
 
@@ -17,137 +19,117 @@ Evidence-based literacy analysis MCP server aligned to the **Science of Reading*
 | **WWC Practice Guides** (2010, 2016) | Evidence-based recommendations for K-3 foundational skills and comprehension |
 | **Three-Tier Vocabulary** (Beck, McKeown & Kucan, 2013) | Tier 1 (basic), Tier 2 (academic), Tier 3 (domain-specific) |
 
-## Tools
+---
+
+## Exposed MCP Tools (14 Tools)
 
 | Tool | Description |
 |---|---|
-| `analyze_lexile` | Estimate Lexile score, word count, sentence complexity, grade level |
-| `check_decodability` | Calculate % of decodable words for K-3 based on phonics scope & sequence |
-| `classify_vocabulary` | Classify text into Tier 1/2/3 with instructional recommendations |
-| `match_word` | Single-word lookup in the vocabulary corpus (tier, frequency, decodable) |
+| `get_phonics_scope` | Fetch target phonemes, taught graphemes, and heart words for grade/unit |
+| `verify_decodable_text` | Verify text decodability against phonics scope with anti-cueing guardrails |
+| `map_orthography` | Map words to phoneme/grapheme sequences and Orton-Gillingham syllable types |
+| `lookup_competency` | Look up CASE framework and state academic standards for a phonics skill |
+| `analyze_lexile` | Estimate Lexile score, word count, sentence complexity, and grade level |
+| `classify_vocabulary` | Classify text into Beck Tier 1/2/3 with instructional recommendations |
+| `match_word` | Single-word lookup in vocabulary corpus (tier, decodability, frequency) |
 | `search_evidence` | Query WWC/BEE/NRP research database by topic with effect sizes |
-| `list_frameworks` | Enumerate all theoretical frameworks with descriptions |
+| `list_frameworks` | Enumerate theoretical frameworks and the 5 Pillars of Reading |
 | `list_assessments` | Browse evidence-based assessment tools (screener, diagnostic, PM, outcome) |
-| `align_standards` | Map text/skills to CCSS, TEKS, B.E.S.T., or NY standards |
-| `assess_comprehension` | Evaluate comprehension question types (literal/inferential/evaluative) |
+| `align_standards` | Map text/skill description to CCSS, TEKS, B.E.S.T., NY, or GA standards |
+| `evaluate_simple_view` | Evaluate student profile using the Simple View of Reading diagnostic formula |
+| `get_instructional_remediation` | Get structured I Do / We Do / You Do explicit remediation cards |
+| `sanitize_pii` | FERPA-compliant PII anonymization before LLM processing |
+
+---
 
 ## Quick Start
 
 ### Local (Python)
 
 ```bash
-# Install
+# Install dependencies
 pip install -r requirements.txt
 
-# Seed the database
+# Verify / seed embedded database
 python3 server.py --seed-only
 
-# Run as MCP server (stdio)
+# Run as MCP server (stdio mode)
 python3 server.py
+
+# Force local offline DuckDB mode
+python3 server.py --offline
 ```
 
 ### Docker
 
 ```bash
-# Build and seed
+# Build container
 docker compose build
+
+# Seed database
 docker compose run --rm sor-seed
 
-# Run SSE/HTTP dev server
+# Run HTTP/SSE server (Port 8080)
 docker compose up sor-sse
-
-# Health check
-curl http://localhost:8080/sse
 ```
 
-### Hermes Agent Integration
-
-Add to `~/.hermes/config.yaml`:
-
-```yaml
-mcp_servers:
-  science-of-reading:
-    command: "python3"
-    args:
-      - "/root/agentic-edu/mcp-servers/science-of-reading/server.py"
-    env:
-      SOR_DB_PATH: "/root/agentic-edu/mcp-servers/science-of-reading/db/sor_evidence.duckdb"
-    enabled: true
-```
-
-Or via CLI:
+### Web Dashboard
 
 ```bash
-hermes mcp add science-of-reading \
-  --command "python3" \
-  --args "/root/agentic-edu/mcp-servers/science-of-reading/server.py" \
-  --env SOR_DB_PATH=/root/agentic-edu/mcp-servers/science-of-reading/db/sor_evidence.duckdb
+# Run FastAPI teacher web dashboard (Port 8093)
+python3 webapp.py
 ```
+
+---
 
 ## Architecture
 
 ```
-MCP Client (Hermes Agent)
-    ↓ stdio (JSON-RPC 2.0)
+MCP Client (Antigravity / Hermes Agent / Claude)
+    ↓ stdio / SSE (JSON-RPC 2.0)
 SoR MCP Server (FastMCP)
-    ├── tools/list → 9 tools exposed
-    ├── tools/call → execute analysis
-    │   ├── analyze_lexile(text)
-    │   ├── check_decodability(text, grade)
-    │   ├── classify_vocabulary(text, domain)
-    │   ├── match_word(word, grade?)
-    │   ├── search_evidence(topic)
-    │   ├── list_frameworks()
-    │   ├── list_assessments(type?)
-    │   ├── align_standards(description, state, grade?)
-    │   └── assess_comprehension(text, questions, grade)
-    └── DuckDB (embedded OLAP)
-        ├── research_papers (12 papers, WWC/BEE/NRP)
-        ├── vocabulary_corpus (74 words, K-3)
-        ├── standards (43 entries, 5 states: CCSS, Georgia GSE, Texas TEKS, Florida B.E.S.T., New York)
-        ├── assessments (11 tools)
-        └── theoretical_frameworks (6 frameworks)
+    ├── Hybrid Routing Engine
+    │   ├── Primary: Upstream API (sor.edtechlabs.dev)
+    │   └── Fallback: Local Embedded DuckDB (sor_evidence.duckdb)
+    ├── 14 Tools Exposed
+    ├── 4 MCP Resources (sor://frameworks, sor://word-lists, etc.)
+    └── 2 MCP Prompts (generate_aligned_decodable, explicit_phonics_routine)
 ```
 
-## Database
-
-The embedded DuckDB database includes:
-
-- **12 research papers** with effect sizes (d=0.32 to d=0.75)
-- **74 vocabulary words** across grades K-3 with tier classification and decodability
-- **43 academic standards** from CCSS, Georgia GSE, Texas TEKS, Florida B.E.S.T., and New York
-- **11 evidence-based assessments** (DIBELS, Acadience, MAP, CORE, PAST, QRI-6, etc.)
-- **6 theoretical frameworks** with full descriptions and references
-
-## Security
-
-- **Stdio transport** — no network exposure in production mode
-- **No hardcoded credentials** — all config via environment variables
-- **Non-root user** — Docker container runs as `sor` user
-- **Minimal dependencies** — slim Python base image, no unnecessary packages
-- **Read-only DB mode** — analytical queries use DuckDB read-only connection
+---
 
 ## Directory Structure
 
 ```
-mcp-servers/science-of-reading/
-├── server.py              # Main MCP server (FastMCP)
-├── tools/
-│   ├── __init__.py
-│   ├── lexile.py          # Lexile text analysis
-│   ├── decodability.py    # Decodable text checker
-│   ├── vocabulary.py      # Tier 1/2/3 classifier
-│   └── evidence.py        # WWC/BEE evidence + standards + assessments
+sor-mcp-server/
+├── server.py              # Main FastMCP server (14 tools, prompts, resources)
+├── webapp.py              # FastAPI teacher web dashboard
+├── pyproject.toml         # Package definition and build configuration
+├── requirements.txt       # Unified Python dependencies
+├── src/
+│   ├── client/            # Async httpx API client with caching & retries
+│   ├── config.py          # Pydantic environment configuration
+│   ├── core/              # Meta-tool router & error definitions
+│   ├── prompts/           # Decodable & phonics prompt builders
+│   ├── resources/         # Framework & word list resources
+│   ├── schemas/           # Pydantic v2 data models
+│   └── tools/             # Consolidated SoR analysis tools
+│       ├── decodability.py
+│       ├── diagnostics.py
+│       ├── evidence.py
+│       ├── orthography.py
+│       ├── phonics.py
+│       ├── privacy.py
+│       ├── remediation.py
+│       └── vocabulary.py
 ├── db/
-│   ├── __init__.py
-│   ├── schema.sql         # DuckDB schema (5 tables + indexes)
-│   ├── database.py        # Connection management
-│   └── seed.py            # Seed data population
-├── Dockerfile             # Multi-stage secure build
-├── docker-compose.yml     # 3 profiles: stdio, sse, seed
-├── requirements.txt       # mcp, duckdb, pyyaml
-└── README.md              # This file
+│   ├── database.py        # Connection manager for DuckDB
+│   ├── schema.sql         # DuckDB schema
+│   └── seed.py            # Evidence & standards seed data
+└── tests/                 # Full Pytest test suite (67 tests)
 ```
+
+---
 
 ## License
 
