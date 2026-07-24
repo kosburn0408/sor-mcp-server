@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import time, uvicorn
 
-app = FastAPI(title="SoR Dashboard", version="3.7")
+app = FastAPI(title="SoR Dashboard", version="3.8")
 
 # ── Static Files Mount ──────────────────────────────────────────────────────
 base_dir = Path(__file__).resolve().parent
@@ -1098,91 +1098,91 @@ var FRAMEWORKS = {FRAMEWORKS_JSON};
 var PAPERS = {PAPERS_JSON};
 var PILLAR_FINDINGS = {PILLAR_FINDINGS_JSON};
 
-// Context-Aware Content Dictionary for Left Pull-Out Drawer
+// Context-Aware Content Dictionary for Left Pull-Out Drawer (Double-quoted strings prevent unescaped single quote syntax errors)
 var CONTEXT_GUIDES = {{
-  'tab-diagnose': {{
-    title: '🩺 Simple View & Student Diagnostic Guide',
+  "tab-diagnose": {{
+    title: "🩺 Simple View & Student Diagnostic Guide",
     research: {{
-      title: 'Gough & Tunmer (1986); Hoover & Gough (1990)',
-      summary: 'The Simple View of Reading states that Reading Comprehension (R) is the product of Decoding (D) and Language Comprehension (LC): R = D x LC. Both components are required for reading competence.',
-      doi: 'https://doi.org/10.1007/BF02648824'
+      title: "Gough & Tunmer (1986); Hoover & Gough (1990)",
+      summary: "The Simple View of Reading states that Reading Comprehension (R) is the product of Decoding (D) and Language Comprehension (LC): R = D x LC. Both components are required for reading competence.",
+      doi: "https://doi.org/10.1007/BF02648824"
     }},
     concepts: [
-      {{ term: 'Decoding Score (D)', def: 'Measures pseudoword and word reading accuracy (e.g. DIBELS NWF-CLS or Acadience). Range: 0.0 to 1.0.' }},
-      {{ term: 'Language Comprehension (LC)', def: 'Measures listening comprehension or cloze maze performance (e.g. DIBELS Maze or MAP). Range: 0.0 to 1.0.' }},
-      {{ term: 'Dyslexia / Decoding Deficit', def: 'Weak decoding (D < 0.6) with strong listening comprehension (LC >= 0.6). Requires explicit phonics & orthographic mapping.' }},
-      {{ term: 'Hyperlexia / Specific Comprehension Deficit', def: 'Strong decoding (D >= 0.6) with weak listening comprehension (LC < 0.6). Requires vocabulary & syntax support.' }},
-      {{ term: 'Garden-Variety / Dual Deficit', def: 'Weaknesses in both decoding and comprehension. Requires multi-component tier 2/3 intervention.' }},
-      {{ term: 'Scripted I Do / We Do / You Do', def: 'Gradual release framework ensuring teacher modeling, guided practice, and independent application.' }}
+      {{ term: "Decoding Score (D)", def: "Measures pseudoword and word reading accuracy (e.g. DIBELS NWF-CLS or Acadience). Range: 0.0 to 1.0." }},
+      {{ term: "Language Comprehension (LC)", def: "Measures listening comprehension or cloze maze performance (e.g. DIBELS Maze or MAP). Range: 0.0 to 1.0." }},
+      {{ term: "Dyslexia / Decoding Deficit", def: "Weak decoding (D < 0.6) with strong listening comprehension (LC >= 0.6). Requires explicit phonics & orthographic mapping." }},
+      {{ term: "Hyperlexia / Specific Comprehension Deficit", def: "Strong decoding (D >= 0.6) with weak listening comprehension (LC < 0.6). Requires vocabulary & syntax support." }},
+      {{ term: "Garden-Variety / Dual Deficit", def: "Weaknesses in both decoding and comprehension. Requires multi-component tier 2/3 intervention." }},
+      {{ term: "Scripted I Do / We Do / You Do", def: "Gradual release framework ensuring teacher modeling, guided practice, and independent application." }}
     ]
   }},
-  'tab-decodable': {{
-    title: '📖 Decodability & Phonics Scope Guide',
+  "tab-decodable": {{
+    title: "📖 Decodability & Phonics Scope Guide",
     research: {{
-      title: 'Linnea Ehri (2005) & National Reading Panel (2000)',
-      summary: 'Systematic explicit phonics instruction significantly improves reading proficiency (d = 0.44-0.74). Decodable text supports orthographic mapping during the full alphabetic phase.',
-      doi: 'https://doi.org/10.3102/00346543071003393'
+      title: "Linnea Ehri (2005) & National Reading Panel (2000)",
+      summary: "Systematic explicit phonics instruction significantly improves reading proficiency (d = 0.44-0.74). Decodable text supports orthographic mapping during the full alphabetic phase.",
+      doi: "https://doi.org/10.3102/00346543071003393"
     }},
     concepts: [
-      {{ term: 'Decodable Text', def: 'Reading passages carefully matched to previously taught sound-spelling correspondences to prevent guessing.' }},
-      {{ term: 'Target Phonics Skill', def: 'The explicit grapheme-phoneme pattern currently being taught (e.g. Silent-e, Consonant Blends, Vowel Teams).' }},
-      {{ term: 'Off-Scope Words', def: 'Words in the text that contain untaught phonics patterns which students cannot yet decode systematically.' }},
-      {{ term: 'Heart Words', def: 'High-frequency words with temporary or permanent irregular spelling parts pre-taught using orthographic mapping.' }},
-      {{ term: 'Orthographic Mapping', def: 'The cognitive process of bonding spellings to pronunciations and meanings in memory.' }}
+      {{ term: "Decodable Text", def: "Reading passages carefully matched to previously taught sound-spelling correspondences to prevent guessing." }},
+      {{ term: "Target Phonics Skill", def: "The explicit grapheme-phoneme pattern currently being taught (e.g. Silent-e, Consonant Blends, Vowel Teams)." }},
+      {{ term: "Off-Scope Words", def: "Words in the text that contain untaught phonics patterns which students cannot yet decode systematically." }},
+      {{ term: "Heart Words", def: "High-frequency words with temporary or permanent irregular spelling parts pre-taught using orthographic mapping." }},
+      {{ term: "Orthographic Mapping", def: "The cognitive process of bonding spellings to pronunciations and meanings in memory." }}
     ]
   }},
-  'tab-vocab': {{
-    title: '📚 Three-Tier Vocabulary Guide',
+  "tab-vocab": {{
+    title: "📚 Three-Tier Vocabulary Guide",
     research: {{
-      title: 'Beck, McKeown & Kucan (2013); Marulis & Neuman (2010)',
-      summary: 'Explicit instruction targeting Tier 2 academic vocabulary produces very large effect sizes (d = 0.88) for word learning and text comprehension across disciplines.',
-      doi: 'https://doi.org/10.3102/0034654310377077'
+      title: "Beck, McKeown & Kucan (2013); Marulis & Neuman (2010)",
+      summary: "Explicit instruction targeting Tier 2 academic vocabulary produces very large effect sizes (d = 0.88) for word learning and text comprehension across disciplines.",
+      doi: "https://doi.org/10.3102/0034654310377077"
     }},
     concepts: [
-      {{ term: 'Tier 1 (Basic Words)', def: 'High-frequency conversational words acquired naturally through oral language (e.g. clock, happy, run).' }},
-      {{ term: 'Tier 2 (High-Utility Academic)', def: 'Cross-domain academic words critical for written text comprehension (e.g. analyze, contrast, evidence, structure).' }},
-      {{ term: 'Tier 3 (Domain-Specific)', def: 'Low-frequency technical terms specific to content areas (e.g. photosynthesis, isotope, stanza).' }},
-      {{ term: 'Instructional Leverage', def: 'Pre-teaching Tier 2 words yields the highest transfer of comprehension skills across grade levels.' }}
+      {{ term: "Tier 1 (Basic Words)", def: "High-frequency conversational words acquired naturally through oral language (e.g. clock, happy, run)." }},
+      {{ term: "Tier 2 (High-Utility Academic)", def: "Cross-domain academic words critical for written text comprehension (e.g. analyze, contrast, evidence, structure)." }},
+      {{ term: "Tier 3 (Domain-Specific)", def: "Low-frequency technical terms specific to content areas (e.g. photosynthesis, isotope, stanza)." }},
+      {{ term: "Instructional Leverage", def: "Pre-teaching Tier 2 words yields the highest transfer of comprehension skills across grade levels." }}
     ]
   }},
-  'tab-evidence': {{
-    title: '🔬 Evidence & Effect Sizes Guide',
+  "tab-evidence": {{
+    title: "🔬 Evidence & Effect Sizes Guide",
     research: {{
-      title: 'What Works Clearinghouse (WWC) & Best Evidence Encyclopedia',
-      summary: 'Meta-analyses evaluate intervention efficacy using standardized effect sizes (Cohen\'s d) across randomized controlled trials (RCTs).',
-      doi: 'https://ies.ed.gov/ncee/wwc/'
+      title: "What Works Clearinghouse (WWC) & Best Evidence Encyclopedia",
+      summary: "Meta-analyses evaluate intervention efficacy using standardized effect sizes (Cohen's d) across randomized controlled trials (RCTs).",
+      doi: "https://ies.ed.gov/ncee/wwc/"
     }},
     concepts: [
-      {{ term: 'Effect Size (Cohen\'s d)', def: 'Quantifies intervention impact: d < 0.20 (small), d = 0.40 (1 yr growth hinge point), d >= 0.50 (large), d >= 0.80 (very large).' }},
-      {{ term: 'Randomized Controlled Trial (RCT)', def: 'Experimental design randomly assigning students to control vs intervention groups.' }},
-      {{ term: 'WWC Practice Guides', def: 'Consensus panel recommendations synthesized from high-tier empirical research.' }}
+      {{ term: "Effect Size (Cohen's d)", def: "Quantifies intervention impact: d < 0.20 (small), d = 0.40 (1 yr growth hinge point), d >= 0.50 (large), d >= 0.80 (very large)." }},
+      {{ term: "Randomized Controlled Trial (RCT)", def: "Experimental design randomly assigning students to control vs intervention groups." }},
+      {{ term: "WWC Practice Guides", def: "Consensus panel recommendations synthesized from high-tier empirical research." }}
     ]
   }},
-  'tab-standards': {{
-    title: '🏛️ State Standards & CASE® Network Guide',
+  "tab-standards": {{
+    title: "🏛️ State Standards & CASE® Network Guide",
     research: {{
-      title: '1EdTech CASE® Specification & Standards Satchel (CGLT)',
-      summary: 'Machine-readable standards enable seamless alignment between literacy tools, state frameworks, and district LMS platforms.',
-      doi: 'https://rosetta.commongoodlt.com/'
+      title: "1EdTech CASE® Specification & Standards Satchel (CGLT)",
+      summary: "Machine-readable standards enable seamless alignment between literacy tools, state frameworks, and district LMS platforms.",
+      doi: "https://rosetta.commongoodlt.com/"
     }},
     concepts: [
-      {{ term: 'Standards Satchel (Rosetta)', def: 'Machine-readable framework portal hosted by Common Good Learning Tools.' }},
-      {{ term: 'CASE® Format', def: 'Competencies & Academic Standards Exchange open standard for interoperable learning objectives.' }},
-      {{ term: 'Crosswalk Mapping', def: 'Algorithmic alignment connecting state frameworks (GSE, TEKS, B.E.S.T.) to Common Core (CCSS).' }},
-      {{ term: 'Deep-Linking URIs', def: 'Direct URLs targeting specific standard GUID items for Google Classroom & lesson plan export.' }}
+      {{ term: "Standards Satchel (Rosetta)", def: "Machine-readable framework portal hosted by Common Good Learning Tools." }},
+      {{ term: "CASE® Format", def: "Competencies & Academic Standards Exchange open standard for interoperable learning objectives." }},
+      {{ term: "Crosswalk Mapping", def: "Algorithmic alignment connecting state frameworks (GSE, TEKS, B.E.S.T.) to Common Core (CCSS)." }},
+      {{ term: "Deep-Linking URIs", def: "Direct URLs targeting specific standard GUID items for Google Classroom & lesson plan export." }}
     ]
   }},
-  'tab-guide': {{
-    title: '🎓 Science of Reading Implementation Guide',
+  "tab-guide": {{
+    title: "🎓 Science of Reading Implementation Guide",
     research: {{
-      title: 'Scarborough\'s Reading Rope (2001) & MTSS Framework',
-      summary: 'Reading proficiency requires weaving together Word Recognition (automaticity) and Language Comprehension (strategic processing).',
-      doi: 'https://doi.org/10.1598/0872075028'
+      title: "Scarborough's Reading Rope (2001) & MTSS Framework",
+      summary: "Reading proficiency requires weaving together Word Recognition (automaticity) and Language Comprehension (strategic processing).",
+      doi: "https://doi.org/10.1598/0872075028"
     }},
     concepts: [
-      {{ term: 'Word Recognition Strands', def: 'Phonological awareness, decoding, sight recognition (become increasingly automatic).' }},
-      {{ term: 'Language Comprehension Strands', def: 'Background knowledge, vocabulary, syntax, verbal reasoning, literacy knowledge (become strategic).' }},
-      {{ term: 'MTSS Tier 1 / 2 / 3', def: 'Universal core instruction (Tier 1), targeted small groups (Tier 2), and intensive diagnostic intervention (Tier 3).' }}
+      {{ term: "Word Recognition Strands", def: "Phonological awareness, decoding, sight recognition (become increasingly automatic)." }},
+      {{ term: "Language Comprehension Strands", def: "Background knowledge, vocabulary, syntax, verbal reasoning, literacy knowledge (become strategic)." }},
+      {{ term: "MTSS Tier 1 / 2 / 3", def: "Universal core instruction (Tier 1), targeted small groups (Tier 2), and intensive diagnostic intervention (Tier 3)." }}
     ]
   }}
 }};
@@ -1548,7 +1548,7 @@ async def standards(data: dict):
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "sor-dashboard", "version": "3.7"}
+    return {"status": "healthy", "service": "sor-dashboard", "version": "3.8"}
 
 
 if __name__ == "__main__":
