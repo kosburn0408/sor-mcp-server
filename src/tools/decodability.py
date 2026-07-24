@@ -55,26 +55,25 @@ PHONICS_PATTERNS: dict[str, list[str]] = {
     "5": [r"[a-z]+"],
 }
 
+GRADE_MAP: dict[str, str] = {
+    "K": "K", "KINDERGARTEN": "K",
+    "1": "1", "1ST": "1", "GRADE 1": "1", "GRADE1": "1",
+    "2": "2", "2ND": "2", "GRADE 2": "2", "GRADE2": "2",
+    "3": "3", "3RD": "3", "GRADE 3": "3", "GRADE3": "3",
+    "4": "4", "4TH": "4", "GRADE 4": "4", "GRADE4": "4",
+    "5": "5", "5TH": "5", "GRADE 5": "5", "GRADE5": "5",
+}
+
 
 def check_decodability(text: str, grade_level: str = "1", target_skill: str = "cvc") -> dict[str, Any]:
     """Check text decodability locally using regex phonics scope rules."""
     if not text or not text.strip():
         return {"error_code": "ERR_INVALID_INPUT", "message": "Text is empty"}
 
-    # Normalize grade strings e.g. "2nd" -> "2", "1st" -> "1", "Grade 3" -> "3"
     raw_grade = str(grade_level).strip().upper()
-    grade_map = {
-        "K": "K", "KINDERGARTEN": "K",
-        "1": "1", "1ST": "1", "GRADE 1": "1",
-        "2": "2", "2ND": "2", "GRADE 2": "2",
-        "3": "3", "3RD": "3", "GRADE 3": "3",
-        "4": "4", "4TH": "4", "GRADE 4": "4",
-        "5": "5", "5TH": "5", "GRADE 5": "5",
-    }
-    grade = grade_map.get(raw_grade, "")
+    grade = GRADE_MAP.get(raw_grade)
     if not grade:
-        match = re.search(r"[K1-5]", raw_grade)
-        grade = match.group(0) if match else "2"
+        return format_api_error(SoRAPIErrorCode.ERR_INVALID_GRADE_BAND, grade=grade_level)
 
     words = re.findall(r"[a-zA-Z]+(?:'[a-zA-Z]+)?", text.lower())
     if not words:
@@ -135,8 +134,9 @@ async def verify_decodable_text(
 ) -> dict[str, Any]:
     """Verify text decodability asynchronously via API with local fallback."""
     raw_grade = str(grade_level).strip().upper()
-    grade_map = {"K": "K", "1ST": "1", "1": "1", "2ND": "2", "2": "2", "3RD": "3", "3": "3", "4TH": "4", "4": "4", "5TH": "5", "5": "5"}
-    grade = grade_map.get(raw_grade, "2")
+    grade = GRADE_MAP.get(raw_grade)
+    if not grade:
+        return format_api_error(SoRAPIErrorCode.ERR_INVALID_GRADE_BAND, grade=grade_level)
 
     if not text or not text.strip():
         return format_api_error(SoRAPIErrorCode.ERR_INVALID_INPUT, detail="text is empty")
