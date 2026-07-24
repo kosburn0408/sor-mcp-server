@@ -15,14 +15,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import time, uvicorn
 
-app = FastAPI(title="SoR Dashboard", version="2.5")
+app = FastAPI(title="SoR Dashboard", version="3.0")
+
+# ── Static Files Mount ──────────────────────────────────────────────────────
+base_dir = Path(__file__).resolve().parent
+static_dir = base_dir / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # ── Security Middleware ─────────────────────────────────────────────────────
 
-# CORS — restrict to known domains
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://edtechlabs.dev", "https://sor.edtechlabs.dev", "http://localhost:8093"],
@@ -30,7 +36,6 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
-# Rate limiting — 60 requests per minute per IP
 rate_limits = {}
 class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -41,7 +46,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             window = {"reset": now + 60, "count": 0}
         window["count"] += 1
         rate_limits[ip] = window
-        if window["count"] > 60:  # Burst: 60/min
+        if window["count"] > 60:
             return JSONResponse({"error": "Rate limit exceeded"}, status_code=429)
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -61,49 +66,17 @@ from src.tools.decodability import check_decodability
 # ── Sidebar Data Loader ─────────────────────────────────────────────────────
 
 def _load_sidebar_data():
-    """Load user guide, examples, and DuckDB research into JSON-safe dicts."""
+    """Load research and theoretical frameworks from DuckDB."""
     base = Path(__file__).resolve().parent
 
-    # User guide
-    ug_path = base / "USER_GUIDE.md"
-    user_guide = ug_path.read_text() if ug_path.exists() else ""
-
-    # Examples
-    ex_path = base / "examples" / "README.md"
-    examples_md = ex_path.read_text() if ex_path.exists() else ""
-
-    examples = _parse_examples(examples_md)
     frameworks, papers = _query_research(base)
     pillar_findings = _build_pillar_findings(papers)
 
     return {
-        "user_guide": user_guide,
-        "examples": examples,
         "frameworks": frameworks,
         "papers": papers,
         "pillar_findings": pillar_findings,
     }
-
-
-def _parse_examples(md_text: str):
-    """Parse the examples README into individual workflow blocks."""
-    import re
-    examples = []
-    blocks = re.split(r'\n## (\d+)\.\s', md_text)
-    if len(blocks) > 1:
-        for i in range(1, len(blocks), 2):
-            title = blocks[i].strip()
-            body = blocks[i + 1].strip() if i + 1 < len(blocks) else ""
-            desc_match = re.match(r'^>?\s*(.+?)(?:\n|$)', body)
-            description = desc_match.group(1).strip() if desc_match else ""
-            body_short = re.sub(r'```.*?```', '```python\n# (code block)\n```', body, flags=re.DOTALL)
-            examples.append({
-                "num": i // 2 + 1,
-                "title": title,
-                "description": description,
-                "body": body_short,
-            })
-    return examples
 
 
 def _query_research(base: Path):
@@ -175,11 +148,9 @@ def _build_pillar_findings(papers):
 # ── Build Frontend ───────────────────────────────────────────────────────────
 
 def build_frontend() -> str:
-    """Build the tabbed HTML frontend with embedded sidebar data."""
+    """Build the Material Design 3 HTML frontend."""
     data = _load_sidebar_data()
 
-    USER_GUIDE_JSON = json.dumps(data["user_guide"])
-    EXAMPLES_JSON = json.dumps(data["examples"])
     FRAMEWORKS_JSON = json.dumps(data["frameworks"])
     PAPERS_JSON = json.dumps(data["papers"])
     PILLAR_FINDINGS_JSON = json.dumps(data["pillar_findings"])
@@ -189,149 +160,491 @@ def build_frontend() -> str:
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EdTech Labs — Science of Reading Teacher Workspace</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<title>Science of Reading — Teacher Workspace</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232D2366'/><text x='16' y='23' text-anchor='middle' font-size='20'>🧠</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%236750A4'/><text x='16' y='23' text-anchor='middle' font-size='20'>🧠</text></svg>">
 <style>
-*{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:'Inter',sans-serif;background:#f5f2ed;color:#2d1f0e;line-height:1.6;overflow-x:hidden}}
+/* ── Google Material Design 3 Tokens ── */
+:root {{
+  --md-sys-color-primary: #6750A4;
+  --md-sys-color-on-primary: #FFFFFF;
+  --md-sys-color-primary-container: #EADDFF;
+  --md-sys-color-on-primary-container: #21005D;
+  --md-sys-color-secondary: #625B71;
+  --md-sys-color-secondary-container: #E8DEF8;
+  --md-sys-color-tertiary: #E06D53;
+  --md-sys-color-tertiary-container: #FFDBCF;
+  --md-sys-color-background: #FAF8FC;
+  --md-sys-color-surface: #FFFFFF;
+  --md-sys-color-surface-variant: #F4EFF4;
+  --md-sys-color-on-surface-variant: #49454F;
+  --md-sys-color-outline: #79747E;
+  --md-sys-color-outline-variant: #CAC4D0;
 
-/* ── Header ── */
-.header{{background:linear-gradient(135deg,#1a1a3e,#2D2366);color:#fff;padding:1rem 1.5rem;display:flex;align-items:center;gap:1rem;position:sticky;top:0;z-index:500;box-shadow:0 4px 12px rgba(0,0,0,.15)}}
-.header-title{{display:flex;align-items:center;gap:.6rem;flex:1}}
-.header h1{{font-size:1.3rem;font-weight:800;margin:0;letter-spacing:-0.02em;color:#fff}}
-.header .badge{{background:linear-gradient(135deg,#FF6B35,#e05a2a);color:#fff;font-size:.65rem;font-weight:700;padding:.2rem .6rem;border-radius:20px;text-transform:uppercase;letter-spacing:.05em}}
+  --md-shape-corner-small: 8px;
+  --md-shape-corner-medium: 16px;
+  --md-shape-corner-large: 24px;
+  --md-shape-corner-full: 9999px;
 
-/* ── Sidebar Toggle ── */
-.sidebar-toggle{{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:1.1rem;cursor:pointer;padding:.4rem .8rem;border-radius:8px;display:flex;align-items:center;gap:.5rem;transition:all .2s}}
-.sidebar-toggle:hover{{background:rgba(255,255,255,.2);transform:none}}
+  --md-elevation-1: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --md-elevation-2: 0 4px 12px rgba(103,80,164,0.08), 0 2px 6px rgba(0,0,0,0.04);
+  --md-elevation-3: 0 8px 24px rgba(103,80,164,0.12), 0 4px 8px rgba(0,0,0,0.06);
+}}
 
-/* ── Sidebar Backdrop & Panel ── */
-.sidebar-backdrop{{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:800;opacity:0;pointer-events:none;transition:opacity .3s}}
-.sidebar-backdrop.open{{opacity:1;pointer-events:auto}}
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+body {{
+  font-family: 'Inter', sans-serif;
+  background-color: var(--md-sys-color-background);
+  color: #1C1B1F;
+  line-height: 1.6;
+  overflow-x: hidden;
+}}
 
-.sidebar{{position:fixed;top:0;left:0;height:100vh;width:340px;max-width:85vw;background:linear-gradient(180deg,#1a1a3e 0%,#2D2366 100%);color:#e0ddf0;z-index:900;overflow-y:auto;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:4px 0 24px rgba(0,0,0,.3)}}
-.sidebar.open{{transform:translateX(0)}}
-.sidebar::-webkit-scrollbar{{width:4px}}
-.sidebar::-webkit-scrollbar-thumb{{background:rgba(255,255,255,.2);border-radius:4px}}
-.sidebar-header{{padding:1.5rem;border-bottom:1px solid rgba(255,255,255,.1);text-align:center}}
-.sidebar-header h2{{font-size:1.1rem;font-weight:700;color:#FFD700;margin-bottom:.3rem}}
-.sidebar-header .brand{{font-size:.75rem;color:#b0aec8}}
+h1, h2, h3, h4, .font-heading {{
+  font-family: 'Outfit', sans-serif;
+}}
 
-/* ── Accordion Sections ── */
-.sidebar-section{{border-bottom:1px solid rgba(255,255,255,.08)}}
-.sidebar-section-header{{display:flex;align-items:center;gap:.6rem;padding:.9rem 1.2rem;cursor:pointer;font-weight:600;font-size:.9rem;color:#d0cce8;transition:background .2s;user-select:none}}
-.sidebar-section-header:hover{{background:rgba(255,255,255,.05)}}
-.sidebar-section-header i{{width:1.2rem;text-align:center;color:#FFD700;font-size:.85rem}}
-.sidebar-section-header .chevron{{margin-left:auto;transition:transform .3s;font-size:.7rem;opacity:.6}}
-.sidebar-section.open .sidebar-section-header .chevron{{transform:rotate(180deg);opacity:1}}
-.sidebar-section-body{{max-height:0;overflow:hidden;transition:max-height .35s ease}}
-.sidebar-section.open .sidebar-section-body{{max-height:2000px;overflow-y:auto}}
-.sidebar-section-inner{{padding:0 1.2rem 1rem}}
-.sidebar h3{{color:#FFD700;font-size:.85rem;margin:1rem 0 .5rem;font-weight:700}}
-.sidebar h4{{color:#c8c0e8;font-size:.8rem;margin:.8rem 0 .4rem;font-weight:600}}
-.sidebar p,.sidebar li{{font-size:.78rem;line-height:1.55;color:#c0bae0;margin:.3rem 0}}
-.sidebar ul{{list-style:none;padding-left:.2rem}}
-.sidebar li::before{{content:"•";color:#FFD700;margin-right:.5rem}}
-.sidebar a{{color:#FF6B35;text-decoration:none}}
-.sidebar a:hover{{text-decoration:underline}}
+/* ── Top App Bar ── */
+.app-bar {{
+  background: var(--md-sys-color-surface);
+  border-bottom: 1px solid var(--md-sys-color-surface-variant);
+  padding: 0.8rem 1.8rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 500;
+  box-shadow: var(--md-elevation-1);
+}}
 
-.research-card{{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:.7rem;margin:.5rem 0}}
-.research-card .rc-title{{font-weight:600;font-size:.78rem;color:#e0ddf0}}
-.research-card .rc-meta{{font-size:.7rem;color:#9088b8;margin:.2rem 0}}
-.research-card .rc-finding{{font-size:.72rem;color:#b0a8d0;margin-top:.3rem;font-style:italic}}
-.effect-badge{{display:inline-block;background:rgba(255,107,53,.2);color:#FF6B35;font-size:.65rem;padding:.1rem .4rem;border-radius:4px;font-weight:700;margin-left:.3rem}}
-.source-badge{{display:inline-block;background:rgba(255,215,0,.15);color:#FFD700;font-size:.6rem;padding:.1rem .35rem;border-radius:3px;font-weight:600;margin-left:.3rem}}
-.pillar-group{{margin:.5rem 0;padding:.5rem;background:rgba(255,255,255,.04);border-radius:6px}}
-.pillar-group h5{{color:#FFD700;font-size:.75rem;margin-bottom:.3rem;font-weight:700}}
-.pillar-item{{font-size:.7rem;color:#c0bae0;padding:.2rem 0;border-bottom:1px solid rgba(255,255,255,.05);display:flex;align-items:baseline;gap:.3rem}}
+.app-bar-brand {{
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex: 1;
+}}
+.app-bar-icon {{
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, var(--md-sys-color-primary), #4A3E7D);
+  color: #fff;
+  border-radius: var(--md-shape-corner-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  box-shadow: 0 2px 8px rgba(103,80,164,0.25);
+}}
+.app-bar-title {{
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1C1B1F;
+  letter-spacing: -0.01em;
+}}
+.app-bar-subtitle {{
+  font-size: 0.75rem;
+  color: var(--md-sys-color-secondary);
+  font-weight: 500;
+}}
 
-.example-card{{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;margin:.5rem 0;overflow:hidden}}
-.example-card-header{{display:flex;align-items:center;gap:.5rem;padding:.6rem .7rem;cursor:pointer;font-size:.78rem;font-weight:600;color:#e0ddf0;transition:background .2s}}
-.example-card-header:hover{{background:rgba(255,255,255,.05)}}
-.example-card-header .ec-num{{background:#FF6B35;color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;flex-shrink:0}}
-.example-card-body{{max-height:0;overflow:hidden;transition:max-height .35s ease}}
-.example-card.open .example-card-body{{max-height:600px;overflow-y:auto}}
-.example-card-inner{{padding:.5rem .7rem .7rem 2rem;font-size:.7rem}}
-.example-card-inner pre{{background:rgba(0,0,0,.3);padding:.5rem;border-radius:4px;overflow-x:auto;font-size:.65rem;line-height:1.4;margin:.3rem 0;color:#b0a8d0}}
+.hub-btn {{
+  background: var(--md-sys-color-secondary-container);
+  color: #1D192B;
+  border: none;
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--md-shape-corner-full);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}}
+.hub-btn:hover {{
+  background: #D8CEE8;
+  transform: translateY(-1px);
+}}
 
-/* ── Main Content & Layout ── */
-.main-content{{transition:margin-left .3s cubic-bezier(.4,0,.2,1)}}
-@media(min-width:1024px){{.main-content.shifted{{margin-left:340px}}}}
-.container{{max-width:960px;margin:0 auto;padding:1.5rem}}
+/* ── M3 Segmented Navigation Bar ── */
+.m3-tab-bar-container {{
+  background: var(--md-sys-color-surface);
+  border-bottom: 1px solid var(--md-sys-color-surface-variant);
+  position: sticky;
+  top: 65px;
+  z-index: 400;
+  box-shadow: var(--md-elevation-1);
+}}
+.m3-tab-bar {{
+  display: flex;
+  gap: 0.6rem;
+  max-width: 1050px;
+  margin: 0 auto;
+  padding: 0.6rem 1rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}}
+.m3-tab-bar::-webkit-scrollbar {{ display: none; }}
 
-/* ── TAB BAR NAVIGATION ── */
-.tab-nav-container{{background:#fff;border-bottom:1px solid #e2ddd5;position:sticky;top:62px;z-index:400;box-shadow:0 2px 8px rgba(0,0,0,.04)}}
-.tab-nav{{display:flex;gap:.5rem;max-width:960px;margin:0 auto;padding:0 1rem;overflow-x:auto;scrollbar-width:none}}
-.tab-nav::-webkit-scrollbar{{display:none}}
-.tab-btn{{background:none;border:none;padding:.9rem 1.1rem;font-size:.9rem;font-weight:600;color:#665e52;cursor:pointer;display:flex;align-items:center;gap:.5rem;white-space:nowrap;border-bottom:3px solid transparent;transition:all .2s;outline:none}}
-.tab-btn:hover{{color:#2D2366;background:rgba(45,35,102,.03)}}
-.tab-btn.active{{color:#FF6B35;border-bottom-color:#FF6B35;font-weight:700}}
-.tab-btn i{{font-size:1rem}}
+.m3-tab-btn {{
+  background: transparent;
+  border: none;
+  padding: 0.7rem 1.3rem;
+  border-radius: var(--md-shape-corner-full);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}}
+.m3-tab-btn:hover {{
+  background: var(--md-sys-color-surface-variant);
+  color: var(--md-sys-color-primary);
+}}
+.m3-tab-btn.active {{
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  box-shadow: 0 4px 12px rgba(103, 80, 164, 0.25);
+  font-weight: 700;
+}}
+.m3-tab-btn i {{
+  font-size: 1.05rem;
+}}
 
-/* ── TAB PANES ── */
-.tab-pane{{display:none;animation:fadeIn .25s ease-in-out}}
-.tab-pane.active{{display:block}}
-@keyframes fadeIn{{from{{opacity:0;transform:translateY(4px)}}to{{opacity:1;transform:translateY(0)}}}}
+/* ── Container & Layout ── */
+.container {{
+  max-width: 1050px;
+  margin: 0 auto;
+  padding: 1.8rem 1.2rem;
+}}
 
-/* ── Card Components ── */
-.card{{background:#fff;border-radius:14px;padding:1.8rem;margin-bottom:1.2rem;box-shadow:0 4px 16px rgba(0,0,0,.04);border:1px solid #eae5dc}}
-.card h2{{font-size:1.25rem;color:#2D2366;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:2px solid #FFD700;display:flex;align-items:center;gap:.6rem}}
-.form-group{{margin-bottom:1.1rem}}
-label{{display:block;font-weight:600;margin-bottom:.4rem;color:#4a4237;font-size:.88rem}}
-input,select,textarea{{width:100%;padding:.75rem;border:2px solid #e0dcd0;border-radius:10px;font-size:.95rem;font-family:inherit;transition:all .2s;background:#fff}}
-input:focus,select:focus,textarea:focus{{border-color:#FF6B35;outline:none;box-shadow:0 0 0 3px rgba(255,107,53,.15)}}
-.row{{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}}
-@media(max-width:600px){{.row{{grid-template-columns:1fr}}}}
+.tab-pane {{
+  display: none;
+  animation: m3FadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}}
+.tab-pane.active {{
+  display: block;
+}}
+@keyframes m3FadeIn {{
+  from {{ opacity: 0; transform: translateY(8px); }}
+  to {{ opacity: 1; transform: translateY(0); }}
+}}
 
-button.action-btn{{background:linear-gradient(135deg,#FF6B35,#e05a2a);color:#fff;border:none;padding:.85rem 2rem;border-radius:50px;font-size:1rem;font-weight:700;cursor:pointer;width:100%;transition:all .2s;box-shadow:0 4px 12px rgba(255,107,53,.25);display:flex;align-items:center;justify-content:center;gap:.5rem}}
-button.action-btn:hover{{transform:translateY(-1px);box-shadow:0 6px 16px rgba(255,107,53,.35)}}
-button.action-btn:active{{transform:translateY(0)}}
-button:disabled{{opacity:.5;cursor:not-allowed}}
+/* ── M3 Cards ── */
+.m3-card {{
+  background: var(--md-sys-color-surface);
+  border-radius: var(--md-shape-corner-large);
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--md-elevation-2);
+  border: 1px solid rgba(121, 116, 126, 0.12);
+  transition: box-shadow 0.25s ease;
+}}
+.m3-card:hover {{
+  box-shadow: var(--md-elevation-3);
+}}
 
-.help-icon{{display:inline-flex;align-items:center;justify-content:center;cursor:help;color:#888;font-size:.8rem;margin-left:.3rem;width:18px;height:18px;border-radius:50%;background:#f0ede6}}
-.help-icon:hover{{color:#FF6B35;background:#ffe8e0}}
+.m3-card-title {{
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--md-sys-color-primary);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}}
+.m3-card-title i {{
+  color: var(--md-sys-color-tertiary);
+}}
 
-/* ── RESULTS AREA ── */
-.result{{display:none;margin-top:1.5rem;padding-top:1.5rem;border-top:2px dashed #eae5dc}}
-.result.show{{display:block}}
-.profile-badge{{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .9rem;border-radius:20px;font-weight:700;font-size:.85rem}}
-.profile-dyslexia{{background:#ffe6e6;color:#c0392b}}
-.profile-typical{{background:#e6f9e6;color:#27ae60}}
-.profile-hyperlexic{{background:#e6ecff;color:#2c3e99}}
-.profile-garden{{background:#fff3e0;color:#e67e22}}
+/* ── Hero Banners ── */
+.hero-card {{
+  background: linear-gradient(135deg, #4A3E7D 0%, #6750A4 100%);
+  color: #fff;
+  border-radius: var(--md-shape-corner-large);
+  padding: 0;
+  overflow: hidden;
+  margin-bottom: 1.8rem;
+  box-shadow: var(--md-elevation-3);
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  align-items: center;
+}}
+@media(max-width: 768px) {{
+  .hero-card {{ grid-template-columns: 1fr; }}
+  .hero-img-col {{ height: 220px; }}
+}}
+.hero-text-col {{
+  padding: 2.2rem;
+}}
+.hero-tag {{
+  display: inline-block;
+  background: var(--md-sys-color-tertiary-container);
+  color: #7A2813;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.8rem;
+  border-radius: var(--md-shape-corner-full);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.8rem;
+}}
+.hero-title {{
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.25;
+  margin-bottom: 0.8rem;
+}}
+.hero-desc {{
+  color: #E8DEF8;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 1.2rem;
+}}
+.hero-img-col img {{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}}
 
-.remediation-card{{background:#fffdf7;border:1px solid #e8ddd0;border-radius:12px;padding:1.5rem;margin:1.2rem 0;page-break-inside:avoid;box-shadow:0 2px 8px rgba(0,0,0,.03)}}
-.remediation-card h3{{color:#2D2366;font-size:1.15rem;margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}}
-.remediation-card .section{{margin:.8rem 0;padding-left:1rem;border-left:3px solid #FFD700}}
-.script-line{{margin:.4rem 0;font-size:.92rem;padding:.4rem .8rem;border-radius:6px}}
-.script-i{{background:rgba(45,35,102,.05);color:#2D2366;border-left:3px solid #2D2366}}
-.script-we{{background:rgba(212,114,42,.05);color:#d4722a;border-left:3px solid #d4722a}}
-.script-you{{background:rgba(39,174,96,.05);color:#27ae60;border-left:3px solid #27ae60}}
+/* ── Form Controls ── */
+.form-group {{ margin-bottom: 1.3rem; }}
+label {{
+  display: block;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: #1C1B1F;
+  margin-bottom: 0.4rem;
+}}
+input, select, textarea {{
+  width: 100%;
+  padding: 0.85rem 1.1rem;
+  border: 2px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-shape-corner-medium);
+  font-size: 0.98rem;
+  font-family: inherit;
+  background: var(--md-sys-color-surface);
+  color: #1C1B1F;
+  transition: all 0.2s ease;
+}}
+input:focus, select:focus, textarea:focus {{
+  border-color: var(--md-sys-color-primary);
+  outline: none;
+  box-shadow: 0 0 0 4px var(--md-sys-color-primary-container);
+}}
+.row {{ display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }}
+@media(max-width: 600px) {{ .row {{ grid-template-columns: 1fr; }} }}
 
-.word-chain{{font-family:monospace;background:#f8f6f0;padding:.6rem 1rem;border-radius:8px;font-size:1rem;font-weight:700;color:#2D2366;display:inline-block}}
-.feedback{{padding:.6rem 1rem;border-radius:8px;margin:.6rem 0;font-size:.9rem}}
-.feedback-error{{background:#fff0f0;border-left:4px solid #e74c3c;color:#c0392b}}
-.feedback-praise{{background:#f0fff0;border-left:4px solid #27ae60;color:#27ae60}}
+/* M3 Filled Button */
+.m3-btn {{
+  background: linear-gradient(135deg, var(--md-sys-color-primary), #4A3E7D);
+  color: var(--md-sys-color-on-primary);
+  border: none;
+  padding: 0.95rem 2rem;
+  border-radius: var(--md-shape-corner-full);
+  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  box-shadow: 0 4px 14px rgba(103, 80, 164, 0.3);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}}
+.m3-btn:hover {{
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(103, 80, 164, 0.4);
+}}
+.m3-btn:active {{
+  transform: translateY(0);
+}}
 
-.stats-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.8rem;margin:1rem 0}}
-.stat{{text-align:center;padding:1rem .8rem;background:#f8f6f0;border-radius:10px;border:1px solid #ece7de}}
-.stat-num{{font-size:1.6rem;font-weight:800;color:#FF6B35;line-height:1.2}}
-.stat-label{{font-size:.7rem;color:#777;text-transform:uppercase;letter-spacing:.05em;margin-top:.2rem;font-weight:600}}
-.spinner{{display:none;text-align:center;padding:2rem;color:#2D2366;font-weight:600}}
-.spinner.show{{display:block}}
+/* ── Collapsible Accordion (M3 Style) ── */
+.m3-accordion {{
+  background: var(--md-sys-color-surface-variant);
+  border-radius: var(--md-shape-corner-medium);
+  margin-bottom: 0.8rem;
+  overflow: hidden;
+  border: 1px solid rgba(121, 116, 126, 0.12);
+  transition: background 0.2s ease;
+}}
+.m3-accordion-header {{
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1.1rem 1.4rem;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--md-sys-color-primary);
+  user-select: none;
+}}
+.m3-accordion-header i.step-icon {{
+  width: 32px;
+  height: 32px;
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}}
+.m3-accordion-header .chevron {{
+  margin-left: auto;
+  transition: transform 0.3s ease;
+  color: var(--md-sys-color-outline);
+}}
+.m3-accordion.open .m3-accordion-header .chevron {{
+  transform: rotate(180deg);
+  color: var(--md-sys-color-primary);
+}}
+.m3-accordion-body {{
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--md-sys-color-surface);
+}}
+.m3-accordion.open .m3-accordion-body {{
+  max-height: 1200px;
+  padding: 1.4rem;
+  border-top: 1px solid var(--md-sys-color-surface-variant);
+}}
 
-footer{{text-align:center;padding:2.5rem 1rem;color:#888;font-size:.85rem;border-top:1px solid #eae5dc;margin-top:2rem}}
-.print-btn{{background:#2D2366;color:#fff;margin-top:1rem;padding:.75rem 1.8rem;border-radius:50px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:.5rem}}
-.print-btn:hover{{background:#1a1a3e}}
+/* ── Results Area & Remediation Cards ── */
+.result {{ display: none; margin-top: 1.8rem; padding-top: 1.8rem; border-top: 2px dashed var(--md-sys-color-outline-variant); }}
+.result.show {{ display: block; }}
 
-@media print{{
-  .sidebar,.sidebar-backdrop,.sidebar-toggle,.header,.tab-nav-container,footer,.card:not(.result-card),button.action-btn{{display:none!important}}
-  .main-content{{margin-left:0!important}}
-  .tab-pane{{display:block!important}}
-  .result{{display:block!important}}
-  .remediation-card{{box-shadow:none;border:1px solid #ccc}}
+.profile-badge {{
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1.1rem;
+  border-radius: var(--md-shape-corner-full);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+}}
+.profile-dyslexia {{ background: #FFDBCF; color: #7A2813; }}
+.profile-typical {{ background: #C8E6C9; color: #1B5E20; }}
+.profile-hyperlexic {{ background: #EADDFF; color: #21005D; }}
+.profile-garden {{ background: #FFE0B2; color: #E65100; }}
+
+.remediation-card {{
+  background: var(--md-sys-color-surface);
+  border: 1px solid var(--md-sys-color-surface-variant);
+  border-radius: var(--md-shape-corner-medium);
+  padding: 1.6rem;
+  margin: 1.4rem 0;
+  box-shadow: var(--md-elevation-1);
+}}
+.remediation-card h3 {{
+  color: var(--md-sys-color-primary);
+  font-size: 1.25rem;
+  margin-bottom: 0.8rem;
+}}
+
+.script-line {{
+  margin: 0.5rem 0;
+  padding: 0.6rem 1rem;
+  border-radius: var(--md-shape-corner-small);
+  font-size: 0.95rem;
+}}
+.script-i {{ background: #F3EDF7; color: #21005D; border-left: 4px solid var(--md-sys-color-primary); }}
+.script-we {{ background: #FFF3E0; color: #E65100; border-left: 4px solid #F57C00; }}
+.script-you {{ background: #E8F5E9; color: #1B5E20; border-left: 4px solid #388E3C; }}
+
+.word-chain {{
+  font-family: monospace;
+  background: #F4EFF4;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--md-shape-corner-small);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--md-sys-color-primary);
+  display: inline-block;
+}}
+.feedback {{
+  padding: 0.7rem 1.1rem;
+  border-radius: var(--md-shape-corner-small);
+  margin: 0.6rem 0;
+  font-size: 0.92rem;
+}}
+.feedback-error {{ background: #FFEDEA; border-left: 4px solid #D32F2F; color: #B71C1C; }}
+.feedback-praise {{ background: #E8F5E9; border-left: 4px solid #388E3C; color: #1B5E20; }}
+
+.stats-grid {{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1rem;
+  margin: 1.2rem 0;
+}}
+.stat {{
+  text-align: center;
+  padding: 1.2rem 0.8rem;
+  background: var(--md-sys-color-surface-variant);
+  border-radius: var(--md-shape-corner-medium);
+}}
+.stat-num {{
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--md-sys-color-primary);
+  line-height: 1.1;
+}}
+.stat-label {{
+  font-size: 0.72rem;
+  color: var(--md-sys-color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 0.3rem;
+  font-weight: 700;
+}}
+.spinner {{ display: none; text-align: center; padding: 2rem; color: var(--md-sys-color-primary); font-weight: 600; }}
+.spinner.show {{ display: block; }}
+
+/* ── Sidebar ── */
+.sidebar-backdrop {{
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 800; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}}
+.sidebar-backdrop.open {{ opacity: 1; pointer-events: auto; }}
+
+.sidebar {{
+  position: fixed; top: 0; left: 0; height: 100vh; width: 360px; max-width: 85vw;
+  background: var(--md-sys-color-surface); color: #1C1B1F; z-index: 900; overflow-y: auto;
+  transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--md-elevation-3); border-right: 1px solid var(--md-sys-color-surface-variant);
+}}
+.sidebar.open {{ transform: translateX(0); }}
+
+footer {{
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--md-sys-color-secondary);
+  font-size: 0.88rem;
+  border-top: 1px solid var(--md-sys-color-surface-variant);
+  margin-top: 3rem;
+}}
+
+@media print {{
+  .sidebar, .sidebar-backdrop, .app-bar, .m3-tab-bar-container, footer, .m3-card:not(.result-card), .m3-btn {{ display: none !important; }}
+  .tab-pane {{ display: block !important; }}
+  .result {{ display: block !important; }}
+  .remediation-card {{ box-shadow: none; border: 1px solid #ccc; }}
 }}
 </style>
 </head>
@@ -342,109 +655,81 @@ footer{{text-align:center;padding:2.5rem 1rem;color:#888;font-size:.85rem;border
 
 <!-- Sidebar Panel -->
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-header">
-    <h2>🧠 SoR Resource Hub</h2>
-    <div class="brand">EdTech Labs — Science of Reading</div>
+  <div style="padding:1.5rem;border-bottom:1px solid var(--md-sys-color-surface-variant);background:var(--md-sys-color-primary-container)">
+    <h2 style="color:var(--md-sys-color-on-primary-container);font-size:1.2rem;font-weight:700">🔬 Science of Reading Evidence</h2>
+    <div style="font-size:0.8rem;color:var(--md-sys-color-secondary);margin-top:0.2rem">Research Papers & Theoretical Models</div>
   </div>
 
-  <div class="sidebar-section open" id="sec-guide">
-    <div class="sidebar-section-header" onclick="toggleSection('sec-guide')">
-      <i class="fa-solid fa-book"></i> User Guide
-      <i class="fa-solid fa-chevron-down chevron"></i>
-    </div>
-    <div class="sidebar-section-body">
-      <div class="sidebar-section-inner" id="userGuideContent"></div>
-    </div>
-  </div>
-
-  <div class="sidebar-section" id="sec-examples">
-    <div class="sidebar-section-header" onclick="toggleSection('sec-examples')">
-      <i class="fa-solid fa-code"></i> Example Workflows
-      <i class="fa-solid fa-chevron-down chevron"></i>
-    </div>
-    <div class="sidebar-section-body">
-      <div class="sidebar-section-inner" id="examplesContent"></div>
-    </div>
-  </div>
-
-  <div class="sidebar-section" id="sec-research">
-    <div class="sidebar-section-header" onclick="toggleSection('sec-research')">
-      <i class="fa-solid fa-flask"></i> SoR Research
-      <i class="fa-solid fa-chevron-down chevron"></i>
-    </div>
-    <div class="sidebar-section-body">
-      <div class="sidebar-section-inner" id="researchContent"></div>
-    </div>
-  </div>
-
-  <div style="padding:1.2rem;text-align:center;border-top:1px solid rgba(255,255,255,.08);margin-top:.5rem">
-    <p style="font-size:.65rem;color:#7870a8">© 2026 EdTech Labs<br>FERPA Compliant • v2.5</p>
-  </div>
+  <div style="padding:1.2rem" id="researchSidebarContent"></div>
 </aside>
 
-<!-- Header -->
-<header class="header">
-  <div class="header-title">
-    <h1>🧠 EdTech Labs</h1>
-    <span class="badge">Science of Reading</span>
+<!-- Top App Bar -->
+<header class="app-bar">
+  <div class="app-bar-brand">
+    <div class="app-bar-icon"><i class="fa-solid fa-brain"></i></div>
+    <div>
+      <div class="app-bar-title">EdTech Labs</div>
+      <div class="app-bar-subtitle">Science of Reading Teacher Workspace</div>
+    </div>
   </div>
-  <button class="sidebar-toggle" id="sidebarToggle" title="Open resource hub & research">
-    <i class="fa-solid fa-book-open"></i>
-    <span style="font-size:.8rem;font-weight:600">Resource Hub</span>
+  <button class="hub-btn" id="sidebarToggle" title="Open Research & Evidence Hub">
+    <i class="fa-solid fa-flask"></i> Research Hub
   </button>
 </header>
 
-<!-- TAB NAVIGATION -->
-<div class="tab-nav-container">
-  <nav class="tab-nav">
-    <button class="tab-btn active" data-tab="tab-diagnose" onclick="switchTab('tab-diagnose')">
-      <i class="fa-solid fa-user-check"></i> Diagnose Student
+<!-- M3 Segmented Navigation Tabs -->
+<div class="m3-tab-bar-container">
+  <nav class="m3-tab-bar">
+    <button class="m3-tab-btn active" data-tab="tab-diagnose" onclick="switchTab('tab-diagnose')">
+      <i class="fa-solid fa-user-doctor"></i> Diagnose Student
     </button>
-    <button class="tab-btn" data-tab="tab-decodable" onclick="switchTab('tab-decodable')">
-      <i class="fa-solid fa-book-reader"></i> Check Decodability
+    <button class="m3-tab-btn" data-tab="tab-decodable" onclick="switchTab('tab-decodable')">
+      <i class="fa-solid fa-book-open"></i> Check Decodability
     </button>
-    <button class="tab-btn" data-tab="tab-vocab" onclick="switchTab('tab-vocab')">
+    <button class="m3-tab-btn" data-tab="tab-vocab" onclick="switchTab('tab-vocab')">
       <i class="fa-solid fa-layer-group"></i> Classify Vocabulary
     </button>
-    <button class="tab-btn" data-tab="tab-evidence" onclick="switchTab('tab-evidence')">
+    <button class="m3-tab-btn" data-tab="tab-evidence" onclick="switchTab('tab-evidence')">
       <i class="fa-solid fa-microscope"></i> Evidence Search
     </button>
-    <button class="tab-btn" data-tab="tab-standards" onclick="switchTab('tab-standards')">
-      <i class="fa-solid fa-graduation-cap"></i> Standards Alignment
+    <button class="m3-tab-btn" data-tab="tab-standards" onclick="switchTab('tab-standards')">
+      <i class="fa-solid fa-award"></i> Standards Alignment
+    </button>
+    <button class="m3-tab-btn" data-tab="tab-guide" onclick="switchTab('tab-guide')">
+      <i class="fa-solid fa-circle-question"></i> Teacher Guide
     </button>
   </nav>
 </div>
 
-<!-- Main Content -->
-<div class="main-content" id="mainContent">
+<!-- Main Container -->
 <div class="container">
 
   <!-- ── TAB 1: DIAGNOSE STUDENT ── -->
   <div class="tab-pane active" id="tab-diagnose">
-    <!-- Hero Banner -->
-    <div class="card" style="background:linear-gradient(135deg,#1a1a3e,#2D2366);color:#fff;padding:1.8rem">
-      <p style="color:#FFD700;font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.4rem;font-weight:700">Simple View of Reading Diagnostic</p>
-      <h2 style="color:#fff;font-size:1.35rem;border:none;margin-bottom:.4rem;padding:0">Turn Assessment Scores into Actionable Lesson Plans</h2>
-      <p style="color:#b0aec8;font-size:.88rem;max-width:650px;margin-bottom:1rem">Enter DIBELS, Acadience, or MAP Reading scores to generate printable, evidence-aligned remediation cards complete with I Do / We Do / You Do explicit teaching scripts.</p>
-      <button onclick="tryExample()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);width:auto;font-size:.82rem;padding:.5rem 1.2rem;border-radius:30px;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;font-weight:600">
-        <i class="fa-solid fa-wand-magic-sparkles" style="color:#FFD700"></i> Try Example Student (DIBELS NWF 0.38)
-      </button>
+    <div class="hero-card">
+      <div class="hero-text-col">
+        <span class="hero-tag">Simple View of Reading Diagnostic</span>
+        <h1 class="hero-title">Turn Benchmark Scores into Lesson Plans</h1>
+        <p class="hero-desc">Input DIBELS, Acadience, or MAP scores to generate printable remediation cards with explicit I Do / We Do / You Do small-group scripts.</p>
+        <button onclick="tryExample()" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);padding:0.6rem 1.4rem;border-radius:28px;font-family:'Outfit',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer;display:inline-flex;align-items:center;gap:0.5rem">
+          <i class="fa-solid fa-wand-magic-sparkles" style="color:#FFD700"></i> Try Demo Student (DIBELS 0.38)
+        </button>
+      </div>
+      <div class="hero-img-col">
+        <img src="/static/teacher_reading_hero.jpg" alt="Teacher Reading Small Group Instruction">
+      </div>
     </div>
 
-    <div class="card">
-      <h2><i class="fa-solid fa-stethoscope" style="color:#FF6B35"></i> Student Assessment Scores</h2>
+    <div class="m3-card">
+      <div class="m3-card-title"><i class="fa-solid fa-stethoscope"></i> Assessment Score Diagnostic</div>
       <form id="diagnoseForm">
         <div class="row">
           <div class="form-group">
-            <label>Decoding Score (0.0 – 1.0)
-              <span class="help-icon" title="Decoding accuracy from DIBELS NWF-CLS, Acadience, or CORE Phonics. e.g., 0.38 = Below Benchmark.">ⓘ</span>
-            </label>
+            <label>Decoding Score (0.0 – 1.0) <span style="font-weight:normal;color:#777">— DIBELS NWF-CLS or Acadience</span></label>
             <input type="number" id="decoding" step="0.01" min="0" max="1" placeholder="e.g. 0.38" required>
           </div>
           <div class="form-group">
-            <label>Language Comprehension (0.0 – 1.0)
-              <span class="help-icon" title="Listening comprehension or vocabulary score from DIBELS Maze or MAP Reading. e.g., 0.85 = Proficient.">ⓘ</span>
-            </label>
+            <label>Language Comprehension (0.0 – 1.0) <span style="font-weight:normal;color:#777">— DIBELS Maze or MAP</span></label>
             <input type="number" id="comprehension" step="0.01" min="0" max="1" placeholder="e.g. 0.85" required>
           </div>
         </div>
@@ -459,17 +744,17 @@ footer{{text-align:center;padding:2.5rem 1rem;color:#888;font-size:.85rem;border
             <option value="5th">5th Grade</option>
           </select>
         </div>
-        <button type="submit" class="action-btn"><i class="fa-solid fa-magnifying-glass"></i> Generate Diagnostic & Remediation Cards</button>
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Remediation Plan</button>
       </form>
 
-      <div class="spinner" id="spinner"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><br><br>Analyzing scores against Simple View of Reading...</div>
+      <div class="spinner" id="spinner"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><br><br>Computing Simple View profile...</div>
 
       <div class="result" id="result">
         <div id="profileArea"></div>
         <div id="remediationArea"></div>
         <div id="nextSteps"></div>
-        <div style="text-align:center">
-          <button class="print-btn" onclick="window.print()"><i class="fa-solid fa-print"></i> Print Remediation Cards</button>
+        <div style="text-align:center;margin-top:1.5rem">
+          <button onclick="window.print()" class="m3-btn" style="width:auto;padding:0.7rem 1.8rem"><i class="fa-solid fa-print"></i> Print Remediation Cards</button>
         </div>
       </div>
     </div>
@@ -477,13 +762,13 @@ footer{{text-align:center;padding:2.5rem 1rem;color:#888;font-size:.85rem;border
 
   <!-- ── TAB 2: CHECK DECODABILITY ── -->
   <div class="tab-pane" id="tab-decodable">
-    <div class="card">
-      <h2><i class="fa-solid fa-book-open-reader" style="color:#FF6B35"></i> Decodability & Phonics Scope Checker</h2>
-      <p style="color:#666;font-size:.88rem;margin-bottom:1.2rem">Paste a story or passage to verify if it aligns with taught phonics patterns and spot untaught "heart words" to pre-teach.</p>
+    <div class="m3-card">
+      <div class="m3-card-title"><i class="fa-solid fa-book-open"></i> Decodability & Scope Verifier</div>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Paste text from a book or passage to check which words use untaught phonics patterns and flag "Heart Words" to pre-teach.</p>
       <form id="decodabilityForm">
         <div class="form-group">
           <label>Passage Text</label>
-          <textarea id="decodeText" rows="4" placeholder="Paste a story or decodable text passage here..."></textarea>
+          <textarea id="decodeText" rows="4" placeholder="Paste reading passage here..."></textarea>
         </div>
         <div class="row">
           <div class="form-group">
@@ -507,7 +792,7 @@ footer{{text-align:center;padding:2.5rem 1rem;color:#888;font-size:.85rem;border
             </select>
           </div>
         </div>
-        <button type="submit" class="action-btn"><i class="fa-solid fa-check-double"></i> Check Text Decodability</button>
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-magnifying-glass"></i> Check Decodability</button>
       </form>
       <div class="result" id="decodeResult"></div>
     </div>
@@ -515,15 +800,15 @@ footer{{text-align:center;padding:2.5rem 1rem;color:#888;font-size:.85rem;border
 
   <!-- ── TAB 3: CLASSIFY VOCABULARY ── -->
   <div class="tab-pane" id="tab-vocab">
-    <div class="card">
-      <h2><i class="fa-solid fa-spell-check" style="color:#FF6B35"></i> Beck's Three-Tier Vocabulary Analyzer</h2>
-      <p style="color:#666;font-size:.88rem;margin-bottom:1.2rem">Identify Tier 1 (Everyday), Tier 2 (High-Utility Academic), and Tier 3 (Domain-Specific) words in any classroom reading text.</p>
+    <div class="m3-card">
+      <div class="m3-card-title"><i class="fa-solid fa-layer-group"></i> Three-Tier Vocabulary Classifier</div>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Analyze text passages using Beck's 3-Tier vocabulary framework to highlight high-utility Tier 2 academic words for explicit pre-teaching.</p>
       <form id="vocabForm">
         <div class="form-group">
-          <label>Reading Text</label>
-          <textarea id="vocabText" rows="4" placeholder="Paste a reading selection to classify vocabulary..."></textarea>
+          <label>Text Selection</label>
+          <textarea id="vocabText" rows="4" placeholder="Paste passage for vocabulary classification..."></textarea>
         </div>
-        <button type="submit" class="action-btn"><i class="fa-solid fa-filter"></i> Classify Tier 1, 2, and 3 Words</button>
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-filter"></i> Classify Vocabulary Tiers</button>
       </form>
       <div class="result" id="vocabResult"></div>
     </div>
@@ -531,15 +816,15 @@ footer{{text-align:center;padding:2.5rem 1rem;color:#888;font-size:.85rem;border
 
   <!-- ── TAB 4: EVIDENCE SEARCH ── -->
   <div class="tab-pane" id="tab-evidence">
-    <div class="card">
-      <h2><i class="fa-solid fa-microscope" style="color:#FF6B35"></i> Science of Reading Research Engine</h2>
-      <p style="color:#666;font-size:.88rem;margin-bottom:1.2rem">Search What Works Clearinghouse (WWC) and Best Evidence Encyclopedia (BEE) meta-analyses for literacy interventions.</p>
+    <div class="m3-card">
+      <div class="m3-card-title"><i class="fa-solid fa-microscope"></i> Evidence & Research Search</div>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Query What Works Clearinghouse (WWC) and Best Evidence Encyclopedia (BEE) meta-analyses for literacy interventions and effect sizes.</p>
       <form id="evidenceForm">
         <div class="form-group">
-          <label>Literacy Topic or Intervention</label>
+          <label>Topic or Skill Area</label>
           <input type="text" id="evidenceTopic" placeholder="e.g. phonics, fluency, vocabulary, comprehension, phonemic awareness..." required>
         </div>
-        <button type="submit" class="action-btn"><i class="fa-solid fa-magnifying-glass"></i> Search Research Evidence</button>
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-magnifying-glass"></i> Search Research Evidence</button>
       </form>
       <div class="result" id="evidenceResult"></div>
     </div>
@@ -547,14 +832,14 @@ footer{{text-align:center;padding:2.5rem 1rem;color:#888;font-size:.85rem;border
 
   <!-- ── TAB 5: STANDARDS ALIGNMENT ── -->
   <div class="tab-pane" id="tab-standards">
-    <div class="card">
-      <h2><i class="fa-solid fa-graduation-cap" style="color:#FF6B35"></i> State Standards Alignment Lookup</h2>
-      <p style="color:#666;font-size:.88rem;margin-bottom:1.2rem">Match classroom reading activities and skills to state English Language Arts standards.</p>
+    <div class="m3-card">
+      <div class="m3-card-title"><i class="fa-solid fa-award"></i> State Standards Alignment Lookup</div>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Find Georgia GSE, CCSS, Texas TEKS, or Florida B.E.S.T. standard codes for lesson plans.</p>
       <form id="standardsForm">
         <div class="row">
           <div class="form-group">
-            <label>Target Skill or Learning Goal</label>
-            <input type="text" id="standardsSkill" placeholder="e.g. decode words with silent e, blend onset and rime..." required>
+            <label>Learning Goal / Skill</label>
+            <input type="text" id="standardsSkill" placeholder="e.g. decode words with silent e..." required>
           </div>
           <div class="form-group">
             <label>State Framework</label>
@@ -566,86 +851,159 @@ footer{{text-align:center;padding:2.5rem 1rem;color:#888;font-size:.85rem;border
             </select>
           </div>
         </div>
-        <button type="submit" class="action-btn"><i class="fa-solid fa-award"></i> Find Matching Standards</button>
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-award"></i> Find Standards</button>
       </form>
       <div class="result" id="standardsResult"></div>
+    </div>
+  </div>
+
+  <!-- ── TAB 6: TEACHER GUIDE (ACCORDION & IMAGERY) ── -->
+  <div class="tab-pane" id="tab-guide">
+    <div class="m3-card">
+      <div class="m3-card-title"><i class="fa-solid fa-graduation-cap"></i> Teacher Guide: Science of Reading Tools</div>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.5rem">Step-by-step instructions on how to use each tool in your classroom reading routines.</p>
+
+      <!-- Reading Rope Image Card -->
+      <div style="margin-bottom:1.8rem;border-radius:var(--md-shape-corner-medium);overflow:hidden;box-shadow:var(--md-elevation-1)">
+        <img src="/static/sor_reading_rope.jpg" alt="Scarborough's Reading Rope" style="width:100%;max-height:360px;object-fit:cover;display:block">
+        <div style="padding:1rem;background:var(--md-sys-color-surface-variant);font-size:0.85rem;color:var(--md-sys-color-secondary)">
+          <strong>The Theoretical Basis:</strong> Reading comprehension is the product of Word Recognition (decoding, phonological awareness, sight recognition) and Language Comprehension (vocabulary, background knowledge, verbal reasoning).
+        </div>
+      </div>
+
+      <!-- Accordion Step 1 -->
+      <div class="m3-accordion open" id="guide-step-1">
+        <div class="m3-accordion-header" onclick="toggleGuide('guide-step-1')">
+          <i class="fa-solid fa-user-doctor step-icon"></i>
+          <span>1. How to Diagnose a Student & Print Remediation Cards</span>
+          <i class="fa-solid fa-chevron-down chevron"></i>
+        </div>
+        <div class="m3-accordion-body">
+          <p style="margin-bottom:0.8rem"><strong>Goal:</strong> Translate DIBELS, Acadience, or MAP scores into a targeted small-group intervention script.</p>
+          <ol style="padding-left:1.4rem;line-height:1.7;color:#333">
+            <li>Click the <strong>Diagnose Student</strong> tab.</li>
+            <li>Input the student's <strong>Decoding Score</strong> (0.0 to 1.0, where 0.38 = Below Benchmark).</li>
+            <li>Input the student's <strong>Language Comprehension Score</strong> (0.0 to 1.0).</li>
+            <li>Select the target <strong>Grade Level</strong> and click <strong>Generate Remediation Plan</strong>.</li>
+            <li>Review the generated <strong>Simple View Profile</strong> and click <strong>Print Remediation Cards</strong> to take small-group scripts to your teacher table.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Accordion Step 2 -->
+      <div class="m3-accordion" id="guide-step-2">
+        <div class="m3-accordion-header" onclick="toggleGuide('guide-step-2')">
+          <i class="fa-solid fa-book-open step-icon"></i>
+          <span>2. How to Check Text Decodability & Target Phonics Scope</span>
+          <i class="fa-solid fa-chevron-down chevron"></i>
+        </div>
+        <div class="m3-accordion-body">
+          <p style="margin-bottom:0.8rem"><strong>Goal:</strong> Ensure students are only reading text with phonics patterns they have been explicitly taught.</p>
+          <ol style="padding-left:1.4rem;line-height:1.7;color:#333">
+            <li>Click the <strong>Check Decodability</strong> tab.</li>
+            <li>Select your target <strong>Grade Level</strong> and <strong>Phonics Skill</strong> (e.g. Silent-e, Blends, Digraphs).</li>
+            <li>Paste any story or decodable passage.</li>
+            <li>Click <strong>Check Decodability</strong> to view the percentage of decodable words, off-scope words, and high-frequency "Heart Words" to pre-teach.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Accordion Step 3 -->
+      <div class="m3-accordion" id="guide-step-3">
+        <div class="m3-accordion-header" onclick="toggleGuide('guide-step-3')">
+          <i class="fa-solid fa-layer-group step-icon"></i>
+          <span>3. How to Classify Vocabulary Tiers (Beck's Model)</span>
+          <i class="fa-solid fa-chevron-down chevron"></i>
+        </div>
+        <div class="m3-accordion-body">
+          <p style="margin-bottom:0.8rem"><strong>Goal:</strong> Select high-impact Tier 2 academic words to pre-teach prior to reading.</p>
+          <ol style="padding-left:1.4rem;line-height:1.7;color:#333">
+            <li>Click the <strong>Classify Vocabulary</strong> tab.</li>
+            <li>Paste a selection from your read-aloud or guided reading book.</li>
+            <li>Click <strong>Classify Vocabulary Tiers</strong>.</li>
+            <li>Use the resulting breakdown to focus explicit vocabulary routines on <strong>Tier 2 (High-Utility Academic)</strong> words.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Accordion Step 4 -->
+      <div class="m3-accordion" id="guide-step-4">
+        <div class="m3-accordion-header" onclick="toggleGuide('guide-step-4')">
+          <i class="fa-solid fa-microscope step-icon"></i>
+          <span>4. How to Search Evidence & Effect Sizes</span>
+          <i class="fa-solid fa-chevron-down chevron"></i>
+        </div>
+        <div class="m3-accordion-body">
+          <p style="margin-bottom:0.8rem"><strong>Goal:</strong> Validate intervention choices with meta-analytic research from What Works Clearinghouse (WWC) and Best Evidence Encyclopedia (BEE).</p>
+          <ol style="padding-left:1.4rem;line-height:1.7;color:#333">
+            <li>Click the <strong>Evidence Search</strong> tab.</li>
+            <li>Type any skill area such as <code>phonemic awareness</code>, <code>fluency</code>, <code>phonics</code>, or <code>comprehension</code>.</li>
+            <li>Review effect sizes ($d$), source studies, and practical classroom takeaways.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Accordion Step 5 -->
+      <div class="m3-accordion" id="guide-step-5">
+        <div class="m3-accordion-header" onclick="toggleGuide('guide-step-5')">
+          <i class="fa-solid fa-award step-icon"></i>
+          <span>5. How to Lookup State Standards Alignment</span>
+          <i class="fa-solid fa-chevron-down chevron"></i>
+        </div>
+        <div class="m3-accordion-body">
+          <p style="margin-bottom:0.8rem"><strong>Goal:</strong> Attach official state framework standard codes to your reading intervention plans.</p>
+          <ol style="padding-left:1.4rem;line-height:1.7;color:#333">
+            <li>Click the <strong>Standards Alignment</strong> tab.</li>
+            <li>Enter your reading goal or skill (e.g. <em>decode words with consonant blends</em>).</li>
+            <li>Select your state framework (Georgia GSE, CCSS, Texas TEKS, Florida B.E.S.T.).</li>
+            <li>Copy the official standard code directly into your lesson plan.</li>
+          </ol>
+        </div>
+      </div>
+
     </div>
   </div>
 
 </div><!-- /container -->
 
 <footer>
-  <p>© 2026 EdTech Labs • Science of Reading MCP Server • <a href="https://github.com/kosburn0408/sor-mcp-server" style="color:#FF6B35" target="_blank">GitHub Repository</a></p>
-  <p style="font-size:.75rem;color:#888;margin-top:.4rem">🔒 FERPA Compliant • Student data never leaves your server</p>
-  <p style="font-size:.7rem;color:#999;margin-top:.3rem">
-    <a href="#" onclick="showPrivacy();return false" style="color:#777">Privacy Policy</a> • 
-    <a href="#" onclick="showAbout();return false" style="color:#777">About Science of Reading</a>
-  </p>
+  <p>© 2026 EdTech Labs • Science of Reading Teacher Workspace</p>
+  <p style="font-size:0.8rem;color:var(--md-sys-color-secondary);margin-top:0.4rem">🔒 FERPA Compliant • Zero Data Retention • Student Privacy Guaranteed</p>
 </footer>
 
-<!-- Privacy Policy Modal -->
-<div id="privacyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center" onclick="this.style.display='none'">
-  <div style="background:#fff;max-width:550px;width:90%;padding:2rem;border-radius:12px;max-height:80vh;overflow-y:auto" onclick="event.stopPropagation()">
-    <h3 style="color:#2D2366;margin-bottom:1rem">🔒 FERPA & Privacy Guarantee</h3>
-    <p style="font-size:.9rem;color:#555;line-height:1.6">The SoR Dashboard does <strong>not</strong> collect, store, or transmit any personally identifiable information (PII).</p>
-    <p style="font-size:.9rem;color:#555;line-height:1.6">Scores are evaluated in memory and discarded immediately after generating remediation cards. No names, IDs, or records are retained.</p>
-    <button onclick="document.getElementById('privacyModal').style.display='none'" style="width:auto;margin-top:1rem;padding:.5rem 1.2rem">Close</button>
-  </div>
-</div>
-
-<!-- About Modal -->
-<div id="aboutModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center" onclick="this.style.display='none'">
-  <div style="background:#fff;max-width:550px;width:90%;padding:2rem;border-radius:12px;max-height:80vh;overflow-y:auto" onclick="event.stopPropagation()">
-    <h3 style="color:#2D2366;margin-bottom:1rem">📖 About Science of Reading Tools</h3>
-    <p style="font-size:.9rem;color:#555;line-height:1.6">Ground in the Simple View of Reading (Gough & Tunmer, 1986), Scarborough's Reading Rope (2001), and National Reading Panel meta-analyses.</p>
-    <p style="font-size:.9rem;color:#555;line-height:1.6">Created by <strong>EdTech Labs</strong> — Open Source under Global MCP Hackathon 2026.</p>
-    <button onclick="document.getElementById('aboutModal').style.display='none'" style="width:auto;margin-top:1rem;padding:.5rem 1.2rem">Close</button>
-  </div>
-</div>
-
 <script>
-function showPrivacy(){{ document.getElementById('privacyModal').style.display='flex'; }}
-function showAbout(){{ document.getElementById('aboutModal').style.display='flex'; }}
-</script>
-
-</div><!-- /main-content -->
-
-<script>
-// ── Embedded Sidebar Data ──
-var USER_GUIDE_MD = {USER_GUIDE_JSON};
-var EXAMPLES_DATA = {EXAMPLES_JSON};
 var FRAMEWORKS = {FRAMEWORKS_JSON};
 var PAPERS = {PAPERS_JSON};
 var PILLAR_FINDINGS = {PILLAR_FINDINGS_JSON};
 
-// ── Tab Switching Logic ──
 function switchTab(tabId) {{
-  var tabs = document.querySelectorAll('.tab-btn');
+  var tabs = document.querySelectorAll('.m3-tab-btn');
   var panes = document.querySelectorAll('.tab-pane');
   tabs.forEach(function(t) {{ t.classList.remove('active'); }});
   panes.forEach(function(p) {{ p.classList.remove('active'); }});
 
-  var selectedTab = document.querySelector('.tab-btn[data-tab="' + tabId + '"]');
+  var selectedTab = document.querySelector('.m3-tab-btn[data-tab="' + tabId + '"]');
   var selectedPane = document.getElementById(tabId);
-
   if (selectedTab && selectedPane) {{
     selectedTab.classList.add('active');
     selectedPane.classList.add('active');
   }}
 }}
 
-// ── Sidebar Logic ──
+function toggleGuide(id) {{
+  var el = document.getElementById(id);
+  el.classList.toggle('open');
+}}
+
 var sidebar = document.getElementById('sidebar');
 var backdrop = document.getElementById('sidebarBackdrop');
 var toggle = document.getElementById('sidebarToggle');
-var mainContent = document.getElementById('mainContent');
 var isOpen = false;
 
 function openSidebar() {{
   isOpen = true;
   sidebar.classList.add('open');
   backdrop.classList.add('open');
-  if(window.innerWidth >= 1024) mainContent.classList.add('shifted');
   document.body.style.overflow = 'hidden';
 }}
 
@@ -653,7 +1011,6 @@ function closeSidebar() {{
   isOpen = false;
   sidebar.classList.remove('open');
   backdrop.classList.remove('open');
-  mainContent.classList.remove('shifted');
   document.body.style.overflow = '';
 }}
 
@@ -667,139 +1024,22 @@ document.addEventListener('keydown', function(e) {{
   if(e.key === 'Escape' && isOpen) closeSidebar();
 }});
 
-function toggleSection(id) {{
-  var sec = document.getElementById(id);
-  sec.classList.toggle('open');
-}}
-
-function toggleExample(idx) {{
-  var card = document.getElementById('example-' + idx);
-  card.classList.toggle('open');
-}}
-
-function renderSidebarContent() {{
-  var ugHtml = renderMarkdownSidebar(USER_GUIDE_MD);
-  document.getElementById('userGuideContent').innerHTML = ugHtml;
-
-  var exHtml = '<p style="font-size:.75rem;color:#9088b8;margin-bottom:.5rem">Click a workflow to expand:</p>';
-  EXAMPLES_DATA.forEach(function(ex, i) {{
-    var body = ex.body
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/```([^`]+)```/g, '<pre><code>$1</code></pre>')
-      .replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px">$1</code>');
-    exHtml += '<div class="example-card" id="example-' + i + '">';
-    exHtml += '<div class="example-card-header" onclick="toggleExample(' + i + ')">';
-    exHtml += '<span class="ec-num">' + ex.num + '</span>';
-    exHtml += '<span>' + ex.title + '</span>';
-    exHtml += '<i class="fa-solid fa-chevron-down" style="margin-left:auto;font-size:.6rem;opacity:.5"></i>';
-    exHtml += '</div>';
-    exHtml += '<div class="example-card-body"><div class="example-card-inner">';
-    exHtml += '<p style="margin-bottom:.4rem;font-style:italic">' + ex.description + '</p>';
-    exHtml += body;
-    exHtml += '</div></div></div>';
-  }});
-  document.getElementById('examplesContent').innerHTML = exHtml;
-
-  var resHtml = '';
-  resHtml += '<h3><i class="fa-solid fa-lightbulb"></i> Theoretical Frameworks</h3>';
-  FRAMEWORKS.forEach(function(f) {{
-    resHtml += '<div class="research-card">';
-    resHtml += '<div class="rc-title">' + f.name + '</div>';
-    resHtml += '<div class="rc-meta">' + f.authors + ' (' + f.year + ')</div>';
-    resHtml += '<div class="rc-finding">' + f.description.substring(0, 200) + '...</div>';
-    resHtml += '</div>';
-  }});
-
-  resHtml += '<h3><i class="fa-solid fa-file-lines"></i> Key Research Papers</h3>';
-  PAPERS.forEach(function(p) {{
-    resHtml += '<div class="research-card">';
-    resHtml += '<div class="rc-title">' + p.title + '</div>';
-    resHtml += '<div class="rc-meta">' + p.authors + ' (' + p.year + ')';
-    if(p.effect_size) resHtml += '<span class="effect-badge">d=' + p.effect_size.toFixed(2) + '</span>';
-    resHtml += '<span class="source-badge">' + p.source + '</span>';
-    resHtml += '</div>';
-    resHtml += '<div class="rc-finding">' + (p.finding || '').substring(0, 180) + '...</div>';
-    resHtml += '</div>';
-  }});
-
-  resHtml += '<h3><i class="fa-solid fa-magnifying-glass-chart"></i> What the Research Says</h3>';
-  var pillarOrder = ['🔤 Phonemic Awareness','📖 Phonics','📈 Fluency','📚 Vocabulary','🧠 Comprehension'];
-  pillarOrder.forEach(function(name) {{
-    var items = PILLAR_FINDINGS[name];
-    if(!items || !items.length) return;
-    resHtml += '<div class="pillar-group"><h5>' + name + '</h5>';
-    items.slice(0, 3).forEach(function(item) {{
-      resHtml += '<div class="pillar-item">';
-      resHtml += '<span style="flex-shrink:0;min-width:38px">';
-      if(item.effect_size) resHtml += '<span class="effect-badge">d=' + item.effect_size.toFixed(2) + '</span>';
-      resHtml += '</span>';
-      resHtml += '<span>' + item.finding.substring(0, 120) + '</span>';
-      resHtml += '</div>';
-    }});
-    resHtml += '</div>';
-  }});
-
-  document.getElementById('researchContent').innerHTML = resHtml;
-}}
-
-function renderMarkdownSidebar(md) {{
-  var lines = md.split('\\n');
+function renderResearchSidebar() {{
   var html = '';
-  var inTable = false;
-  var inCode = false;
-  var tableHtml = '';
-  for(var i=0; i<Math.min(lines.length, 280); i++) {{
-    var line = lines[i];
-    if(line.startsWith('```')) {{
-      if(inCode) {{ inCode = false; continue; }}
-      inCode = true; continue;
-    }}
-    if(inCode) continue;
-
-    if(line.startsWith('|') && line.endsWith('|')) {{
-      if(line.indexOf('---') > -1) continue;
-      if(!inTable) {{ inTable = true; tableHtml = '<table style="width:100%;font-size:.65rem;border-collapse:collapse;margin:.4rem 0">'; }}
-      var cells = line.split('|').filter(function(c){{return c.trim().length>0}});
-      tableHtml += '<tr style="border-bottom:1px solid rgba(255,255,255,.1)">';
-      var tag = i < 6 ? 'th' : 'td';
-      cells.forEach(function(c) {{
-        tableHtml += '<'+tag+' style="padding:.2rem .4rem;color:#d0cce8">' + c.trim() + '</'+tag+'>';
-      }});
-      tableHtml += '</tr>';
-      continue;
-    }} else if(inTable) {{
-      html += tableHtml + '</table>';
-      inTable = false;
-      tableHtml = '';
-    }}
-
-    if(line.startsWith('### ')) html += '<h3>' + line.slice(4) + '</h3>';
-    else if(line.startsWith('## ')) html += '<h3>' + line.slice(3) + '</h3>';
-    else if(line.startsWith('# ')) html += '<h3>' + line.slice(2) + '</h3>';
-    else if(line.startsWith('**') && line.endsWith('**')) html += '<h4>' + line.slice(2, -2) + '</h4>';
-    else if(line.match(/^\\s*-\\s/)) {{
-      var text = line.replace(/^\\s*-\\s+/, '');
-      text = text.replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>');
-      text = text.replace(/\\*(.+?)\\*/g, '<em>$1</em>');
-      text = text.replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px">$1</code>');
-      html += '<li>' + text + '</li>';
-    }}
-    else if(line.startsWith('> ')) html += '<p style="border-left:2px solid #FF6B35;padding-left:.5rem;font-style:italic;opacity:.85">' + line.slice(2) + '</p>';
-    else if(line.match(/^---+$/)) html += '<hr style="border:0;border-top:1px solid rgba(255,255,255,.1);margin:.5rem 0">';
-    else if(line.trim().length > 0) {{
-      var text = line.replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>');
-      text = text.replace(/\\*(.+?)\\*/g, '<em>$1</em>');
-      text = text.replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px">$1</code>');
-      html += '<p>' + text + '</p>';
-    }}
-  }}
-  html += '<p style="text-align:center;margin-top:.8rem"><a href="https://github.com/kosburn0408/sor-mcp-server/blob/main/USER_GUIDE.md" target="_blank">📖 View Full User Guide →</a></p>';
-  return html;
+  html += '<h3 style="color:var(--md-sys-color-primary);font-size:0.9rem;margin-bottom:0.6rem">Key Research Papers</h3>';
+  PAPERS.forEach(function(p) {{
+    html += '<div style="background:var(--md-sys-color-surface-variant);padding:0.75rem;border-radius:10px;margin-bottom:0.6rem">';
+    html += '<div style="font-weight:700;font-size:0.85rem;color:#1C1B1F">' + p.title + '</div>';
+    html += '<div style="font-size:0.75rem;color:var(--md-sys-color-secondary)">' + p.authors + ' (' + p.year + ')</div>';
+    if(p.effect_size) html += '<span class="profile-badge profile-typical" style="font-size:0.65rem;padding:0.1rem 0.4rem;margin-top:0.3rem">d=' + p.effect_size + '</span>';
+    html += '</div>';
+  }});
+  document.getElementById('researchSidebarContent').innerHTML = html;
 }}
 
-renderSidebarContent();
+renderResearchSidebar();
 
-function tryExample(){{
+function tryExample() {{
   switchTab('tab-diagnose');
   document.getElementById('decoding').value = '0.38';
   document.getElementById('comprehension').value = '0.85';
@@ -854,12 +1094,12 @@ function renderResult(r) {{
 
   document.getElementById('profileArea').innerHTML = html;
 
-  var cardsHtml = '<h3 style="margin-top:1.5rem;color:#2D2366">📋 Remediation Cards</h3>';
+  var cardsHtml = '<h3 style="margin-top:1.5rem;color:var(--md-sys-color-primary)">📋 Remediation Cards</h3>';
   r.remediations.forEach(function(card){{
     cardsHtml += '<div class="remediation-card">' + renderMarkdownCard(card) + '</div>';
   }});
   document.getElementById('remediationArea').innerHTML = cardsHtml;
-  document.getElementById('nextSteps').innerHTML = '<p style="margin-top:1rem;padding:1rem;background:#f0f4ff;border-radius:8px;border-left:4px solid #2D2366"><strong>📝 Next Steps:</strong> ' + r.next_steps + '</p>';
+  document.getElementById('nextSteps').innerHTML = '<p style="margin-top:1rem;padding:1.2rem;background:var(--md-sys-color-surface-variant);border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong>📝 Next Steps:</strong> ' + r.next_steps + '</p>';
   document.getElementById('result').classList.add('show');
   document.getElementById('result').scrollIntoView({{behavior: 'smooth'}});
 }}
@@ -871,7 +1111,7 @@ function renderMarkdownCard(card) {{
     .replace(/^## (.+)$/gm, '<h3>$1</h3>')
     .replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>')
     .replace(/\\*(.+?)\\*/g, '<em>$1</em>')
-    .replace(/^> (.+)$/gm, '<blockquote style="color:#666;font-style:italic;border-left:3px solid #FFD700;padding-left:1rem;margin:.5rem 0">$1</blockquote>')
+    .replace(/^> (.+)$/gm, '<blockquote style="color:#555;font-style:italic;border-left:3px solid var(--md-sys-color-tertiary);padding-left:1rem;margin:.5rem 0">$1</blockquote>')
     .replace(/^🔵 (.+)$/gm, '<div class="script-line script-i">🔵 <strong>I DO:</strong> $1</div>')
     .replace(/^🟡 (.+)$/gm, '<div class="script-line script-we">🟡 <strong>WE DO:</strong> $1</div>')
     .replace(/^🟢 (.+)$/gm, '<div class="script-line script-you">🟢 <strong>YOU DO:</strong> $1</div>')
@@ -891,13 +1131,13 @@ document.getElementById('decodabilityForm').addEventListener('submit', async fun
   if(!data.text.trim()) return alert('Please paste a passage to check.');
   var resp = await fetch('/api/decodability', {{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(data)}});
   var r = await resp.json();
-  var html = '<h3 style="margin-top:1rem;color:#2D2366">📊 Decodability Report</h3>';
+  var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">📊 Decodability Report</h3>';
   html += '<div class="stats-grid"><div class="stat"><div class="stat-num">' + r.total_words + '</div><div class="stat-label">Total Words</div></div>';
   html += '<div class="stat"><div class="stat-num">' + r.decodable_pct + '%</div><div class="stat-label">Decodable</div></div>';
   html += '<div class="stat"><div class="stat-num">' + (r.off_scope_words||[]).length + '</div><div class="stat-label">Off-Scope</div></div>';
   html += '<div class="stat"><div class="stat-num">' + (r.heart_words||[]).length + '</div><div class="stat-label">Heart Words</div></div></div>';
-  if(r.off_scope_words && r.off_scope_words.length) html += '<p style="color:#e74c3c;margin-top:.8rem"><strong>⚠️ Off-scope words:</strong> ' + r.off_scope_words.join(', ') + '</p>';
-  if(r.heart_words && r.heart_words.length) html += '<p style="color:#e67e22;margin-top:.4rem"><strong>💛 Heart words to pre-teach:</strong> ' + r.heart_words.join(', ') + '</p>';
+  if(r.off_scope_words && r.off_scope_words.length) html += '<p style="color:#D32F2F;margin-top:.8rem"><strong>⚠️ Off-scope words:</strong> ' + r.off_scope_words.join(', ') + '</p>';
+  if(r.heart_words && r.heart_words.length) html += '<p style="color:#E65100;margin-top:.4rem"><strong>💛 Heart words to pre-teach:</strong> ' + r.heart_words.join(', ') + '</p>';
   document.getElementById('decodeResult').innerHTML = html;
   document.getElementById('decodeResult').classList.add('show');
 }});
@@ -908,10 +1148,10 @@ document.getElementById('vocabForm').addEventListener('submit', async function(e
   if(!data.text.trim()) return alert('Please paste some text.');
   var resp = await fetch('/api/vocabulary', {{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(data)}});
   var r = await resp.json();
-  var html = '<h3 style="margin-top:1rem;color:#2D2366">📚 Vocabulary Breakdown</h3>';
+  var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">📚 Vocabulary Breakdown</h3>';
   var tiers = r.tier_counts || {{}};
   html += '<div class="stats-grid"><div class="stat"><div class="stat-num">'+(tiers.tier_1||0)+'</div><div class="stat-label">Tier 1 (Basic)</div></div><div class="stat"><div class="stat-num">'+(tiers.tier_2||0)+'</div><div class="stat-label">Tier 2 (Academic)</div></div><div class="stat"><div class="stat-num">'+(tiers.tier_3||0)+'</div><div class="stat-label">Tier 3 (Domain)</div></div><div class="stat"><div class="stat-num">'+r.total_words+'</div><div class="stat-label">Total Words</div></div></div>';
-  if(r.recommendation) html += '<p style="margin-top:.8rem;padding:1rem;background:#f0f4ff;border-radius:10px;border-left:4px solid #2D2366"><strong>📝 Recommendation:</strong> ' + r.recommendation + '</p>';
+  if(r.recommendation) html += '<p style="margin-top:.8rem;padding:1.2rem;background:var(--md-sys-color-surface-variant);border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong>📝 Recommendation:</strong> ' + r.recommendation + '</p>';
   document.getElementById('vocabResult').innerHTML = html;
   document.getElementById('vocabResult').classList.add('show');
 }});
@@ -921,10 +1161,10 @@ document.getElementById('evidenceForm').addEventListener('submit', async functio
   var topic = document.getElementById('evidenceTopic').value;
   var resp = await fetch('/api/evidence?topic=' + encodeURIComponent(topic));
   var r = await resp.json();
-  var html = '<h3 style="margin-top:1rem;color:#2D2366">🔬 Research Evidence for "' + r.topic + '"</h3>';
-  html += '<p style="color:#666;margin-bottom:1rem">' + r.total_papers + ' studies found' + (r.average_effect_size ? ' • Average effect size: d=' + r.average_effect_size : '') + '</p>';
+  var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">🔬 Research Evidence for "' + r.topic + '"</h3>';
+  html += '<p style="color:var(--md-sys-color-secondary);margin-bottom:1rem">' + r.total_papers + ' studies found' + (r.average_effect_size ? ' • Average effect size: d=' + r.average_effect_size : '') + '</p>';
   (r.papers||[]).forEach(function(p){{
-    html += '<div style="background:#fafaf7;padding:1rem;margin:.6rem 0;border-radius:10px;border-left:4px solid #FFD700;box-shadow:0 2px 6px rgba(0,0,0,.02)"><strong style="color:#2D2366;font-size:1rem">' + p.title + '</strong> (' + p.year + ')<br><span style="color:#FF6B35;font-weight:700">Effect Size d=' + p.effect_size + '</span> — <span style="color:#2D2366;font-weight:600">' + p.source + '</span><br><p style="font-size:.88rem;color:#555;margin-top:.4rem">' + (p.finding||'') + '</p></div>';
+    html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.1rem;margin:.7rem 0;border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong style="color:#1C1B1F;font-size:1rem">' + p.title + '</strong> (' + p.year + ')<br><span style="color:var(--md-sys-color-tertiary);font-weight:700">Effect Size d=' + p.effect_size + '</span> — <span style="color:var(--md-sys-color-primary);font-weight:600">' + p.source + '</span><br><p style="font-size:.9rem;color:#444;margin-top:.4rem">' + (p.finding||'') + '</p></div>';
   }});
   document.getElementById('evidenceResult').innerHTML = html;
   document.getElementById('evidenceResult').classList.add('show');
@@ -935,9 +1175,9 @@ document.getElementById('standardsForm').addEventListener('submit', async functi
   var data = {{description: document.getElementById('standardsSkill').value, state: document.getElementById('standardsState').value}};
   var resp = await fetch('/api/standards', {{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(data)}});
   var r = await resp.json();
-  var html = '<h3 style="margin-top:1rem;color:#2D2366">🏛️ Standards Matches (' + r.total_matches + ')</h3>';
+  var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">🏛️ Standards Matches (' + r.total_matches + ')</h3>';
   (r.matches||[]).forEach(function(m){{
-    html += '<div style="background:#fafaf7;padding:1rem;margin:.6rem 0;border-radius:10px;border-left:4px solid #2D2366;box-shadow:0 2px 6px rgba(0,0,0,.02)"><strong style="color:#2D2366;font-size:1rem">' + m.code + '</strong> <span style="color:#777;font-size:.85rem;margin-left:.5rem">' + m.state + ' Grade ' + m.grade + '</span><br><p style="font-size:.9rem;color:#444;margin-top:.3rem">' + m.description + '</p></div>';
+    html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.1rem;margin:.7rem 0;border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong style="color:#1C1B1F;font-size:1rem">' + m.code + '</strong> <span style="color:var(--md-sys-color-secondary);font-size:0.85rem;margin-left:.5rem">' + m.state + ' Grade ' + m.grade + '</span><br><p style="font-size:.92rem;color:#444;margin-top:.3rem">' + m.description + '</p></div>';
   }});
   document.getElementById('standardsResult').innerHTML = html;
   document.getElementById('standardsResult').classList.add('show');
@@ -1000,10 +1240,8 @@ async def standards(data: dict):
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "sor-dashboard", "version": "2.5"}
+    return {"status": "healthy", "service": "sor-dashboard", "version": "3.0"}
 
-
-# ── Main ────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     import argparse
