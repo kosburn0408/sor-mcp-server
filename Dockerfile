@@ -20,8 +20,7 @@ FROM python:3.11-slim-bookworm
 
 LABEL org.opencontainers.image.title="Science of Reading MCP Server"
 LABEL org.opencontainers.image.description="Evidence-based literacy analysis MCP server aligned to the Science of Reading"
-LABEL org.opencontainers.image.source="https://github.com/nousresearch/agentic-edu"
-LABEL org.opencontainers.image.licenses="All Rights Reserved"
+LABEL org.opencontainers.image.source="https://github.com/kosburn0408/sor-mcp-server"
 
 # Create non-root user with home /app
 RUN groupadd -r sor && useradd -r -g sor -d /app -s /sbin/nologin sor
@@ -33,14 +32,16 @@ COPY --from=builder /install /app/packages
 
 # Copy application code
 COPY --chown=sor:sor server.py .
-COPY --chown=sor:sor tools/ ./tools/
+COPY --chown=sor:sor webapp.py .
+COPY --chown=sor:sor src/ ./src/
 COPY --chown=sor:sor db/ ./db/
+COPY --chown=sor:sor tests/ ./tests/
 
 # Create data directory with proper permissions
 RUN mkdir -p /data && chown sor:sor /data /app
 
 # Set environment
-ENV PYTHONPATH=/app/packages
+ENV PYTHONPATH=/app/packages:.
 ENV PATH="/app/packages/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 ENV SOR_DB_PATH=/data/sor_evidence.duckdb
@@ -48,19 +49,14 @@ ENV SOR_DB_PATH=/data/sor_evidence.duckdb
 # Drop to non-root user
 USER sor
 
-# Health check — verifies the DB can be initialized and tools are registered
+# Health check — verifies DB and tools
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python3 -c "from db.database import ensure_database; path, _ = ensure_database(); print(f'OK: {path}')" || exit 1
 
 # Pre-seed the database during build
-RUN python3 -c "from db.database import ensure_database; ensure_database()"
+RUN python3 server.py --seed-only
 
-# MCP uses stdio transport — no ports exposed
-# For HTTP/SSE dev mode, the user must explicitly bind a port
-EXPOSE 8080
+EXPOSE 8080 8093
 
 ENTRYPOINT ["python3", "server.py"]
-
-# Override with --http PORT for SSE/HTTP transport (dev only)
-# CMD is empty — defaults to stdio
 CMD []
