@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import time, uvicorn
 
-app = FastAPI(title="SoR Dashboard", version="3.8")
+app = FastAPI(title="SoR Dashboard", version="3.9")
 
 # ── Static Files Mount ──────────────────────────────────────────────────────
 base_dir = Path(__file__).resolve().parent
@@ -720,7 +720,7 @@ footer {{
   <div style="padding:1.4rem;border-bottom:1px solid var(--md-sys-color-surface-variant);background:var(--md-sys-color-primary-container);display:flex;align-items:center;justify-content:space-between">
     <div>
       <h2 style="color:var(--md-sys-color-on-primary-container);font-size:1.15rem;font-weight:700" id="drawerTitle">🔬 Topic & Research Guide</h2>
-      <div style="font-size:0.75rem;color:var(--md-sys-color-secondary);margin-top:0.15rem">Contextual Science of Reading Research & Concepts</div>
+      <div style="font-size:0.78rem;color:var(--md-sys-color-secondary);margin-top:0.2rem" id="drawerSubTitle">Contextual Science of Reading Research & Concepts</div>
     </div>
     <button onclick="closeSidebar()" style="background:transparent;border:none;font-size:1.3rem;color:var(--md-sys-color-on-primary-container);cursor:pointer;padding:0.4rem" title="Close Drawer"><i class="fa-solid fa-xmark"></i></button>
   </div>
@@ -1098,6 +1098,15 @@ var FRAMEWORKS = {FRAMEWORKS_JSON};
 var PAPERS = {PAPERS_JSON};
 var PILLAR_FINDINGS = {PILLAR_FINDINGS_JSON};
 
+var TAB_NAMES = {{
+  "tab-diagnose": "Diagnose Student",
+  "tab-decodable": "Check Decodability",
+  "tab-vocab": "Classify Vocabulary",
+  "tab-evidence": "Evidence Search",
+  "tab-standards": "Standards Alignment",
+  "tab-guide": "Teacher Guide"
+}};
+
 // Context-Aware Content Dictionary for Left Pull-Out Drawer (Double-quoted strings prevent unescaped single quote syntax errors)
 var CONTEXT_GUIDES = {{
   "tab-diagnose": {{
@@ -1189,9 +1198,17 @@ var CONTEXT_GUIDES = {{
 
 function updateDrawerContent(tabId) {{
   var guide = CONTEXT_GUIDES[tabId] || CONTEXT_GUIDES['tab-diagnose'];
+  var tabName = TAB_NAMES[tabId] || 'Diagnose Student';
+
   document.getElementById('drawerTitle').innerText = guide.title;
+  document.getElementById('drawerSubTitle').innerText = 'Viewing Tool: ' + tabName;
 
   var html = '';
+  // Active Tool Context Badge inside drawer
+  html += '<div style="background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container);padding:0.65rem 1rem;border-radius:var(--md-shape-corner-medium);margin-bottom:1.2rem;font-size:0.88rem;font-weight:700;display:flex;align-items:center;gap:0.6rem;box-shadow:0 2px 6px rgba(103,80,164,0.12)">';
+  html += '<i class="fa-solid fa-compass" style="color:var(--md-sys-color-primary);font-size:1.1rem"></i> Active Tab Context: ' + tabName;
+  html += '</div>';
+
   // Section 1: Research Basis
   html += '<div class="drawer-section">';
   html += '<div class="drawer-section-title"><i class="fa-solid fa-flask"></i> Theoretical & Research Basis</div>';
@@ -1243,6 +1260,11 @@ var isOpen = false;
 
 function openSidebar() {{
   isOpen = true;
+  // Always query which tab is active right now and refresh drawer content
+  var activePane = document.querySelector('.tab-pane.active');
+  var activeTabId = activePane ? activePane.id : 'tab-diagnose';
+  updateDrawerContent(activeTabId);
+
   sidebar.classList.add('open');
   backdrop.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -1548,7 +1570,7 @@ async def standards(data: dict):
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "sor-dashboard", "version": "3.8"}
+    return {"status": "healthy", "service": "sor-dashboard", "version": "3.9"}
 
 
 if __name__ == "__main__":
