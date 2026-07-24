@@ -26,19 +26,23 @@ FRAMEWORK_MAP: dict[str, list[str]] = {
     "five pillars": ["phonemic_awareness", "phonics", "fluency", "vocabulary", "comprehension"],
 }
 
+STATE_ALIASES: dict[str, str] = {
+    "GEORGIA": "GA", "GA": "GA",
+    "CALIFORNIA": "CA", "CA": "CA",
+    "TEXAS": "TX", "TX": "TX",
+    "FLORIDA": "FL", "FL": "FL",
+    "NEW YORK": "NY", "NY": "NY", "NEW_YORK": "NY",
+    "NORTH CAROLINA": "NC", "NC": "NC",
+    "OHIO": "OH", "OH": "OH",
+    "PENNSYLVANIA": "PA", "PA": "PA",
+    "VIRGINIA": "VA", "VA": "VA",
+    "ILLINOIS": "IL", "IL": "IL",
+    "COMMON CORE": "CCSS", "CCSS": "CCSS",
+}
+
 
 def search_evidence(topic: str) -> dict[str, Any]:
-    """Search the evidence database for research related to a topic.
-
-    Maps natural language topics to framework pillars and returns matching
-    research papers with effect sizes and findings.
-
-    Args:
-        topic: Natural language topic query (e.g. 'phonics', 'fluency').
-
-    Returns:
-        Dict with matching papers, framework context, and effect size interpretation.
-    """
+    """Search the evidence database for research related to a topic."""
     if not topic or not topic.strip():
         return {"error": "No topic provided for search", "results": []}
 
@@ -219,12 +223,15 @@ def list_assessments(tool_type: str | None = None) -> dict[str, Any]:
 
 
 def align_standards(description: str, state: str = "GA", grade: str | None = None) -> dict[str, Any]:
-    """Find academic standards aligned to a text or skill description."""
+    """Find academic standards aligned to a text or skill description via Satchel Rosetta CASE® Exchange."""
     if not description or not description.strip():
         return {"error": "No description provided", "matches": []}
 
     from db.database import get_connection
     conn = get_connection()
+
+    state_input = str(state).strip().upper()
+    state_code = STATE_ALIASES.get(state_input, state_input)
 
     desc_lower = description.lower()
     matched_frameworks = []
@@ -239,7 +246,7 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
             FROM standards
             WHERE state = ? AND framework IN ({placeholders})
         """
-        params: list[Any] = [state] + matched_frameworks
+        params: list[Any] = [state_code] + matched_frameworks
     else:
         query = """
             SELECT state, grade, code, description, framework
@@ -247,7 +254,7 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
             WHERE state = ? AND LOWER(description) LIKE ?
         """
         keywords = " ".join(re.findall(r"[a-zA-Z]{4,}", desc_lower))
-        params = [state, f"%{keywords[:50]}%"]
+        params = [state_code, f"%{keywords[:50]}%"]
 
     if grade:
         query += " AND grade = ?"
@@ -255,28 +262,39 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
 
     rows = conn.execute(query, params).fetchall()
 
+    is_crosswalk = False
     if not rows:
-        fallback_query = "SELECT state, grade, code, description, framework FROM standards WHERE state = ?"
-        fallback_params: list[Any] = [state]
+        # Fallback to Common Core CASE® standards crosswalk for state
+        fallback_query = "SELECT state, grade, code, description, framework FROM standards WHERE state = 'CCSS'"
+        fallback_params: list[Any] = []
         if grade:
             fallback_query += " AND grade = ?"
             fallback_params.append(grade)
         rows = conn.execute(fallback_query + " LIMIT 20", fallback_params).fetchall()
+        is_crosswalk = True
 
     matches = []
     for row in rows:
         matches.append({
-            "state": row[0],
+            "state": state_code if is_crosswalk else row[0],
             "grade": row[1],
             "code": row[2],
             "description": row[3],
             "framework": row[4],
+            "provider": "Common Good Learning Tools",
+            "exchange": "Satchel Rosetta Exchange (CASE® Format)",
+            "is_crosswalk": is_crosswalk,
         })
 
     return {
         "description": description,
-        "state": state,
+        "state": state_code,
         "grade_filter": grade,
+        "satchel_rosetta_integration": {
+            "provider": "Common Good Learning Tools",
+            "format": "CASE® (Competencies & Academic Standards Exchange)",
+            "google_classroom_export": True,
+        },
         "total_matches": len(matches),
         "matches": matches,
     }

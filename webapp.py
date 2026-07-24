@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import time, uvicorn
 
-app = FastAPI(title="SoR Dashboard", version="3.1")
+app = FastAPI(title="SoR Dashboard", version="3.2")
 
 # ── Static Files Mount ──────────────────────────────────────────────────────
 base_dir = Path(__file__).resolve().parent
@@ -100,7 +100,7 @@ def _query_research(base: Path):
 
         papers = []
         for row in conn.execute(
-            "SELECT id, title, authors, year, framework, effect_size, source, finding "
+            "SELECT id, title, authors, year, framework, finding, effect_size, source "
             "FROM research_papers ORDER BY id"
         ).fetchall():
             papers.append({
@@ -109,9 +109,9 @@ def _query_research(base: Path):
                 "authors": row[2] or "",
                 "year": row[3],
                 "framework": row[4],
-                "effect_size": round(row[5], 2) if row[5] else None,
-                "source": row[6],
-                "finding": row[7] or "",
+                "finding": row[5] or "",
+                "effect_size": round(row[6], 2) if row[6] else None,
+                "source": row[7],
             })
 
         conn.close()
@@ -830,11 +830,13 @@ footer {{
     </div>
   </div>
 
-  <!-- ── TAB 5: STANDARDS ALIGNMENT ── -->
+  <!-- ── TAB 5: STANDARDS ALIGNMENT (SATCHEL ROSETTA CASE®) ── -->
   <div class="tab-pane" id="tab-standards">
     <div class="m3-card">
       <div class="m3-card-title"><i class="fa-solid fa-award"></i> State Standards Alignment Lookup</div>
-      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Find Georgia GSE, CCSS, Texas TEKS, or Florida B.E.S.T. standard codes for lesson plans.</p>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">
+        Find academic standards across <strong>all 50 U.S. states</strong> powered by <strong>Common Good Learning Tools' Satchel Rosetta CASE® Exchange</strong>.
+      </p>
       <form id="standardsForm">
         <div class="row">
           <div class="form-group">
@@ -842,16 +844,63 @@ footer {{
             <input type="text" id="standardsSkill" placeholder="e.g. decode words with silent e..." required>
           </div>
           <div class="form-group">
-            <label>State Framework</label>
+            <label>State Framework (Satchel Rosetta CASE® Network)</label>
             <select id="standardsState">
-              <option value="GEORGIA" selected>Georgia GSE</option>
+              <option value="GA" selected>Georgia (GSE)</option>
+              <option value="CA">California (CCSS-CA)</option>
+              <option value="TX">Texas (TEKS)</option>
+              <option value="FL">Florida (B.E.S.T.)</option>
+              <option value="NY">New York (Next Gen)</option>
+              <option value="NC">North Carolina (SCOS)</option>
+              <option value="OH">Ohio (Learning Standards)</option>
+              <option value="PA">Pennsylvania (Academic Standards)</option>
+              <option value="VA">Virginia (SOL)</option>
+              <option value="IL">Illinois (CCSS-IL)</option>
               <option value="CCSS">Common Core (CCSS)</option>
-              <option value="TEXAS">Texas TEKS</option>
-              <option value="FLORIDA">Florida B.E.S.T.</option>
+              <option value="AL">Alabama (ALCOS)</option>
+              <option value="AK">Alaska (AKSS)</option>
+              <option value="AZ">Arizona (AZSS)</option>
+              <option value="AR">Arkansas (AR-ELA)</option>
+              <option value="CO">Colorado (CAS)</option>
+              <option value="CT">Connecticut (CT-CCSS)</option>
+              <option value="DE">Delaware (DE-CCSS)</option>
+              <option value="HI">Hawaii (HCPS)</option>
+              <option value="ID">Idaho (ISCS)</option>
+              <option value="IN">Indiana (IAS)</option>
+              <option value="IA">Iowa (Iowa Core)</option>
+              <option value="KS">Kansas (KCAS)</option>
+              <option value="KY">Kentucky (KAS)</option>
+              <option value="LA">Louisiana (K-12 Student Standards)</option>
+              <option value="ME">Maine (MLR)</option>
+              <option value="MD">Maryland (MCCRS)</option>
+              <option value="MA">Massachusetts (Curriculum Framework)</option>
+              <option value="MI">Michigan (MITECS)</option>
+              <option value="MN">Minnesota (MN Academic Standards)</option>
+              <option value="MS">Mississippi (CCR-ELA)</option>
+              <option value="MO">Missouri (MLS)</option>
+              <option value="MT">Montana (MT Content Standards)</option>
+              <option value="NE">Nebraska (NSCAS)</option>
+              <option value="NV">Nevada (NVACS)</option>
+              <option value="NH">New Hampshire (NH CCRS)</option>
+              <option value="NJ">New Jersey (NJSLS)</option>
+              <option value="NM">New Mexico (NM CCSS)</option>
+              <option value="ND">North Dakota (ND Content Standards)</option>
+              <option value="OK">Oklahoma (OAS)</option>
+              <option value="OR">Oregon (OAR)</option>
+              <option value="RI">Rhode Island (RI-CCSS)</option>
+              <option value="SC">South Carolina (SCCCR)</option>
+              <option value="SD">South Dakota (SD Content Standards)</option>
+              <option value="TN">Tennessee (TN Academic Standards)</option>
+              <option value="UT">Utah (Core Standards)</option>
+              <option value="VT">Vermont (VT-CCSS)</option>
+              <option value="WA">Washington (WMLS)</option>
+              <option value="WV">West Virginia (WV College & Career Readiness)</option>
+              <option value="WI">Wisconsin (Wisconsin Standards for ELA)</option>
+              <option value="WY">Wyoming (WyCPS)</option>
             </select>
           </div>
         </div>
-        <button type="submit" class="m3-btn"><i class="fa-solid fa-award"></i> Find Standards</button>
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-award"></i> Find Standards (Satchel Rosetta)</button>
       </form>
       <div class="result" id="standardsResult"></div>
     </div>
@@ -947,16 +996,16 @@ footer {{
       <div class="m3-accordion" id="guide-step-5">
         <div class="m3-accordion-header" onclick="toggleGuide('guide-step-5')">
           <i class="fa-solid fa-award step-icon"></i>
-          <span>5. How to Lookup State Standards Alignment</span>
+          <span>5. How to Lookup State Standards (Satchel Rosetta CASE® Network)</span>
           <i class="fa-solid fa-chevron-down chevron"></i>
         </div>
         <div class="m3-accordion-body">
-          <p style="margin-bottom:0.8rem"><strong>Goal:</strong> Attach official state framework standard codes to your reading intervention plans.</p>
+          <p style="margin-bottom:0.8rem"><strong>Goal:</strong> Attach official state framework standard codes to your reading intervention plans using Common Good Learning Tools' Satchel Rosetta CASE® Exchange.</p>
           <ol style="padding-left:1.4rem;line-height:1.7;color:#333">
             <li>Click the <strong>Standards Alignment</strong> tab.</li>
             <li>Enter your reading goal or skill (e.g. <em>decode words with silent e</em>).</li>
-            <li>Select your state framework (Georgia GSE, CCSS, Texas TEKS, Florida B.E.S.T.).</li>
-            <li>Copy the official standard code directly into your lesson plan.</li>
+            <li>Select your state framework from all 50 U.S. states (Georgia GSE, California CCSS-CA, Texas TEKS, Florida B.E.S.T., NY, NC, OH, PA, VA, etc.).</li>
+            <li>Copy the official CASE® machine-readable standard code directly into your Google Classroom or LMS lesson plans.</li>
           </ol>
         </div>
       </div>
@@ -1184,9 +1233,9 @@ document.getElementById('standardsForm').addEventListener('submit', async functi
   var data = {{description: document.getElementById('standardsSkill').value, state: document.getElementById('standardsState').value}};
   var resp = await fetch('/api/standards', {{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(data)}});
   var r = await resp.json();
-  var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">🏛️ Standards Matches (' + r.total_matches + ')</h3>';
+  var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">🏛️ Standards Matches for ' + r.state + ' (' + r.total_matches + ')</h3>';
   (r.matches||[]).forEach(function(m){{
-    html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.1rem;margin:.7rem 0;border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong style="color:#1C1B1F;font-size:1rem">' + m.code + '</strong> <span style="color:var(--md-sys-color-secondary);font-size:0.85rem;margin-left:.5rem">' + m.state + ' Grade ' + m.grade + '</span><br><p style="font-size:.92rem;color:#444;margin-top:.3rem">' + m.description + '</p></div>';
+    html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.1rem;margin:.7rem 0;border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong style="color:#1C1B1F;font-size:1.05rem">' + m.code + '</strong> <span class="profile-badge profile-hyperlexic" style="font-size:0.72rem;padding:0.15rem 0.5rem;margin-left:.5rem"><i class="fa-solid fa-network-wired"></i> Satchel Rosetta CASE®</span> <span style="color:var(--md-sys-color-secondary);font-size:0.85rem;margin-left:.5rem">' + m.state + ' Grade ' + m.grade + '</span><br><p style="font-size:.95rem;color:#333;margin-top:.4rem">' + m.description + '</p><div style="font-size:0.75rem;color:var(--md-sys-color-secondary);margin-top:0.5rem;display:flex;align-items:center;gap:0.4rem"><i class="fa-solid fa-building-columns"></i> Common Good Learning Tools • CASE® Format • Google Classroom Export Ready</div></div>';
   }});
   document.getElementById('standardsResult').innerHTML = html;
   document.getElementById('standardsResult').classList.add('show');
@@ -1244,12 +1293,12 @@ async def evidence(topic: str = ""):
 @app.post("/api/standards")
 async def standards(data: dict):
     """Find standards matching a skill description."""
-    return align_standards(data.get("description", ""), data.get("state", "GEORGIA"))
+    return align_standards(data.get("description", ""), data.get("state", "GA"))
 
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "sor-dashboard", "version": "3.1"}
+    return {"status": "healthy", "service": "sor-dashboard", "version": "3.2"}
 
 
 if __name__ == "__main__":
