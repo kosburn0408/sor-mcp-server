@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import time, uvicorn
 
-app = FastAPI(title="SoR Dashboard", version="3.4")
+app = FastAPI(title="SoR Dashboard", version="3.5")
 
 # ── Static Files Mount ──────────────────────────────────────────────────────
 base_dir = Path(__file__).resolve().parent
@@ -262,6 +262,7 @@ h1, h2, h3, h4, .font-heading {{
   align-items: center;
   gap: 0.5rem;
   transition: all 0.2s ease;
+  text-decoration: none;
 }}
 .hub-btn:hover {{
   background: #D8CEE8;
@@ -1012,7 +1013,7 @@ footer {{
             <li>Click the <strong>Standards Alignment</strong> tab.</li>
             <li>Enter your reading goal or skill (e.g. <em>decode words with silent e</em>).</li>
             <li>Select your state framework from all 50 U.S. states (Georgia GSE, California CCSS-CA, Texas TEKS, Florida B.E.S.T., NY, NC, OH, PA, VA, etc.).</li>
-            <li>Copy the official CASE® machine-readable standard code directly into your Google Classroom or LMS lesson plans.</li>
+            <li>Click the direct <strong>Open Standard Deep Link</strong> or <strong>CASE API Endpoint</strong> to copy standard URLs directly into Google Classroom.</li>
           </ol>
         </div>
       </div>
@@ -1274,11 +1275,26 @@ document.getElementById('standardsForm').addEventListener('submit', async functi
   var data = {{description: document.getElementById('standardsSkill').value, state: document.getElementById('standardsState').value}};
   var resp = await fetch('/api/standards', {{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(data)}});
   var r = await resp.json();
+
   var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">🏛️ Standards Matches for ' + r.state + ' (' + r.total_matches + ')</h3>';
-  html += '<p style="color:var(--md-sys-color-secondary);font-size:0.9rem;margin-bottom:1rem"><a href="https://rosetta.commongoodlt.com/" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline"><i class="fa-solid fa-arrow-up-right-from-square"></i> Standards Satchel Portal (https://rosetta.commongoodlt.com/)</a> — Common Good Learning Tools CASE® Exchange</p>';
+  html += '<p style="color:var(--md-sys-color-secondary);font-size:0.9rem;margin-bottom:1rem"><a href="https://rosetta.commongoodlt.com/" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline"><i class="fa-solid fa-arrow-up-right-from-square"></i> Standards Satchel Portal (rosetta.commongoodlt.com)</a> — Common Good Learning Tools CASE® Exchange</p>';
+
   (r.matches||[]).forEach(function(m){{
-    html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.1rem;margin:.7rem 0;border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong style="color:#1C1B1F;font-size:1.05rem">' + m.code + '</strong> <span class="profile-badge profile-hyperlexic" style="font-size:0.72rem;padding:0.15rem 0.5rem;margin-left:.5rem"><i class="fa-solid fa-network-wired"></i> Standards Satchel CASE®</span> <span style="color:var(--md-sys-color-secondary);font-size:0.85rem;margin-left:.5rem">' + m.state + ' Grade ' + m.grade + '</span><br><p style="font-size:.95rem;color:#333;margin-top:.4rem">' + m.description + '</p><div style="font-size:0.75rem;color:var(--md-sys-color-secondary);margin-top:0.5rem;display:flex;align-items:center;gap:0.4rem"><i class="fa-solid fa-building-columns"></i> <a href="https://rosetta.commongoodlt.com/" target="_blank" style="color:inherit;font-weight:600">rosetta.commongoodlt.com</a> • CASE® Format • Google Classroom Export Ready</div></div>';
+    var deepLink = m.url || ('https://rosetta.commongoodlt.com/#/search?q=' + encodeURIComponent(m.code));
+    var caseApiLink = m.case_api_uri || ('https://rosetta.commongoodlt.com/ims/case/v1p1/CFItems/' + encodeURIComponent(m.code));
+
+    html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.2rem;margin:.8rem 0;border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.6rem">';
+    html += '<div><strong style="color:#1C1B1F;font-size:1.1rem">' + m.code + '</strong> <span class="profile-badge profile-hyperlexic" style="font-size:0.72rem;padding:0.15rem 0.5rem;margin-left:.5rem"><i class="fa-solid fa-network-wired"></i> Standards Satchel CASE®</span> <span style="color:var(--md-sys-color-secondary);font-size:0.85rem;margin-left:.5rem">' + m.state + ' Grade ' + m.grade + '</span></div>';
+    html += '<div style="display:flex;gap:0.4rem;flex-wrap:wrap">';
+    html += '<a href="' + deepLink + '" target="_blank" class="hub-btn" style="padding:0.4rem 0.9rem;font-size:0.78rem;background:var(--md-sys-color-primary);color:#fff;font-weight:700" title="Open direct deep link to this standard in Standards Satchel"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open Standard Deep Link</a>';
+    html += '<a href="' + caseApiLink + '" target="_blank" class="hub-btn" style="padding:0.4rem 0.9rem;font-size:0.78rem;background:var(--md-sys-color-secondary-container);color:#1D192B" title="View CASE v1.1 REST API Endpoint"><i class="fa-solid fa-code"></i> CASE API Endpoint</a>';
+    html += '</div></div>';
+    html += '<p style="font-size:.95rem;color:#333;margin-top:.6rem">' + m.description + '</p>';
+    html += '<div style="font-size:0.78rem;color:var(--md-sys-color-secondary);margin-top:0.6rem;display:flex;align-items:center;gap:0.6rem"><i class="fa-solid fa-link" style="color:var(--md-sys-color-primary)"></i> <span>Direct URI: <a href="' + deepLink + '" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline">' + deepLink + '</a></span></div>';
+    html += '</div>';
   }});
+
   document.getElementById('standardsResult').innerHTML = html;
   document.getElementById('standardsResult').classList.add('show');
 }});
@@ -1340,7 +1356,7 @@ async def standards(data: dict):
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "sor-dashboard", "version": "3.4"}
+    return {"status": "healthy", "service": "sor-dashboard", "version": "3.5"}
 
 
 if __name__ == "__main__":

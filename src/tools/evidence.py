@@ -7,6 +7,7 @@ embedded in DuckDB, with optional upstream API fallbacks.
 from __future__ import annotations
 
 import re
+import urllib.parse
 from typing import Any
 
 FRAMEWORK_MAP: dict[str, list[str]] = {
@@ -274,15 +275,18 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
 
     matches = []
     for row in rows:
+        code = row[2]
+        encoded_code = urllib.parse.quote(code)
         matches.append({
             "state": state_code if is_crosswalk else row[0],
             "grade": row[1],
-            "code": row[2],
+            "code": code,
             "description": row[3],
             "framework": row[4],
             "provider": "Common Good Learning Tools",
             "portal": "Standards Satchel",
-            "url": "https://rosetta.commongoodlt.com/",
+            "url": f"https://rosetta.commongoodlt.com/#/search?q={encoded_code}",
+            "case_api_uri": f"https://rosetta.commongoodlt.com/ims/case/v1p1/CFItems/{encoded_code}",
             "exchange": "Satchel Rosetta Exchange (CASE® Format)",
             "is_crosswalk": is_crosswalk,
         })
@@ -296,6 +300,7 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
             "provider": "Common Good Learning Tools",
             "url": "https://rosetta.commongoodlt.com/",
             "format": "CASE® (Competencies & Academic Standards Exchange)",
+            "case_api_base": "https://rosetta.commongoodlt.com/ims/case/v1p1/",
             "google_classroom_export": True,
         },
         "total_matches": len(matches),
