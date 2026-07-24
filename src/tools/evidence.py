@@ -223,7 +223,7 @@ def list_assessments(tool_type: str | None = None) -> dict[str, Any]:
 
 
 def align_standards(description: str, state: str = "GA", grade: str | None = None) -> dict[str, Any]:
-    """Find academic standards aligned to a text or skill description via Satchel Rosetta CASE® Exchange."""
+    """Find academic standards aligned to a text or skill description via Standards Satchel (CASE® Exchange)."""
     if not description or not description.strip():
         return {"error": "No description provided", "matches": []}
 
@@ -264,7 +264,6 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
 
     is_crosswalk = False
     if not rows:
-        # Fallback to Common Core CASE® standards crosswalk for state
         fallback_query = "SELECT state, grade, code, description, framework FROM standards WHERE state = 'CCSS'"
         fallback_params: list[Any] = []
         if grade:
@@ -282,6 +281,8 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
             "description": row[3],
             "framework": row[4],
             "provider": "Common Good Learning Tools",
+            "portal": "Standards Satchel",
+            "url": "https://rosetta.commongoodlt.com/",
             "exchange": "Satchel Rosetta Exchange (CASE® Format)",
             "is_crosswalk": is_crosswalk,
         })
@@ -291,7 +292,9 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
         "state": state_code,
         "grade_filter": grade,
         "satchel_rosetta_integration": {
+            "portal": "Standards Satchel",
             "provider": "Common Good Learning Tools",
+            "url": "https://rosetta.commongoodlt.com/",
             "format": "CASE® (Competencies & Academic Standards Exchange)",
             "google_classroom_export": True,
         },

@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import time, uvicorn
 
-app = FastAPI(title="SoR Dashboard", version="3.2")
+app = FastAPI(title="SoR Dashboard", version="3.3")
 
 # ── Static Files Mount ──────────────────────────────────────────────────────
 base_dir = Path(__file__).resolve().parent
@@ -830,12 +830,15 @@ footer {{
     </div>
   </div>
 
-  <!-- ── TAB 5: STANDARDS ALIGNMENT (SATCHEL ROSETTA CASE®) ── -->
+  <!-- ── TAB 5: STANDARDS ALIGNMENT (STANDARDS SATCHEL / SATCHEL ROSETTA CASE®) ── -->
   <div class="tab-pane" id="tab-standards">
     <div class="m3-card">
       <div class="m3-card-title"><i class="fa-solid fa-award"></i> State Standards Alignment Lookup</div>
       <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">
-        Find academic standards across <strong>all 50 U.S. states</strong> powered by <strong>Common Good Learning Tools' Satchel Rosetta CASE® Exchange</strong>.
+        Find academic standards across <strong>all 50 U.S. states</strong> powered by
+        <a href="https://rosetta.commongoodlt.com/" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> Common Good Learning Tools' Standards Satchel
+        </a> (CASE® Exchange).
       </p>
       <form id="standardsForm">
         <div class="row">
@@ -844,7 +847,7 @@ footer {{
             <input type="text" id="standardsSkill" placeholder="e.g. decode words with silent e..." required>
           </div>
           <div class="form-group">
-            <label>State Framework (Satchel Rosetta CASE® Network)</label>
+            <label>State Framework (Standards Satchel CASE® Network)</label>
             <select id="standardsState">
               <option value="GA" selected>Georgia (GSE)</option>
               <option value="CA">California (CCSS-CA)</option>
@@ -900,7 +903,7 @@ footer {{
             </select>
           </div>
         </div>
-        <button type="submit" class="m3-btn"><i class="fa-solid fa-award"></i> Find Standards (Satchel Rosetta)</button>
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-award"></i> Find Standards (Standards Satchel)</button>
       </form>
       <div class="result" id="standardsResult"></div>
     </div>
@@ -996,11 +999,15 @@ footer {{
       <div class="m3-accordion" id="guide-step-5">
         <div class="m3-accordion-header" onclick="toggleGuide('guide-step-5')">
           <i class="fa-solid fa-award step-icon"></i>
-          <span>5. How to Lookup State Standards (Satchel Rosetta CASE® Network)</span>
+          <span>5. How to Lookup State Standards (Standards Satchel — CGLT)</span>
           <i class="fa-solid fa-chevron-down chevron"></i>
         </div>
         <div class="m3-accordion-body">
-          <p style="margin-bottom:0.8rem"><strong>Goal:</strong> Attach official state framework standard codes to your reading intervention plans using Common Good Learning Tools' Satchel Rosetta CASE® Exchange.</p>
+          <p style="margin-bottom:0.8rem">
+            <strong>Goal:</strong> Attach official state framework standard codes to your reading intervention plans using
+            <a href="https://rosetta.commongoodlt.com/" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline">Standards Satchel (https://rosetta.commongoodlt.com/)</a>
+            by Common Good Learning Tools.
+          </p>
           <ol style="padding-left:1.4rem;line-height:1.7;color:#333">
             <li>Click the <strong>Standards Alignment</strong> tab.</li>
             <li>Enter your reading goal or skill (e.g. <em>decode words with silent e</em>).</li>
@@ -1211,7 +1218,7 @@ document.getElementById('vocabForm').addEventListener('submit', async function(e
   html += '<div class="stats-grid"><div class="stat"><div class="stat-num">'+(tiers.tier_1||0)+'</div><div class="stat-label">Tier 1 (Basic)</div></div><div class="stat"><div class="stat-num">'+(tiers.tier_2||0)+'</div><div class="stat-label">Tier 2 (Academic)</div></div><div class="stat"><div class="stat-num">'+(tiers.tier_3||0)+'</div><div class="stat-label">Tier 3 (Domain)</div></div><div class="stat"><div class="stat-num">'+r.total_words+'</div><div class="stat-label">Total Words</div></div></div>';
   if(r.recommendation) html += '<p style="margin-top:.8rem;padding:1.2rem;background:var(--md-sys-color-surface-variant);border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong>📝 Recommendation:</strong> ' + r.recommendation + '</p>';
   document.getElementById('vocabResult').innerHTML = html;
-  document.getElementById('vocabResult').classList.add('show');
+  document.getElementById('vocabResult').classList.show ? document.getElementById('vocabResult').classList.add('show') : document.getElementById('vocabResult').classList.add('show');
 }});
 
 document.getElementById('evidenceForm').addEventListener('submit', async function(e){{
@@ -1234,8 +1241,9 @@ document.getElementById('standardsForm').addEventListener('submit', async functi
   var resp = await fetch('/api/standards', {{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(data)}});
   var r = await resp.json();
   var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">🏛️ Standards Matches for ' + r.state + ' (' + r.total_matches + ')</h3>';
+  html += '<p style="color:var(--md-sys-color-secondary);font-size:0.9rem;margin-bottom:1rem"><a href="https://rosetta.commongoodlt.com/" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline"><i class="fa-solid fa-arrow-up-right-from-square"></i> Standards Satchel Portal (https://rosetta.commongoodlt.com/)</a> — Common Good Learning Tools CASE® Exchange</p>';
   (r.matches||[]).forEach(function(m){{
-    html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.1rem;margin:.7rem 0;border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong style="color:#1C1B1F;font-size:1.05rem">' + m.code + '</strong> <span class="profile-badge profile-hyperlexic" style="font-size:0.72rem;padding:0.15rem 0.5rem;margin-left:.5rem"><i class="fa-solid fa-network-wired"></i> Satchel Rosetta CASE®</span> <span style="color:var(--md-sys-color-secondary);font-size:0.85rem;margin-left:.5rem">' + m.state + ' Grade ' + m.grade + '</span><br><p style="font-size:.95rem;color:#333;margin-top:.4rem">' + m.description + '</p><div style="font-size:0.75rem;color:var(--md-sys-color-secondary);margin-top:0.5rem;display:flex;align-items:center;gap:0.4rem"><i class="fa-solid fa-building-columns"></i> Common Good Learning Tools • CASE® Format • Google Classroom Export Ready</div></div>';
+    html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.1rem;margin:.7rem 0;border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong style="color:#1C1B1F;font-size:1.05rem">' + m.code + '</strong> <span class="profile-badge profile-hyperlexic" style="font-size:0.72rem;padding:0.15rem 0.5rem;margin-left:.5rem"><i class="fa-solid fa-network-wired"></i> Standards Satchel CASE®</span> <span style="color:var(--md-sys-color-secondary);font-size:0.85rem;margin-left:.5rem">' + m.state + ' Grade ' + m.grade + '</span><br><p style="font-size:.95rem;color:#333;margin-top:.4rem">' + m.description + '</p><div style="font-size:0.75rem;color:var(--md-sys-color-secondary);margin-top:0.5rem;display:flex;align-items:center;gap:0.4rem"><i class="fa-solid fa-building-columns"></i> <a href="https://rosetta.commongoodlt.com/" target="_blank" style="color:inherit;font-weight:600">rosetta.commongoodlt.com</a> • CASE® Format • Google Classroom Export Ready</div></div>';
   }});
   document.getElementById('standardsResult').innerHTML = html;
   document.getElementById('standardsResult').classList.add('show');
@@ -1298,7 +1306,7 @@ async def standards(data: dict):
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "sor-dashboard", "version": "3.2"}
+    return {"status": "healthy", "service": "sor-dashboard", "version": "3.3"}
 
 
 if __name__ == "__main__":
