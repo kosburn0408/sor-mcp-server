@@ -1455,8 +1455,8 @@ function renderDecodableInspector(r, targetId) {{
   // Export Bar (Story 3)
   html += '<div class="export-bar">';
   html += '<button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print Student Sheet</button>';
-  html += '<button onclick="downloadAsPDF(\'' + targetId + '\')" class="export-btn"><i class="fa-solid fa-file-pdf"></i> 📄 Download PDF</button>';
-  html += '<button onclick="copyResultText(\'' + targetId + '\')" class="export-btn"><i class="fa-solid fa-copy"></i> 📋 Copy Plain Text</button>';
+  html += '<button onclick="downloadAsPDF(' + "'" + targetId + "'" + ')" class="export-btn"><i class="fa-solid fa-file-pdf"></i> 📄 Download PDF</button>';
+  html += '<button onclick="copyResultText(' + "'" + targetId + "'" + ')" class="export-btn"><i class="fa-solid fa-copy"></i> 📋 Copy Plain Text</button>';
   html += '</div>';
 
   var resEl = document.getElementById(targetId);
@@ -1529,7 +1529,7 @@ document.getElementById('phonicsRoutineForm').addEventListener('submit', async f
   
   var html = '<h3 style="color:var(--md-sys-color-primary);margin-bottom:1rem"><i class="fa-solid fa-puzzle-piece"></i> 5-Day Explicit Phonics Routine Script</h3>';
   html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.4rem;border-radius:var(--md-shape-corner-medium);white-space:pre-wrap;font-family:monospace;line-height:1.6">' + r.routine + '</div>';
-  html += '<div class="export-bar"><button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print Student Sheet</button><button onclick="copyResultText(\'phonicsRoutineResult\')" class="export-btn"><i class="fa-solid fa-copy"></i> 📋 Copy Plain Text</button></div>';
+  html += '<div class="export-bar"><button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print Student Sheet</button><button onclick="copyResultText(&quot;phonicsRoutineResult&quot;)" class="export-btn"><i class="fa-solid fa-copy"></i> 📋 Copy Plain Text</button></div>';
 
   var resEl = document.getElementById('phonicsRoutineResult');
   resEl.innerHTML = html;
