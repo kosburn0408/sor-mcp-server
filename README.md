@@ -1,18 +1,32 @@
-# Science of Reading MCP Server
+# Science of Reading MCP Server & Teacher Workspace
 
 [![MCP](https://img.shields.io/badge/MCP-1.26+-blue)](https://modelcontextprotocol.io)
 [![Python](https://img.shields.io/badge/Python-3.11+-green)](https://python.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-blue)](https://docker.com)
 [![Web App](https://img.shields.io/badge/Web%20App-sor.edtechlabs.dev-purple)](https://sor.edtechlabs.dev)
 [![Standards](https://img.shields.io/badge/Standards-50%20States%20(CASE®)-orange)](https://rosetta.commongoodlt.com)
+[![Google Classroom](https://img.shields.io/badge/Google%20Classroom-OAuth2%20v1-yellow)](https://classroom.google.com)
 
-Production-grade **Science of Reading** Model Context Protocol (MCP) server & Material Design 3 Web Dashboard. Bridges LLMs and K-5 teachers to evidence-based literacy research (Simple View of Reading, Scarborough's Reading Rope, Five Pillars, WWC Practice Guides) via a hybrid execution engine (**Remote API + Local DuckDB OLAP database**).
+Production-grade **Science of Reading** Model Context Protocol (MCP) server & Material Design 3 Web Dashboard. Bridges LLMs, K-3 teachers, and literacy specialists to evidence-based reading research (Simple View of Reading, Scarborough's Reading Rope, Five Pillars, IES/WWC Practice Guides) under Georgia HB 538 guidelines with direct **Google Classroom** coursework publishing.
 
-🌐 **Live Web Application:** [https://sor.edtechlabs.dev](https://sor.edtechlabs.dev)
+🌐 **Live Web Application:** [https://sor.edtechlabs.dev](https://sor.edtechlabs.dev)  
+📖 **Comprehensive Teacher Manual:** [USER_GUIDE.md](USER_GUIDE.md)
 
 ---
 
-## Theoretical Frameworks & Key Capabilities
+## Key Features & Capabilities
+
+- 📖 **Task-Based 4-Quadrant Workspace:** Goal-oriented task cards for Decodable Text Generation, Explicit Phonics Routines, MTSS Remediation, and Anti-Cueing Auditing.
+- ⚡ **Dynamic Scope Fetching (< 200ms):** Grade (K–3) & Unit (1–10) scope controls query `/api/phonics_scope` to pre-fill target phonemes, taught graphemes, and irregular Heart Words.
+- 🔬 **DecodableInspector Visual Auditor:** Color-coded word badges (🟢 Green Decodable, 🟡 Yellow Heart Word, 🔴 Red Untaught/Off-Scope) with interactive phonetic breakdown hover tooltips (e.g. `ch - a - t → /tʃ/ /æ/ /t/`).
+- 🎯 **Georgia HB 538 MTSS Remediation:** Screener deficit selector (Nonsense Word Fluency, Phoneme Segmentation, Vowel Teams, Consonant Blends) outputs 5-day I Do / We Do / You Do intervention cards with direct 1EdTech CASE® Rosetta deep links (`https://rosetta.commongoodlt.com/#/search?q={code}`).
+- 🖨️ **Print-First CSS (@media print):** Automatic printable student worksheet formatting using `Atkinson Hyperlegible` font (18pt–24pt, 1.6 line-spacing) with student headers (`Name: ____________ Date: ________`).
+- 🎓 **Google Classroom OAuth & Coursework Export:** Export decodable reading assignments directly to active Google Classroom streams via `GET /v1/courses` and `POST /v1/courses/{courseId}/courseWork`.
+- 🔒 **FERPA Privacy Shield:** Client-side pre-flight `sanitizeClientPII` auto-anonymizes student names (`[STUDENT_1]`) and student IDs before API transmission.
+
+---
+
+## Theoretical Frameworks & Evidence Base
 
 | Framework | Key Insight | Web & MCP Capability |
 |---|---|---|
@@ -21,7 +35,7 @@ Production-grade **Science of Reading** Model Context Protocol (MCP) server & Ma
 | **Five Pillars** (NRP, 2000) | Phonemic Awareness, Phonics, Fluency, Vocabulary, Comprehension | Scope & sequence verification with `verify_decodable_text` and anti-cueing guardrails |
 | **Three-Tier Vocabulary** (Beck, McKeown & Kucan, 2013) | Tier 1 (basic), Tier 2 (academic), Tier 3 (domain-specific) | `classify_vocabulary` tool + explicit Tier 2 pre-teaching routine prompt |
 | **Standards Satchel CASE® Exchange** (Common Good Learning Tools) | Machine-readable standards across 50 state frameworks | `align_standards` with per-standard deep links (`rosetta.commongoodlt.com`) & CASE REST API URIs |
-| **WWC & BEE Evidence Base** (IES / WWC Practice Guides) | Standardized effect sizes ($d$) across randomized controlled trials | `search_evidence` with direct publication links and DOI references (`https://doi.org/...`) |
+| **Google Classroom REST API v1** (Google Workspace) | Direct coursework assignment publishing | `list_courses` & `publish_coursework` integration via `/api/v1/google-classroom/` |
 
 ---
 
@@ -78,6 +92,13 @@ python3 webapp.py
 ```
 Access locally at `http://localhost:8093` or live at `https://sor.edtechlabs.dev`.
 
+### Running Unit Tests
+
+```bash
+# Run complete test suite (77 tests)
+python3 -m pytest
+```
+
 ### Local MCP Server (stdio mode)
 
 ```bash
@@ -89,43 +110,10 @@ python3 server.py --seed-only
 
 # Run as MCP server (stdio transport)
 python3 server.py
-
-# Force local offline DuckDB mode
-python3 server.py --offline
-```
-
-### Docker Deployment
-
-```bash
-# Build container
-docker compose build
-
-# Seed database
-docker compose run --rm sor-seed
-
-# Run HTTP/SSE server (Port 8080)
-docker compose up sor-sse
 ```
 
 ---
 
-## Architecture
+## License & Data Privacy
 
-```
-MCP Client (Antigravity / Hermes Agent / Claude)
-    ↓ stdio / SSE (JSON-RPC 2.0)
-SoR MCP Server (FastMCP)
-    ├── Hybrid Routing Engine
-    │   ├── Primary: Upstream API (sor.edtechlabs.dev)
-    │   └── Fallback: Local Embedded DuckDB (sor_evidence.duckdb)
-    ├── 14 Tools Exposed
-    ├── 4 MCP Prompts
-    ├── 6 MCP Resources
-    └── Privacy Layer (FERPA ZDR Anonymizer)
-```
-
----
-
-## License
-
-Copyright © 2026 EdTech Labs. All rights reserved.
+© 2026 EdTech Labs. All rights reserved. Student data is auto-anonymized client-side before transmission and never retained on disk.

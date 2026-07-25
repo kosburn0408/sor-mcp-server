@@ -1,136 +1,246 @@
-# Science of Reading MCP Server — User Guide
+# Science of Reading Teacher Workspace — Comprehensive User Manual & Guide
 
-## What Is the Science of Reading?
+[![Live Web App](https://img.shields.io/badge/Live%20Web%20App-sor.edtechlabs.dev-purple)](https://sor.edtechlabs.dev)
+[![Standards Satchel](https://img.shields.io/badge/Standards-50%20States%20(CASE®)-orange)](https://rosetta.commongoodlt.com)
+[![FERPA Shield](https://img.shields.io/badge/FERPA-Compliant%20%26%20ZDR-green)](#-data-privacy--ferpa-shield)
 
-The Science of Reading (SoR) is a vast, interdisciplinary body of **scientifically-based research** about reading and issues related to reading and writing. It draws from cognitive psychology, neuroscience, linguistics, and education — spanning over five decades of peer-reviewed studies.
+Welcome to the **Science of Reading (SoR) Teacher-First Workspace**. This platform is designed specifically for **K–3 classroom teachers, reading specialists, interventionists, and literacy coaches**. It translates over 50 years of interdisciplinary reading research (Simple View of Reading, Scarborough's Reading Rope, Five Pillars, IES/WWC Practice Guides) into low-friction, print-ready classroom assets with zero prompt engineering required.
 
-This research has produced a clear, consistent finding: **reading is not natural — it must be explicitly taught.** The human brain is wired for speech, but not for reading. Every child must build the neural pathways that connect visual symbols (letters) to sounds (phonemes) to meaning.
-
-### The Five Pillars
-
-The National Reading Panel (2000) identified five essential, non-negotiable components of effective reading instruction:
-
-| Pillar | What It Is | Why It Matters |
-|---|---|---|
-| 🔤 **Phonemic Awareness** | Hearing and manipulating individual sounds in spoken words | The #1 predictor of reading success. Without it, phonics makes no sense. |
-| 📖 **Phonics** | Connecting sounds (phonemes) to written letters (graphemes) | Systematic phonics instruction has an effect size of d=0.41 — meaning it works for most children, and it's essential for struggling readers. |
-| 📈 **Fluency** | Reading accurately, at an appropriate rate, with expression | Fluency is the bridge between decoding and comprehension. If all mental energy goes to sounding out words, there's nothing left for meaning. |
-| 📚 **Vocabulary** | Knowing what words mean | Vocabulary in 1st grade predicts reading comprehension in 11th grade. The gap starts early and widens without intervention. |
-| 🧠 **Comprehension** | Understanding, remembering, and communicating what was read | This is the ultimate goal of all reading instruction. Every other pillar serves this one. |
+🌐 **Access the Live Web App:** [https://sor.edtechlabs.dev](https://sor.edtechlabs.dev)
 
 ---
 
-## Who This Is For
-
-This tool is built for **K-5 educators, reading specialists, and literacy coaches** who are transitioning to Structured Literacy and the Science of Reading. You don't need to be a programmer. You need to be someone who looks at a struggling reader and asks: *"What do I do tomorrow morning at 8:15 AM?"*
-
-### Intended Users
-
-| Role | How They Use It |
-|---|---|
-| 🍎 **Classroom Teacher (K-3)** | Runs a 2nd grader's DIBELS score through Simple View diagnostic → prints a remediation card → runs a 5-minute small group that same day |
-| 📋 **Reading Specialist / Interventionist** | Pulls 6 students, batch-diagnoses, gets differentiated word chains and decodable passages for each group |
-| 🏫 **Literacy Coach** | Demonstrates explicit phonics routines during PLCs, aligns Tier 2 interventions to WWC evidence |
-| 💻 **EdTech Developer** | Integrates the MCP server into their reading app or assessment platform |
-| 🏛️ **District Curriculum Director** | Maps purchased curriculum to state standards across 50 states using CASE GUID alignment, verifies scope and sequence compliance |
+## Table of Contents
+1. [Science of Reading Core Foundations](#science-of-reading-core-foundations)
+2. [Teacher Workspace Architecture & Navigation](#teacher-workspace-architecture--navigation)
+3. [Step-by-Step Teacher Workflows](#step-by-step-teacher-workflows)
+   - [Quadrant 1: Decodable Text Generator & Scope Verifier](#quadrant-1-decodable-text-generator--scope-verifier)
+   - [Quadrant 2: Explicit Phonics Routine Builder](#quadrant-2-explicit-phonics-routine-builder)
+   - [Quadrant 3: MTSS Screener & Georgia HB 538 Remediation](#quadrant-3-mtss-screener--georgia-hb-538-remediation)
+   - [Quadrant 4: Decodability & Anti-Cueing Auditor](#quadrant-4-decodability--anti-cueing-auditor)
+   - [Workspace 5: Three-Tier Vocabulary Classifier](#workspace-5-three-tier-vocabulary-classifier)
+   - [Workspace 6: State Standards Alignment (CASE® Network)](#workspace-6-state-standards-alignment-case-network)
+4. [Classroom Printing & Export Options](#classroom-printing--export-options)
+   - [Printable Student Worksheets (@media print)](#printable-student-worksheets-media-print)
+   - [Publishing Directly to Google Classroom](#publishing-directly-to-google-classroom)
+5. [Context-Aware Dynamic Left Research Drawer](#context-aware-dynamic-left-research-drawer)
+6. [Data Privacy & FERPA Shield](#data-privacy--ferpa-shield)
+7. [MCP Server Integration for AI Agents](#mcp-server-integration-for-ai-agents)
 
 ---
 
-## How a Teacher Actually Uses This
+## Science of Reading Core Foundations
 
-### Option A: Web Dashboard (Recommended for Teachers)
-
-A teacher-friendly Google Material Design 3 web application is live at:
-👉 **[https://sor.edtechlabs.dev](https://sor.edtechlabs.dev)**
-
-- **No installation or command line needed.**
-- **6 Dedicated Segmented Tabs:**
-  1. 🩺 **Diagnose Student:** Input DIBELS/Acadience/MAP scores to generate printable small-group remediation cards.
-  2. 📖 **Check Decodability:** Check passages against phonics scopes and flag high-frequency Heart Words.
-  3. 📚 **Classify Vocabulary:** Highlight Tier 2 academic words using Isabel Beck's 3-Tier model.
-  4. 🔬 **Evidence Search:** Query WWC/BEE research studies with effect sizes ($d$) and direct paper publication links.
-  5. 🏛️ **Standards Alignment:** Search standards across **all 50 U.S. states** with deep links to [Standards Satchel](https://rosetta.commongoodlt.com/) by Common Good Learning Tools.
-  6. 🎓 **Teacher Guide:** Interactive accordion directions with Scarborough's Reading Rope diagrams.
-- **Context-Aware Left Pull-Out Drawer:** Click **`Topic & Research Guide`** at any time to view theoretical research and tool vocabulary dynamically populated for whichever tab you are currently viewing.
-
-### Option B: Via an AI Agent (MCP Server)
-
-Your district or local setup runs the MCP server once. Teachers access it through an AI assistant (Antigravity, Claude, or Hermes):
+The Science of Reading is an extensive body of empirical research establishing that **reading must be explicitly and systematically taught**. 
 
 ```
-Teacher: "Marcus scored 0.38 on decoding. What do I do?"
-   ↓
-AI Agent → evaluate_simple_view(decoding=0.38, grade="2nd")
-   ↓
-Server → Dyslexia profile → 3 remediation cards
-   ↓
-Teacher: Printable 5-minute lesson plan
+                                      SIMPLE VIEW OF READING
+ ┌────────────────────────────────┐                             ┌────────────────────────────────┐
+ │     Decoding (D)               │     Linguistic              │   Reading Comprehension (R)    │
+ │ Word Recognition & Systematic  │  X  Comprehension (LC)   =   │   Ultimate Goal of All         │
+ │ Grapheme-Phoneme Mapping       │     Vocabulary & Language   │   Literacy Instruction         │
+ └────────────────────────────────┘                             └────────────────────────────────┘
 ```
 
-### Option C: Direct Install (Tech-Savvy / Developers)
+### The 5 Essential Pillars of Reading (National Reading Panel)
+1. 🔤 **Phonemic Awareness:** Hearing, isolating, and manipulating individual spoken sounds (phonemes).
+2. 📖 **Phonics:** Connecting spoken sounds (phonemes) to written letters (graphemes) using explicit sound-spelling rules.
+3. 📈 **Fluency:** Reading text accurately, at an appropriate pace, with natural prosody and expression.
+4. 📚 **Vocabulary:** Knowing the depth and breadth of word meanings (Tier 1 basic, Tier 2 cross-domain academic, Tier 3 technical).
+5. 🧠 **Comprehension:** Active mental construction of meaning, backed by background knowledge and linguistic structures.
 
-```bash
-git clone https://github.com/kosburn0408/sor-mcp-server.git
-pip install -r requirements.txt
-python3 server.py --seed-only && python3 server.py
+---
+
+## Teacher Workspace Architecture & Navigation
+
+When you open **[https://sor.edtechlabs.dev](https://sor.edtechlabs.dev)**, the top section features a **4-Quadrant Task Card Selector**. Clicking any card instantly launches that goal-oriented workspace:
+
+```
+┌──────────────────────────────────────────┬──────────────────────────────────────────┐
+│ 📖 Decodable Text Generator              │ 🧩 Explicit Phonics Routine Builder       │
+│ Create & audit stories using taught GPCs │ Generate 5-day I Do / We Do / You Do     │
+│ with auto-fetched grade scope (< 200ms)  │ scripts with multisensory cues.          │
+├──────────────────────────────────────────┼──────────────────────────────────────────┤
+│ 🎯 MTSS / Screener & Remediation         │ 🔍 Decodability & Anti-Cueing Auditor    │
+│ Translate DIBELS scores into Georgia     │ Visual proof inspector with color        │
+│ HB 538 cards & CASE® Rosetta links.      │ badges & phonetic breakdown tooltips.    │
+└──────────────────────────────────────────┴──────────────────────────────────────────┘
 ```
 
----
-
-## Data Privacy — FERPA by Design
-
-Student data privacy is built into the architecture at the protocol level.
-
-- 🔒 **Names never reach AI:** Student identities are replaced with synthetic tokens (`std_a3f27b8c`).
-- 🗑️ **Zero Data Retention (ZDR):** Identity mappings are destroyed when the session ends.
-- 🛡️ **25 PII fields stripped:** First name, last name, student ID, email, date of birth — all removed before processing.
+Top navigation tabs also allow rapid switching between tools, while the **🔒 FERPA Compliant: PII Auto-Scrubbed** shield badge in the header ensures student data privacy is active.
 
 ---
 
-## MCP Server Capabilities (14 Tools, 4 Prompts, 6 Resources)
+## Step-by-Step Teacher Workflows
 
-### Tools (14)
+### Quadrant 1: Decodable Text Generator & Scope Verifier
+**Goal:** Create or audit reading passages to ensure 100% alignment with taught phonics patterns.
 
-| Tool | Input | Output |
-|---|---|---|
-| `query_sor_curriculum` | grade, strand, phoneme | Scope & sequence for that skill |
-| `evaluate_simple_view` | decoding, comprehension scores | Reading profile + auto-remediation |
-| `analyze_lexile` | Text | Lexile score + grade level |
-| `classify_vocabulary` | Text | Tier 1/2/3 word breakdown |
-| `verify_decodable_text` | Text, scope | % decodable, off-scope words, cueing flags |
-| `search_evidence` | Topic | WWC/BEE/NRP papers with effect sizes & DOIs |
-| `align_standards` | Skill description, state | CASE GUIDs + 50-state standard codes & Rosetta deep links |
-| `get_instructional_remediation` | deficit_code, grade | Full remediation card (I Do/We Do/You Do) |
-| `map_orthography` | Word list | Phonemes, graphemes, syllable division |
-| `get_phonics_scope` | Grade, unit | Target phonemes, graphemes, heart words |
-| `lookup_competency` | Skill, state | CASE framework alignment |
-| `match_word` | Word, grade | Single word corpus lookup |
-| `list_frameworks` | — | Enumerates 5 Pillars and Reading Rope |
-| `list_assessments` | tool_type | Assessment instruments database |
-| `sanitize_pii` | Data dict | FERPA-sanitized student data |
-
-### MCP Prompts (4)
-
-| Prompt | Input | Output |
-|---|---|---|
-| `generate_aligned_decodable` | grade, unit, topic | Science of Reading decodable passage |
-| `explicit_phonics_routine` | target_phoneme, grade | Scripted I Do / We Do / You Do lesson |
-| `vocabulary_tier_routine` | words, grade, topic | Isabel Beck Tier 2 pre-teaching routine |
-| `standards_alignment_routine` | skill, state, grade | Lesson plan standard alignment with CASE URIs |
-
-### MCP Resources (6)
-
-| Resource URI | Content |
-|---|---|
-| `sor://frameworks` | Theoretical frameworks (Simple View, Reading Rope, 5 Pillars) |
-| `sor://frameworks/syllable-rules` | Orton-Gillingham 6 syllable types and division procedures |
-| `sor://word-lists` | Decodable word lists and high-frequency heart words |
-| `sor://assessments` | Reading assessment instruments catalog |
-| `sor://standards-satchel` | Standards Satchel (Rosetta) CASE network metadata |
-| `sor://evidence/meta-analyses` | WWC/BEE research studies with effect sizes and DOIs |
+1. **Select Scope Scope:** Choose your **Grade Level** (K, 1st, 2nd, 3rd) and **Unit/Module** (Unit 1–10).
+2. **Instant Scope Fetching (< 200ms):** The active scope box instantly updates to show:
+   - *Taught Graphemes:* e.g. `a, e, i, o, u, sh, ch, th, wh, ck`
+   - *Heart Words to Pre-Teach:* e.g. `the, said, was, you`
+3. **Input Passage:** Paste your reading text into the box (or use the pre-filled sample text).
+4. **Click "Audit Decodability & Render Visual Badges":** The **DecodableInspector** renders:
+   - **Audit Metrics Bar:** `% Decodable Ratio`, `Total Word Count`, `Heart Words Used`, and `Anti-Cueing Compliance: PASSED`.
+   - 🟢 **Green Badges:** Words fully decodable using taught GPCs.
+   - 🟡 **Yellow/Heart Badges:** High-frequency irregular Heart Words.
+   - 🔴 **Red Badges:** Off-scope or untaught words.
+5. **Interactive Tooltips:** Hover or tap any word badge to view its exact **phonetic breakdown** (e.g. `ch - a - t → /tʃ/ /æ/ /t/`).
 
 ---
 
-## License
+### Quadrant 2: Explicit Phonics Routine Builder
+**Goal:** Generate a 5-day explicit phonics lesson script for whole-group or small-group instruction.
 
-© 2026 EdTech Labs. All rights reserved. Student data stays on your machine — always.
+1. **Enter Target Phoneme / Skill:** Type the target sound (e.g., `/sh/`, `/ch/`, `/ai/`, `/silent_e/`).
+2. **Select Multisensory Cue Technique:**
+   - *Finger Tapping* (Phoneme Segmentation)
+   - *Elkonin Sound Boxes*
+   - *Sky Writing / Arm Tapping*
+   - *Magic-E Wand*
+3. **Click "Build 5-Day Scripted Routine":** Instantly generates a complete 5-day explicit lesson plan following the **I Do (Teacher Model) → We Do (Guided Practice) → You Do (Independent Mastery)** model, complete with word chaining sequences.
+
+---
+
+### Quadrant 3: MTSS Screener & Georgia HB 538 Remediation
+**Goal:** Translate assessment scores (DIBELS NWF, Acadience, MAP) into Georgia HB 538-compliant 5-day intervention plans with state standards deep links.
+
+1. **Select HB 538 Screener Deficit Profile:**
+   - *Nonsense Word Fluency Low* (Decoding Score: 0.35)
+   - *Phoneme Segmentation Deficit* (Decoding Score: 0.28)
+   - *Vowel Team Confusion* (Decoding Score: 0.42)
+   - *Consonant Blend Breakdown* (Decoding Score: 0.38)
+   - Or enter custom assessment scores (Decoding 0.0–1.0 & Language Comprehension 0.0–1.0).
+2. **Student Identity (Optional):** Enter a student name. The FERPA Shield automatically anonymizes it to `[STUDENT_1]` before processing.
+3. **Click "Generate HB 538 Remediation Plan & CASE Links":**
+   - Renders Simple View profile (e.g. `⚠️ Decoding Deficit (Georgia HB 538 Priority)`).
+   - Generates 5-day explicit intervention cards.
+   - Attaches official **1EdTech CASE® Standards Satchel** deep links (`https://rosetta.commongoodlt.com/#/search?q={code}`) for direct curriculum alignment.
+
+---
+
+### Quadrant 4: Decodability & Anti-Cueing Auditor
+**Goal:** Audit commercial reading passages for untaught graphemes and eliminate 3-Cueing (MSV) guessing prompts.
+
+1. **Paste Text Selection:** Paste any reading passage into the text area.
+2. **Click "Run Visual Audit & Anti-Cueing Inspection":**
+   - Scans text for untaught phonics patterns.
+   - Enforces anti-cueing guardrails (flags prompts that encourage students to guess words from pictures or context instead of decoding).
+
+---
+
+### Workspace 5: Three-Tier Vocabulary Classifier
+**Goal:** Analyze passages using Isabel Beck's 3-Tier model to select high-utility Tier 2 words for pre-teaching.
+
+1. **Paste Passage:** Enter your read-aloud or comprehension text.
+2. **Click "Classify Vocabulary Tiers":** Displays count and breakdown across:
+   - *Tier 1:* Basic conversational words.
+   - 🎯 *Tier 2 (Academic):* High-utility, cross-domain academic words to pre-teach (with occurrence counts).
+   - *Tier 3:* Domain-specific technical terms.
+
+---
+
+### Workspace 6: State Standards Alignment (CASE® Network)
+**Goal:** Find aligned learning standards across **all 50 U.S. states** powered by Standards Satchel (Rosetta).
+
+1. **Enter Learning Goal / Skill:** e.g., `"decode words with silent e"`.
+2. **Select State Framework:** Georgia (GSE), California (CCSS-CA), Texas (TEKS), Florida (B.E.S.T.), New York, North Carolina, Ohio, Pennsylvania, Virginia, etc.
+3. **Click "Find Standards":** Displays matching standard codes, descriptions, and direct links to the official 1EdTech CASE® record.
+
+---
+
+## Classroom Printing & Export Options
+
+Every workspace result includes an **Export Action Bar** designed for instant classroom deployment:
+
+```
+[ 🖨️ Print Student Sheet ]  [ 📄 Download PDF ]  [ 📋 Copy Plain Text ]  [ 🎓 Export to Google Classroom ]
+```
+
+### Printable Student Worksheets (@media print)
+Clicking **`Print Student Sheet`** activates specialized print CSS:
+- Automatically hides all app bars, navigation tabs, sidebars, buttons, forms, and background shading.
+- Sets body typography to **Atkinson Hyperlegible** (18pt–24pt font with 1.6 line spacing) for optimal readability for young readers and students with dyslexia.
+- Automatically inserts a printable worksheet header:
+  ```
+  Name: ____________________________________    Date: __________________
+  Science of Reading Practice Sheet             Grade: _______ Unit: _______
+  ```
+
+---
+
+### Publishing Directly to Google Classroom
+
+You can publish decodable passages and phonics routines directly to your Google Classroom stream as an assignment:
+
+1. Click **`🎓 Export to Google Classroom`** on any generated passage or routine.
+2. An interactive Google Classroom modal opens:
+   - **Google OAuth Access Token:** Paste your Google OAuth bearer token (or leave blank to test in instant Demo Mode).
+   - **Select Course:** Choose your target active class (e.g., *1st Grade Reading — Unit 3*).
+   - **Assignment Title & Instructions:** Pre-filled with your decodable story or 5-day routine script.
+   - **Points:** Set maximum points (default: 100).
+3. Click **`🎓 Publish Assignment`**:
+   - Sends a `POST` request to `https://classroom.googleapis.com/v1/courses/{courseId}/courseWork`.
+   - Displays a success state with a direct outbound link (`🔗 Open in Google Classroom`) to view the live assignment.
+
+---
+
+## Context-Aware Dynamic Left Research Drawer
+
+In the top app bar, click the **`Topic & Research Guide`** button to open the pull-out left drawer:
+
+- **Dynamic Content:** The drawer automatically updates its theoretical background, research papers, DOIs, and key vocabulary based on whichever tab you are currently viewing!
+- **Tab Context Summary:**
+  - *Decodable Generator:* Displays Linnea Ehri's Orthographic Mapping research, NRP phonics meta-analyses ($d=0.44$), and definitions for Decodable Text, Off-Scope Words, and Heart Words.
+  - *Phonics Routine Builder:* Displays IES/WWC Practice Guide evidence on explicit modeling (I Do / We Do / You Do).
+  - *MTSS Screener:* Displays Gough & Tunmer's Simple View of Reading ($R = D \times LC$) and Georgia HB 538 literacy requirements.
+  - *Visual Auditor:* Displays David Kilpatrick's research on eliminating 3-Cueing (MSV) guessing habits.
+
+---
+
+## Data Privacy & FERPA Shield
+
+Student data privacy is enforced at both the client and server levels:
+
+- 🔒 **Client-Side Pre-Flight Sanitizer (`sanitizeClientPII`):** Before any data leaves your browser, student names (e.g. *Alex Smith*) and student IDs (e.g. *GA-12345*) are automatically replaced with synthetic tokens like `[STUDENT_1]`.
+- 🔔 **Toast Notifications:** A green toast popup alerts you whenever student identifiers are detected and anonymized.
+- 🛡️ **Zero Data Retention (ZDR):** No student identity mappings are saved to disk or database logs.
+- 📜 **Compliance:** Fully compliant with **FERPA**, **COPPA**, and **GDPR** right-to-erasure guidelines.
+
+---
+
+## MCP Server Integration for AI Agents
+
+For developers and tech-savvy administrators running AI assistants (Antigravity, Claude, Hermes), the underlying Python engine operates as a Model Context Protocol (MCP) server:
+
+### Available MCP Tools (14)
+- `get_phonics_scope`: Fetch scope & sequence for grade/unit.
+- `verify_decodable_text`: Verify decodability ratio & flag untaught GPCs.
+- `evaluate_simple_view`: Compute Simple View diagnostic profile & remediations.
+- `get_instructional_remediation`: Retrieve explicit I Do / We Do / You Do intervention cards.
+- `align_standards`: Query 50-state framework standards with CASE® Rosetta links.
+- `classify_vocabulary`: Classify text into Beck Tier 1/2/3.
+- `search_evidence`: Search WWC/BEE research meta-analyses with effect sizes & DOIs.
+- `sanitize_pii`: FERPA-compliant PII anonymizer.
+
+### Available FastMCP Prompts (4)
+- `generate_aligned_decodable`: Generate decodable passage matching scope.
+- `explicit_phonics_routine`: Scripted 5-day explicit phonics routine.
+- `vocabulary_tier_routine`: Isabel Beck Tier 2 pre-teaching routine.
+- `standards_alignment_routine`: Lesson plan state standard alignment plan.
+
+### Available MCP Resources (6)
+- `sor://frameworks`: Theoretical frameworks (Simple View, Reading Rope, 5 Pillars).
+- `sor://frameworks/syllable-rules`: Orton-Gillingham 6 syllable types and division rules.
+- `sor://word-lists`: Decodable word lists & high-frequency Heart Words.
+- `sor://assessments`: Reading assessment instruments database.
+- `sor://standards-satchel`: Standards Satchel (Rosetta) CASE network metadata.
+- `sor://evidence/meta-analyses`: WWC/BEE research studies with effect sizes ($d$) & DOIs.
+
+---
+
+## License & Support
+
+© 2026 EdTech Labs. All rights reserved.
+For support or questions regarding Georgia HB 538 implementation or 1EdTech CASE® integration, visit **[https://sor.edtechlabs.dev](https://sor.edtechlabs.dev)**.
