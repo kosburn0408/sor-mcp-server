@@ -435,28 +435,26 @@ h1, h2, h3, h4, .font-heading {{
 }}
 .m3-tab-bar {{
   display: flex;
-  gap: 0.6rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   max-width: 1100px;
   margin: 0 auto;
   padding: 0.6rem 1rem;
-  overflow-x: auto;
-  scrollbar-width: none;
 }}
-.m3-tab-bar::-webkit-scrollbar {{ display: none; }}
 
 .m3-tab-btn {{
   background: transparent;
   border: none;
-  padding: 0.7rem 1.3rem;
+  padding: 0.55rem 1.05rem;
   border-radius: var(--md-shape-corner-full);
   font-family: 'Outfit', sans-serif;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 600;
   color: var(--md-sys-color-on-surface-variant);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
   white-space: nowrap;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }}
@@ -739,13 +737,17 @@ input:focus, select:focus, textarea:focus {{
   background: linear-gradient(135deg, var(--md-sys-color-primary), #4A3E7D);
   color: var(--md-sys-color-on-primary);
   border: none;
-  padding: 0.95rem 2rem;
+  padding: 0.95rem 1.6rem;
   border-radius: var(--md-shape-corner-full);
   font-family: 'Outfit', sans-serif;
-  font-size: 1rem;
+  font-size: 0.96rem;
   font-weight: 700;
   cursor: pointer;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  white-space: normal;
+  text-align: center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
