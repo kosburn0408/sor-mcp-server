@@ -1,4 +1,4 @@
-"""EPIC-SOR-01 Verification Suite — Stories 1 through 5.
+"""EPIC-SOR-01 Verification Suite — Stories 1 through 6.
 
 Verifies:
   - Story 1: Task-Based Workspace Architecture & Scope Fetching (< 200ms)
@@ -6,6 +6,7 @@ Verifies:
   - Story 3: Print-First CSS & Export Utilities (@media print, Atkinson Hyperlegible)
   - Story 4: Georgia HB 538 MTSS Remediation & 1EdTech CASE® Rosetta Mapping
   - Story 5: FERPA Privacy Shield & Client/Server PII Scrubbing
+  - Story 6: Google Classroom OAuth & Coursework Export Endpoints
 """
 from __future__ import annotations
 
@@ -99,7 +100,6 @@ def test_story4_georgia_hb538_remediation_and_case_deep_links() -> None:
     assert data["diagnostic"]["reading_profile"] == "dyslexia"
     assert len(data["remediations"]) > 0
 
-    # Test standards mapping returns CASE Rosetta links
     std_response = client.post("/api/standards", json={"description": "decode words with silent e", "state": "GA"})
     assert std_response.status_code == 200
     std_data = std_response.json()
@@ -122,7 +122,6 @@ def test_story5_ferpa_pii_sanitization() -> None:
     assert "Alex Smith" not in str(sanitized)
     assert "student_token" in sanitized
 
-    # Test evaluate_simple_view strips raw student names
     diag_response = client.post("/tools/evaluate_simple_view", json={
         "decoding": 0.40,
         "comprehension": 0.85,
@@ -132,3 +131,31 @@ def test_story5_ferpa_pii_sanitization() -> None:
     assert diag_response.status_code == 200
     diag_data = diag_response.json()
     assert "Alex Smith" not in str(diag_data)
+
+
+# ── Story 6: Google Classroom OAuth & Coursework Export ─────────────────────
+
+def test_story6_google_classroom_courses_endpoint() -> None:
+    """Story 6: GET /api/v1/google-classroom/courses returns teacher active courses."""
+    response = client.get("/api/v1/google-classroom/courses")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert "courses" in data
+    assert len(data["courses"]) > 0
+
+
+def test_story6_google_classroom_publish_endpoint() -> None:
+    """Story 6: POST /api/v1/google-classroom/publish publishes assignment coursework."""
+    payload = {
+        "course_id": "demo_course_101",
+        "title": "Decodable Text Assignment: Short Vowels",
+        "description": "The cat sat on a mat.",
+        "points": 100
+    }
+    response = client.post("/api/v1/google-classroom/publish", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "published"
+    assert "alternateLink" in data
+    assert "classroom.google.com" in data["alternateLink"]

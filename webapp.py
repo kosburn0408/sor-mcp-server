@@ -6,6 +6,7 @@ EPIC-SOR-01 Implementation:
   - Story 3: Print-First CSS & Classroom Export Options (@media print, Atkinson Hyperlegible, student headers)
   - Story 4: Georgia HB 538 Remediation & 1EdTech CASE® Standards Mapper (Rosetta deep links)
   - Story 5: FERPA Privacy Shield & Client-Side PII Safeguard (Pre-flight PII scrubbing & toast notifications)
+  - Story 6: Google Classroom OAuth & Coursework Export (GET /v1/courses, POST /v1/courses/{id}/courseWork)
 
 Usage: python3 webapp.py  (runs on localhost:8093 by default)
 """
@@ -26,7 +27,10 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import time, uvicorn
 
+from src.routes.google_classroom import router as gc_router
+
 app = FastAPI(title="SoR Dashboard", version="4.0")
+app.include_router(gc_router)
 
 # ── Static Files Mount ──────────────────────────────────────────────────────
 base_dir = Path(__file__).resolve().parent
@@ -565,7 +569,7 @@ h1, h2, h3, h4, .font-heading {{
   opacity: 1;
 }}
 
-/* ── Story 3: Export Bar & Print Classroom Sheet ── */
+/* ── Story 3 & 6: Export Bar & Print Classroom Sheet ── */
 .export-bar {{
   display: flex;
   gap: 0.8rem;
@@ -829,6 +833,56 @@ input:focus, select:focus, textarea:focus {{
   <div style="padding:1.4rem" id="sidebarDynamicContent"></div>
 </aside>
 
+<!-- Story 6: Google Classroom Export Modal Dialog -->
+<div class="sidebar-backdrop" id="gcModalBackdrop" style="z-index:2000"></div>
+<div id="gcModal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:var(--md-shape-corner-large);max-width:550px;width:92vw;padding:1.8rem;box-shadow:var(--md-elevation-3);z-index:2100;display:none">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem">
+    <h3 style="color:var(--md-sys-color-primary);margin:0;display:flex;align-items:center;gap:0.6rem">
+      <i class="fa-solid fa-graduation-cap"></i> Export to Google Classroom
+    </h3>
+    <button onclick="closeGCModal()" style="background:none;border:none;font-size:1.3rem;cursor:pointer">✕</button>
+  </div>
+
+  <div id="gcModalSuccess" style="display:none;text-align:center;padding:1.5rem 0">
+    <div style="font-size:3rem;margin-bottom:0.8rem">🎉</div>
+    <h4 style="color:#2E7D32;margin-bottom:0.5rem">Assignment Successfully Published!</h4>
+    <p style="font-size:0.9rem;color:#555;margin-bottom:1.2rem">Your decodable reading assignment is now live for your students in Google Classroom.</p>
+    <a id="gcOutboundLink" href="https://classroom.google.com" target="_blank" class="export-btn" style="text-decoration:none;display:inline-flex">
+      🔗 Open in Google Classroom
+    </a>
+  </div>
+
+  <form id="gcPublishForm">
+    <div class="form-group">
+      <label>Google OAuth Access Token (Optional for Demo Mode)</label>
+      <input type="password" id="gcAccessToken" placeholder="Paste Bearer Token or leave blank for demo">
+    </div>
+    <div class="form-group">
+      <label>Select Target Classroom Course</label>
+      <select id="gcCourseSelect">
+        <option value="demo_course_101">1st Grade Reading — Unit 3</option>
+        <option value="demo_course_102">MTSS Literacy Intervention Group</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Assignment Title</label>
+      <input type="text" id="gcTitle" value="Decodable Text Practice Sheet" required>
+    </div>
+    <div class="form-group">
+      <label>Instructions & Decodable Content</label>
+      <textarea id="gcContent" rows="5" required></textarea>
+    </div>
+    <div class="form-group">
+      <label>Points</label>
+      <input type="number" id="gcPoints" value="100">
+    </div>
+    <div style="display:flex;gap:0.8rem;margin-top:1.2rem">
+      <button type="button" onclick="closeGCModal()" class="export-btn" style="background:#E8DEF8">Cancel</button>
+      <button type="submit" class="m3-btn" style="width:auto;flex:1"><i class="fa-solid fa-paper-plane"></i> Publish Coursework</button>
+    </div>
+  </form>
+</div>
+
 <!-- Top App Bar -->
 <header class="app-bar">
   <button class="drawer-trigger-btn" id="sidebarToggle" title="Open Topic & Research Guide">
@@ -842,7 +896,7 @@ input:focus, select:focus, textarea:focus {{
       <div class="app-bar-subtitle">Science of Reading Teacher-First Workspace</div>
     </div>
   </div>
-  <!-- Story 5: FERPA Privacy Shield Indicator -->
+  <!-- Story 5: FERPA Security Trust Indicator Badge -->
   <div class="ferpa-shield-badge" title="Zero Data Retention (ZDR) • Client-Side PII Auto-Sanitization Active">
     <i class="fa-solid fa-shield-halved"></i>
     <span>🔒 FERPA Compliant: PII Auto-Scrubbed</span>
@@ -1059,11 +1113,12 @@ input:focus, select:focus, textarea:focus {{
         <div id="profileArea"></div>
         <div id="remediationArea"></div>
         <div id="nextSteps"></div>
-        <!-- Export Action Bar (Story 3) -->
+        <!-- Export Action Bar (Story 3 & Story 6) -->
         <div class="export-bar">
           <button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print Student Sheet</button>
           <button onclick="downloadAsPDF('result')" class="export-btn"><i class="fa-solid fa-file-pdf"></i> 📄 Download PDF</button>
           <button onclick="copyResultText('result')" class="export-btn"><i class="fa-solid fa-copy"></i> 📋 Copy Plain Text</button>
+          <button onclick="openGCModal('MTSS Literacy Remediation Plan', document.getElementById('result').innerText)" class="export-btn" style="background:#EADDFF;color:#21005D"><i class="fa-solid fa-graduation-cap"></i> 🎓 Export to Google Classroom</button>
         </div>
       </div>
     </div>
@@ -1247,7 +1302,6 @@ function sanitizeClientPII(inputStr) {{
   var cleaned = inputStr;
   var detected = [];
 
-  // Detect and replace common student names
   var namePatterns = [/Alex\\s+Smith/gi, /Marcus\\s+Williams/gi, /Alex/gi, /Marcus/gi, /John\\s+Doe/gi];
   namePatterns.forEach(function(p, idx) {{
     if (p.test(cleaned)) {{
@@ -1256,7 +1310,6 @@ function sanitizeClientPII(inputStr) {{
     }}
   }});
 
-  // Detect and replace student IDs (e.g. GA-12345, ID# 98765)
   if (/(GA-\\d{{5}}|ID#?\\s*\\d{{4,8}})/gi.test(cleaned)) {{
     detected.push('Student ID');
     cleaned = cleaned.replace(/(GA-\\d{{5}}|ID#?\\s*\\d{{4,8}})/gi, '[STUDENT_ID_REDACTED]');
@@ -1279,6 +1332,67 @@ function showToast(msg) {{
     setTimeout(function() {{ toast.remove(); }}, 300);
   }}, 4000);
 }}
+
+// ── Story 6: Google Classroom Modal Helpers ──
+function openGCModal(title, content) {{
+  document.getElementById('gcTitle').value = title || 'Decodable Reading Assignment';
+  document.getElementById('gcContent').value = content || document.getElementById('decodeText').value;
+  document.getElementById('gcModalSuccess').style.display = 'none';
+  document.getElementById('gcPublishForm').style.display = 'block';
+  document.getElementById('gcModalBackdrop').classList.add('open');
+  document.getElementById('gcModal').style.display = 'block';
+  fetchGCCourses();
+}}
+
+function closeGCModal() {{
+  document.getElementById('gcModalBackdrop').classList.remove('open');
+  document.getElementById('gcModal').style.display = 'none';
+}}
+
+async function fetchGCCourses() {{
+  var token = document.getElementById('gcAccessToken').value;
+  var headers = token ? {{'Authorization': 'Bearer ' + token}} : {{}};
+  try {{
+    var resp = await fetch('/api/v1/google-classroom/courses', {{headers: headers}});
+    var data = await resp.json();
+    if (data.courses && data.courses.length > 0) {{
+      var select = document.getElementById('gcCourseSelect');
+      select.innerHTML = '';
+      data.courses.forEach(function(c) {{
+        var opt = document.createElement('option');
+        opt.value = c.id;
+        opt.innerText = c.name + (c.section ? ' (' + c.section + ')' : '');
+        select.appendChild(opt);
+      }});
+    }}
+  }} catch(e) {{ console.error('Course fetch error:', e); }}
+}}
+
+document.getElementById('gcPublishForm').addEventListener('submit', async function(e) {{
+  e.preventDefault();
+  var payload = {{
+    course_id: document.getElementById('gcCourseSelect').value,
+    title: document.getElementById('gcTitle').value,
+    description: document.getElementById('gcContent').value,
+    points: parseFloat(document.getElementById('gcPoints').value),
+    access_token: document.getElementById('gcAccessToken').value
+  }};
+
+  var resp = await fetch('/api/v1/google-classroom/publish', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify(payload)
+  }});
+  var r = await resp.json();
+  if (r.status === 'published') {{
+    document.getElementById('gcPublishForm').style.display = 'none';
+    document.getElementById('gcOutboundLink').href = r.alternateLink || 'https://classroom.google.com';
+    document.getElementById('gcModalSuccess').style.display = 'block';
+    showToast('🎓 Successfully published assignment to Google Classroom!');
+  }} else {{
+    alert('Failed to publish: ' + (r.detail || 'Unknown error'));
+  }}
+}});
 
 // ── Story 1: Dynamic Scope Fetching (< 200ms) ──
 async function fetchPhonicsScope() {{
@@ -1320,7 +1434,6 @@ function switchTab(tabId) {{
     selectedPane.classList.add('active');
   }}
 
-  // Highlight active quadrant card if mapped
   var quadMap = {{
     'tab-decodable': 'quadrant-decodable',
     'tab-phonics': 'quadrant-phonics',
@@ -1398,7 +1511,6 @@ toggle.addEventListener('click', function(e) {{
 
 backdrop.addEventListener('click', closeSidebar);
 
-// Story 4: Autofill HB 538 Screener Scores
 function autofillDeficitScores() {{
   var val = document.getElementById('hb538Deficit').value;
   var decInput = document.getElementById('decoding');
@@ -1418,7 +1530,6 @@ function renderDecodableInspector(r, targetId) {{
 
   var html = '<h3 style="color:var(--md-sys-color-primary);margin-bottom:0.8rem"><i class="fa-solid fa-microscope"></i> Visual Audit Inspector & Decodability Report</h3>';
   
-  // Audit Metrics Bar (Story 2)
   html += '<div class="audit-metrics-bar">';
   html += '<div><div class="audit-metric-num">' + pct + '%</div><div class="audit-metric-label">% Decodable Ratio</div></div>';
   html += '<div><div class="audit-metric-num">' + totalWords + '</div><div class="audit-metric-label">Total Word Count</div></div>';
@@ -1426,7 +1537,6 @@ function renderDecodableInspector(r, targetId) {{
   html += '<div><div class="audit-metric-num" style="color:#2E7D32"><i class="fa-solid fa-check-circle"></i> PASSED</div><div class="audit-metric-label">Anti-Cueing Audit</div></div>';
   html += '</div>';
 
-  // Interactive Word Inspector with Phonetic Hover Tooltips (Story 2)
   var text = r.text || r.original_text || document.getElementById('decodeText').value;
   var words = text.split(/(\\s+)/);
 
@@ -1452,11 +1562,12 @@ function renderDecodableInspector(r, targetId) {{
   }});
   html += '</div>';
 
-  // Export Bar (Story 3)
+  // Export Bar (Story 3 & Story 6)
   html += '<div class="export-bar">';
   html += '<button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print Student Sheet</button>';
   html += '<button onclick="downloadAsPDF(' + "'" + targetId + "'" + ')" class="export-btn"><i class="fa-solid fa-file-pdf"></i> 📄 Download PDF</button>';
   html += '<button onclick="copyResultText(' + "'" + targetId + "'" + ')" class="export-btn"><i class="fa-solid fa-copy"></i> 📋 Copy Plain Text</button>';
+  html += '<button onclick="openGCModal(' + "'Decodable Text Practice'" + ', document.getElementById(' + "'decodeText'" + ').value)" class="export-btn" style="background:#EADDFF;color:#21005D"><i class="fa-solid fa-graduation-cap"></i> 🎓 Export to Google Classroom</button>';
   html += '</div>';
 
   var resEl = document.getElementById(targetId);
@@ -1464,7 +1575,6 @@ function renderDecodableInspector(r, targetId) {{
   resEl.classList.add('show');
 }}
 
-// Mock Phonetic Breakdown Dictionary for Hover Tooltips (Story 2)
 function getPhoneticBreakdown(word) {{
   var dict = {{
     'cat': 'c - a - t → /k/ /æ/ /t/',
@@ -1483,7 +1593,6 @@ function getPhoneticBreakdown(word) {{
   return word.split('').join(' - ') + ' → /' + word + '/';
 }}
 
-// Story 3: Export Utilities (Copy Plain Text & Print)
 function copyResultText(elementId) {{
   var el = document.getElementById(elementId);
   var text = el.innerText || el.textContent;
@@ -1494,8 +1603,6 @@ function copyResultText(elementId) {{
 function downloadAsPDF(elementId) {{
   window.print();
 }}
-
-// ── Form Submit Event Handlers with Story 5 PII Pre-Flight Scrubbing ──
 
 document.getElementById('decodableGeneratorForm').addEventListener('submit', async function(e){{
   e.preventDefault();
@@ -1529,7 +1636,7 @@ document.getElementById('phonicsRoutineForm').addEventListener('submit', async f
   
   var html = '<h3 style="color:var(--md-sys-color-primary);margin-bottom:1rem"><i class="fa-solid fa-puzzle-piece"></i> 5-Day Explicit Phonics Routine Script</h3>';
   html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.4rem;border-radius:var(--md-shape-corner-medium);white-space:pre-wrap;font-family:monospace;line-height:1.6">' + r.routine + '</div>';
-  html += '<div class="export-bar"><button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print Student Sheet</button><button onclick="copyResultText(&quot;phonicsRoutineResult&quot;)" class="export-btn"><i class="fa-solid fa-copy"></i> 📋 Copy Plain Text</button></div>';
+  html += '<div class="export-bar"><button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print Student Sheet</button><button onclick="copyResultText(' + "'phonicsRoutineResult'" + ')" class="export-btn"><i class="fa-solid fa-copy"></i> 📋 Copy Plain Text</button><button onclick="openGCModal(' + "'Explicit Phonics Routine'" + ', r.routine)" class="export-btn" style="background:#EADDFF;color:#21005D"><i class="fa-solid fa-graduation-cap"></i> 🎓 Export to Google Classroom</button></div>';
 
   var resEl = document.getElementById('phonicsRoutineResult');
   resEl.innerHTML = html;
@@ -1586,7 +1693,6 @@ function renderResult(r) {{
 
   document.getElementById('profileArea').innerHTML = html;
 
-  // Story 4: Render Georgia HB 538 5-Day Remediation Cards & 1EdTech CASE® Standards Deep Links
   var cardsHtml = '<h3 style="margin-top:1.5rem;color:var(--md-sys-color-primary)">📋 Georgia HB 538 Intervention Cards & 1EdTech CASE® Standards</h3>';
   r.remediations.forEach(function(card){{
     cardsHtml += '<div class="remediation-card">' + renderMarkdownCard(card) + '</div>';
@@ -1613,7 +1719,6 @@ function renderMarkdownCard(card) {{
     .replace(/\\n\\n/g, '<br><br>')
     .replace(/\\n/g, '<br>');
 
-  // Story 4: Outbound CASE® Standards Rosetta Deep Links
   html += '<div style="margin-top:0.8rem;padding:0.6rem 0.9rem;background:var(--md-sys-color-surface-variant);border-radius:var(--md-shape-corner-small);font-size:0.82rem;display:flex;align-items:center;justify-space-between">';
   html += '<span><i class="fa-solid fa-award" style="color:var(--md-sys-color-primary)"></i> <strong>Aligned Georgia GSE Standard:</strong> ELAGSE1RF3</span>';
   html += '<a href="https://rosetta.commongoodlt.com/#/search?q=ELAGSE1RF3" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open CASE Network Record</a>';
@@ -1693,14 +1798,13 @@ document.getElementById('standardsForm').addEventListener('submit', async functi
   document.getElementById('standardsResult').classList.add('show');
 }});
 
-// Fetch initial scope on page load (< 200ms)
 fetchPhonicsScope();
 </script>
 </body>
 </html>"""
 
 
-# ── API Routes (Stories 1–5 Compliant) ───────────────────────────────────────
+# ── API Routes (Stories 1–6 Compliant) ───────────────────────────────────────
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -1735,7 +1839,6 @@ async def diagnose(data: dict):
     grade = data.get("grade", data.get("student_grade", "1st"))
     student_name = data.get("student_name", "")
 
-    # Story 5: Server-side PII Sanitization
     sanitized_input = sanitize_pii({"student_name": student_name})
     clean_name = sanitized_input.get("student_token", "Anonymous Student")
 
