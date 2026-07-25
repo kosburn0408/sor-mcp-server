@@ -249,8 +249,8 @@ Open `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) o
 }
 ```
 
-##### 🟣 Antigravity / Cursor / VS Code / Cline (`mcp.json`)
-Add the following to your workspace `mcp.json`:
+##### 🟣 Hermes Agent / Antigravity / Cursor / VS Code / Cline (`mcp.json`)
+Add the following to your workspace or Hermes `mcp.json`:
 
 ```json
 {
@@ -262,6 +262,24 @@ Add the following to your workspace `mcp.json`:
       "env": {
         "SOR_API_BASE_URL": "https://sor.edtechlabs.dev/api/v1",
         "SOR_DB_PATH": "db/sor_evidence.duckdb"
+      }
+    }
+  }
+}
+```
+
+##### 🤖 Hermes Server Deployment Configuration (`10.100.0.35` / `ubuntu-root`)
+
+```json
+{
+  "mcpServers": {
+    "science-of-reading": {
+      "command": "/root/sor-mcp-server/.venv/bin/python3",
+      "args": ["/root/agentic-edu/mcp-servers/science-of-reading/server.py"],
+      "cwd": "/root/agentic-edu/mcp-servers/science-of-reading",
+      "env": {
+        "SOR_API_BASE_URL": "http://localhost:8093/api/v1",
+        "SOR_DB_PATH": "/root/agentic-edu/mcp-servers/science-of-reading/db/sor_evidence.duckdb"
       }
     }
   }
