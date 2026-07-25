@@ -212,17 +212,79 @@ Student data privacy is enforced at both the client and server levels:
 
 ## MCP Server Integration for AI Agents
 
-For developers and tech-savvy administrators running AI assistants (Antigravity, Claude, Hermes), the underlying Python engine operates as a Model Context Protocol (MCP) server:
+For developers, district IT administrators, and tech-savvy educators running AI assistants (Antigravity, Claude Desktop, Cursor, VS Code, Cline, Roo Code), the underlying Python engine operates as a Model Context Protocol (MCP) server.
+
+### Step-by-Step MCP Server Setup Guide
+
+#### 1. Clone & Initialize Environment
+```bash
+git clone https://github.com/kosburn0408/sor-mcp-server.git
+cd sor-mcp-server
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Verify / seed local DuckDB database
+python3 server.py --seed-only
+```
+
+#### 2. Configure Your AI Client
+
+##### 🟢 Claude Desktop (`claude_desktop_config.json`)
+Open `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows) and add:
+
+```json
+{
+  "mcpServers": {
+    "science-of-reading": {
+      "command": "/absolute/path/to/sor-mcp-server/.venv/bin/python3",
+      "args": ["/absolute/path/to/sor-mcp-server/server.py"],
+      "env": {
+        "SOR_API_BASE_URL": "https://sor.edtechlabs.dev/api/v1",
+        "SOR_DB_PATH": "/absolute/path/to/sor-mcp-server/db/sor_evidence.duckdb"
+      }
+    }
+  }
+}
+```
+
+##### 🟣 Antigravity / Cursor / VS Code / Cline (`mcp.json`)
+Add the following to your workspace `mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "science-of-reading": {
+      "command": "python3",
+      "args": ["server.py"],
+      "cwd": "/path/to/sor-mcp-server",
+      "env": {
+        "SOR_API_BASE_URL": "https://sor.edtechlabs.dev/api/v1",
+        "SOR_DB_PATH": "db/sor_evidence.duckdb"
+      }
+    }
+  }
+}
+```
+
+---
 
 ### Available MCP Tools (14)
-- `get_phonics_scope`: Fetch scope & sequence for grade/unit.
+- `get_phonics_scope`: Fetch scope & sequence for grade/unit (< 200ms).
 - `verify_decodable_text`: Verify decodability ratio & flag untaught GPCs.
 - `evaluate_simple_view`: Compute Simple View diagnostic profile & remediations.
 - `get_instructional_remediation`: Retrieve explicit I Do / We Do / You Do intervention cards.
 - `align_standards`: Query 50-state framework standards with CASE® Rosetta links.
 - `classify_vocabulary`: Classify text into Beck Tier 1/2/3.
 - `search_evidence`: Search WWC/BEE research meta-analyses with effect sizes & DOIs.
-- `sanitize_pii`: FERPA-compliant PII anonymizer.
+- `map_orthography`: Map phonemes, graphemes, and Orton-Gillingham syllable division.
+- `analyze_lexile`: Lexile readability estimation.
+- `match_word`: Single-word corpus lookup.
+- `list_frameworks`: Enumerate 5 Pillars and Reading Rope.
+- `list_assessments`: Categorized assessment instruments catalog.
+- `lookup_competency`: CASE competency lookup.
+- `sanitize_pii`: FERPA-compliant student PII anonymizer.
 
 ### Available FastMCP Prompts (4)
 - `generate_aligned_decodable`: Generate decodable passage matching scope.

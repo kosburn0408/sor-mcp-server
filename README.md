@@ -26,16 +26,71 @@ Production-grade **Science of Reading** Model Context Protocol (MCP) server & Ma
 
 ---
 
-## Theoretical Frameworks & Evidence Base
+## MCP Server Installation & AI Setup Guide
 
-| Framework | Key Insight | Web & MCP Capability |
-|---|---|---|
-| **Simple View of Reading** (Gough & Tunmer, 1986) | Reading comprehension = Decoding × Linguistic Comprehension | `evaluate_simple_view` diagnostic + auto-generated printable I Do/We Do/You Do remediation cards |
-| **Scarborough's Reading Rope** (2001) | Skilled reading weaves together Word Recognition and Language Comprehension strands | Interactive Scarborough Rope breakdown & MTSS Tier 1/2/3 framework guides |
-| **Five Pillars** (NRP, 2000) | Phonemic Awareness, Phonics, Fluency, Vocabulary, Comprehension | Scope & sequence verification with `verify_decodable_text` and anti-cueing guardrails |
-| **Three-Tier Vocabulary** (Beck, McKeown & Kucan, 2013) | Tier 1 (basic), Tier 2 (academic), Tier 3 (domain-specific) | `classify_vocabulary` tool + explicit Tier 2 pre-teaching routine prompt |
-| **Standards Satchel CASE® Exchange** (Common Good Learning Tools) | Machine-readable standards across 50 state frameworks | `align_standards` with per-standard deep links (`rosetta.commongoodlt.com`) & CASE REST API URIs |
-| **Google Classroom REST API v1** (Google Workspace) | Direct coursework assignment publishing | `list_courses` & `publish_coursework` integration via `/api/v1/google-classroom/` |
+You can connect the Science of Reading MCP server to **Claude Desktop**, **Antigravity CLI/IDE**, **VS Code**, **Cursor**, or **Cline**.
+
+### Step 1: Clone Repository & Install Dependencies
+
+```bash
+# Clone the repository
+git clone https://github.com/kosburn0408/sor-mcp-server.git
+cd sor-mcp-server
+
+# Create virtual environment and install dependencies
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Verify / seed local embedded DuckDB database
+python3 server.py --seed-only
+```
+
+### Step 2: Add MCP Server Config to Your AI Client
+
+#### 🟢 Claude Desktop Configuration (`claude_desktop_config.json`)
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "science-of-reading": {
+      "command": "/path/to/sor-mcp-server/.venv/bin/python3",
+      "args": ["/path/to/sor-mcp-server/server.py"],
+      "env": {
+        "SOR_API_BASE_URL": "https://sor.edtechlabs.dev/api/v1",
+        "SOR_DB_PATH": "/path/to/sor-mcp-server/db/sor_evidence.duckdb"
+      }
+    }
+  }
+}
+```
+
+#### 🟣 Antigravity / Cursor / VS Code / Cline Configuration (`mcp.json`)
+
+```json
+{
+  "mcpServers": {
+    "science-of-reading": {
+      "command": "python3",
+      "args": ["server.py"],
+      "cwd": "/path/to/sor-mcp-server",
+      "env": {
+        "SOR_API_BASE_URL": "https://sor.edtechlabs.dev/api/v1",
+        "SOR_DB_PATH": "db/sor_evidence.duckdb"
+      }
+    }
+  }
+}
+```
+
+### Step 3: Test MCP Server Connection
+
+```bash
+# Test stdio transport locally
+python3 server.py
+```
 
 ---
 
@@ -97,19 +152,6 @@ Access locally at `http://localhost:8093` or live at `https://sor.edtechlabs.dev
 ```bash
 # Run complete test suite (77 tests)
 python3 -m pytest
-```
-
-### Local MCP Server (stdio mode)
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Verify / seed embedded database
-python3 server.py --seed-only
-
-# Run as MCP server (stdio transport)
-python3 server.py
 ```
 
 ---
