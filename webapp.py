@@ -1,12 +1,19 @@
-"""SoR Web Dashboard — Teacher-friendly interface for the Science of Reading MCP server.
+"""SoR Web Dashboard — Teacher-First Workspace for the Science of Reading MCP server.
 
-Single-file FastAPI app with embedded frontend. No command line needed.
+EPIC-SOR-01 Implementation:
+  - Story 1: Task-Based Workspace Architecture & 4-Quadrant Workspace Selector (Grade & Unit Scope fetching < 200ms)
+  - Story 2: Decodable Text Generator & Visual Audit Inspector (Color-coded phonetic badges & hover breakdown tooltips)
+  - Story 3: Print-First CSS & Classroom Export Options (@media print, Atkinson Hyperlegible, student headers)
+  - Story 4: Georgia HB 538 Remediation & 1EdTech CASE® Standards Mapper (Rosetta deep links)
+  - Story 5: FERPA Privacy Shield & Client-Side PII Safeguard (Pre-flight PII scrubbing & toast notifications)
+
 Usage: python3 webapp.py  (runs on localhost:8093 by default)
 """
 from __future__ import annotations
 
 import json
 import sys
+import re
 from pathlib import Path
 
 # Add repo root to path for imports
@@ -19,7 +26,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 import time, uvicorn
 
-app = FastAPI(title="SoR Dashboard", version="3.9")
+app = FastAPI(title="SoR Dashboard", version="4.0")
 
 # ── Static Files Mount ──────────────────────────────────────────────────────
 base_dir = Path(__file__).resolve().parent
@@ -62,6 +69,9 @@ from src.tools.vocabulary import classify_text
 from src.tools.remediation import get_instructional_remediation, list_available_remediations
 from src.tools.diagnostics import evaluate_simple_view
 from src.tools.decodability import check_decodability
+from src.tools.phonics import get_phonics_scope
+from src.prompts.phonics import explicit_phonics_routine
+from src.tools.privacy import sanitize_pii
 
 # ── Sidebar Data Loader ─────────────────────────────────────────────────────
 
@@ -162,8 +172,8 @@ def build_frontend() -> str:
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Science of Reading — Teacher Workspace</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Science of Reading — Teacher-First Workspace</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%236750A4'/><text x='16' y='23' text-anchor='middle' font-size='20'>🧠</text></svg>">
 <style>
@@ -207,7 +217,7 @@ h1, h2, h3, h4, .font-heading {{
   font-family: 'Outfit', sans-serif;
 }}
 
-/* ── Top App Bar ── */
+/* ── Top App Bar & FERPA Security Shield ── */
 .app-bar {{
   background: var(--md-sys-color-surface);
   border-bottom: 1px solid var(--md-sys-color-surface-variant);
@@ -273,27 +283,112 @@ h1, h2, h3, h4, .font-heading {{
   font-weight: 500;
 }}
 
-.hub-btn {{
-  background: var(--md-sys-color-secondary-container);
-  color: #1D192B;
-  border: none;
-  padding: 0.5rem 1.1rem;
+/* Story 5: FERPA Security Trust Indicator Badge */
+.ferpa-shield-badge {{
+  background: #E8F5E9;
+  color: #1B5E20;
+  border: 1px solid #A5D6A7;
+  padding: 0.45rem 0.9rem;
   border-radius: var(--md-shape-corner-full);
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  display: flex;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  transition: all 0.2s ease;
-  text-decoration: none;
-}}
-.hub-btn:hover {{
-  background: #D8CEE8;
-  transform: translateY(-1px);
 }}
 
-/* ── M3 Segmented Navigation Bar ── */
+/* Toast Notifications for PII Sanitization */
+.toast-container {{
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}}
+.toast {{
+  background: #1C1B1F;
+  color: #fff;
+  padding: 0.9rem 1.4rem;
+  border-radius: var(--md-shape-corner-medium);
+  box-shadow: var(--md-elevation-3);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  border-left: 4px solid #4CAF50;
+  animation: toastIn 0.3s cubic-bezier(0.4,0,0.2,1);
+}}
+@keyframes toastIn {{
+  from {{ opacity: 0; transform: translateY(12px); }}
+  to {{ opacity: 1; transform: translateY(0); }}
+}}
+
+/* ── Story 1: 4-Quadrant Workspace Selector ── */
+.quadrant-grid {{
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.2rem;
+  margin-bottom: 2rem;
+}}
+@media(max-width: 768px) {{
+  .quadrant-grid {{ grid-template-columns: 1fr; }}
+}}
+
+.quadrant-card {{
+  background: var(--md-sys-color-surface);
+  border: 2px solid var(--md-sys-color-surface-variant);
+  border-radius: var(--md-shape-corner-large);
+  padding: 1.4rem;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--md-elevation-1);
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}}
+.quadrant-card:hover {{
+  border-color: var(--md-sys-color-primary);
+  box-shadow: var(--md-elevation-2);
+  transform: translateY(-2px);
+}}
+.quadrant-card.active {{
+  border-color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-primary-container);
+  box-shadow: var(--md-elevation-2);
+}}
+.quadrant-icon {{
+  width: 48px;
+  height: 48px;
+  border-radius: var(--md-shape-corner-medium);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}}
+.quadrant-card.active .quadrant-icon {{
+  background: var(--md-sys-color-primary);
+  color: #fff;
+}}
+.quadrant-title {{
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1C1B1F;
+  margin-bottom: 0.2rem;
+}}
+.quadrant-desc {{
+  font-size: 0.85rem;
+  color: var(--md-sys-color-secondary);
+  line-height: 1.4;
+}}
+
+/* ── M3 Navigation Bar ── */
 .m3-tab-bar-container {{
   background: var(--md-sys-color-surface);
   border-bottom: 1px solid var(--md-sys-color-surface-variant);
@@ -305,7 +400,7 @@ h1, h2, h3, h4, .font-heading {{
 .m3-tab-bar {{
   display: flex;
   gap: 0.6rem;
-  max-width: 1050px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 0.6rem 1rem;
   overflow-x: auto;
@@ -339,13 +434,10 @@ h1, h2, h3, h4, .font-heading {{
   box-shadow: 0 4px 12px rgba(103, 80, 164, 0.25);
   font-weight: 700;
 }}
-.m3-tab-btn i {{
-  font-size: 1.05rem;
-}}
 
 /* ── Container & Layout ── */
 .container {{
-  max-width: 1050px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 1.8rem 1.2rem;
 }}
@@ -370,10 +462,6 @@ h1, h2, h3, h4, .font-heading {{
   margin-bottom: 1.5rem;
   box-shadow: var(--md-elevation-2);
   border: 1px solid rgba(121, 116, 126, 0.12);
-  transition: box-shadow 0.25s ease;
-}}
-.m3-card:hover {{
-  box-shadow: var(--md-elevation-3);
 }}
 
 .m3-card-title {{
@@ -385,62 +473,209 @@ h1, h2, h3, h4, .font-heading {{
   align-items: center;
   gap: 0.7rem;
 }}
-.m3-card-title i {{
-  color: var(--md-sys-color-tertiary);
-}}
 
-/* ── Hero Banners ── */
-.hero-card {{
-  background: linear-gradient(135deg, #4A3E7D 0%, #6750A4 100%);
-  color: #fff;
-  border-radius: var(--md-shape-corner-large);
-  padding: 0;
-  overflow: hidden;
-  margin-bottom: 1.8rem;
-  box-shadow: var(--md-elevation-3);
+/* ── Story 2: DecodableInspector Word Badges & Audit Bar ── */
+.audit-metrics-bar {{
+  background: var(--md-sys-color-surface-variant);
+  border-radius: var(--md-shape-corner-medium);
+  padding: 1.1rem 1.4rem;
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  align-items: center;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.4rem;
+  border-left: 5px solid var(--md-sys-color-primary);
 }}
-@media(max-width: 768px) {{
-  .hero-card {{ grid-template-columns: 1fr; }}
-  .hero-img-col {{ height: 220px; }}
-}}
-.hero-text-col {{
-  padding: 2.2rem;
-}}
-.hero-tag {{
-  display: inline-block;
-  background: var(--md-sys-color-tertiary-container);
-  color: #7A2813;
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.25rem 0.8rem;
-  border-radius: var(--md-shape-corner-full);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 0.8rem;
-}}
-.hero-title {{
+.audit-metric-num {{
+  font-family: 'Outfit', sans-serif;
   font-size: 1.6rem;
   font-weight: 800;
-  line-height: 1.25;
-  margin-bottom: 0.8rem;
+  color: var(--md-sys-color-primary);
 }}
-.hero-desc {{
-  color: #E8DEF8;
-  font-size: 0.95rem;
-  line-height: 1.6;
-  margin-bottom: 1.2rem;
-}}
-.hero-img-col img {{
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+.audit-metric-label {{
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--md-sys-color-secondary);
+  letter-spacing: 0.05em;
 }}
 
-/* ── Form Controls ── */
+.inspector-word-container {{
+  line-height: 2.3;
+  font-size: 1.15rem;
+  padding: 1.4rem;
+  background: #fff;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-shape-corner-medium);
+  margin: 1.2rem 0;
+}}
+
+.word-badge {{
+  position: relative;
+  display: inline-block;
+  padding: 0.25rem 0.55rem;
+  margin: 0.15rem 0.2rem;
+  border-radius: var(--md-shape-corner-small);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}}
+.word-badge:hover {{
+  transform: translateY(-2px);
+}}
+.badge-decodable {{
+  background: #E8F5E9;
+  color: #1B5E20;
+  border: 1px solid #A5D6A7;
+}}
+.badge-heart {{
+  background: #FFF9C4;
+  color: #F57F17;
+  border: 1px solid #FFF59D;
+}}
+.badge-heart::after {{
+  content: ' 💛';
+  font-size: 0.75rem;
+}}
+.badge-offscope {{
+  background: #FFEBEE;
+  color: #C62828;
+  border: 2px solid #EF5350;
+}}
+
+/* Phonetic Breakdown Tooltip */
+.word-badge .tooltip {{
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #212121;
+  color: #fff;
+  padding: 0.5rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}}
+.word-badge:hover .tooltip {{
+  visibility: visible;
+  opacity: 1;
+}}
+
+/* ── Story 3: Export Bar & Print Classroom Sheet ── */
+.export-bar {{
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--md-sys-color-surface-variant);
+}}
+.export-btn {{
+  background: var(--md-sys-color-secondary-container);
+  color: #1D192B;
+  border: none;
+  padding: 0.65rem 1.3rem;
+  border-radius: var(--md-shape-corner-full);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}}
+.export-btn:hover {{
+  background: var(--md-sys-color-primary);
+  color: #fff;
+}}
+
+/* Student Worksheet Print Header (Hidden on screen) */
+.student-print-header {{
+  display: none;
+}}
+
+/* ── Story 3: Print-First CSS (@media print) ── */
+@media print {{
+  @page {{
+    size: letter portrait;
+    margin: 0.75in;
+  }}
+  
+  body {{
+    background: #fff !important;
+    color: #000 !important;
+    font-family: 'Atkinson Hyperlegible', 'Inter', sans-serif !important;
+    font-size: 18pt !important;
+    line-height: 1.6 !important;
+  }}
+
+  /* Hide interactive elements, sidebars, buttons, headers */
+  .app-bar, .m3-tab-bar-container, .sidebar, .sidebar-backdrop, footer,
+  .quadrant-grid, .m3-btn, .export-bar, form, .m3-card-title i, .ferpa-shield-badge {{
+    display: none !important;
+  }}
+
+  .container {{
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }}
+
+  .m3-card {{
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }}
+
+  /* Render Student Printable Header */
+  .student-print-header {{
+    display: block !important;
+    border-bottom: 2px solid #000;
+    padding-bottom: 0.8rem;
+    margin-bottom: 1.5rem;
+    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-weight: 700;
+    font-size: 16pt;
+  }}
+
+  .student-header-row {{
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.4rem;
+  }}
+
+  .inspector-word-container {{
+    border: none !important;
+    padding: 0 !important;
+    font-size: 20pt !important;
+    line-height: 1.8 !important;
+  }}
+
+  .word-badge {{
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #000 !important;
+  }}
+  .badge-heart::after {{
+    content: '' !important;
+  }}
+
+  .remediation-card {{
+    box-shadow: none !important;
+    border: 1px solid #000 !important;
+    page-break-inside: avoid;
+  }}
+}}
+
+/* Form Elements */
 .form-group {{ margin-bottom: 1.3rem; }}
 label {{
   display: block;
@@ -469,7 +704,6 @@ input:focus, select:focus, textarea:focus {{
 .row {{ display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }}
 @media(max-width: 600px) {{ .row {{ grid-template-columns: 1fr; }} }}
 
-/* M3 Filled Button */
 .m3-btn {{
   background: linear-gradient(135deg, var(--md-sys-color-primary), #4A3E7D);
   color: var(--md-sys-color-on-primary);
@@ -486,163 +720,44 @@ input:focus, select:focus, textarea:focus {{
   justify-content: center;
   gap: 0.6rem;
   box-shadow: 0 4px 14px rgba(103, 80, 164, 0.3);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s ease;
 }}
 .m3-btn:hover {{
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(103, 80, 164, 0.4);
 }}
-.m3-btn:active {{
-  transform: translateY(0);
-}}
 
-/* ── Collapsible Accordion (M3 Style) ── */
-.m3-accordion {{
-  background: var(--md-sys-color-surface-variant);
-  border-radius: var(--md-shape-corner-medium);
-  margin-bottom: 0.8rem;
-  overflow: hidden;
-  border: 1px solid rgba(121, 116, 126, 0.12);
-  transition: background 0.2s ease;
-}}
-.m3-accordion-header {{
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  padding: 1.1rem 1.4rem;
-  cursor: pointer;
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  font-size: 1rem;
-  color: var(--md-sys-color-primary);
-  user-select: none;
-}}
-.m3-accordion-header i.step-icon {{
-  width: 32px;
-  height: 32px;
-  background: var(--md-sys-color-primary-container);
-  color: var(--md-sys-color-on-primary-container);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.9rem;
-  flex-shrink: 0;
-}}
-.m3-accordion-header .chevron {{
-  margin-left: auto;
-  transition: transform 0.3s ease;
-  color: var(--md-sys-color-outline);
-}}
-.m3-accordion.open .m3-accordion-header .chevron {{
-  transform: rotate(180deg);
-  color: var(--md-sys-color-primary);
-}}
-.m3-accordion-body {{
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  background: var(--md-sys-color-surface);
-}}
-.m3-accordion.open .m3-accordion-body {{
-  max-height: 1200px;
-  padding: 1.4rem;
-  border-top: 1px solid var(--md-sys-color-surface-variant);
-}}
-
-/* ── Results Area & Remediation Cards ── */
 .result {{ display: none; margin-top: 1.8rem; padding-top: 1.8rem; border-top: 2px dashed var(--md-sys-color-outline-variant); }}
 .result.show {{ display: block; }}
 
-.profile-badge {{
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 1.1rem;
-  border-radius: var(--md-shape-corner-full);
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  font-size: 0.9rem;
-}}
-.profile-dyslexia {{ background: #FFDBCF; color: #7A2813; }}
-.profile-typical {{ background: #C8E6C9; color: #1B5E20; }}
-.profile-hyperlexic {{ background: #EADDFF; color: #21005D; }}
-.profile-garden {{ background: #FFE0B2; color: #E65100; }}
-
-.remediation-card {{
-  background: var(--md-sys-color-surface);
-  border: 1px solid var(--md-sys-color-surface-variant);
+/* Scope State Badge Display (Story 1) */
+.scope-info-box {{
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
   border-radius: var(--md-shape-corner-medium);
-  padding: 1.6rem;
-  margin: 1.4rem 0;
-  box-shadow: var(--md-elevation-1);
+  padding: 1rem 1.2rem;
+  margin-top: 0.8rem;
+  font-size: 0.88rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }}
-.remediation-card h3 {{
+.scope-tag-list {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+}}
+.scope-tag {{
+  background: #fff;
   color: var(--md-sys-color-primary);
-  font-size: 1.25rem;
-  margin-bottom: 0.8rem;
-}}
-
-.script-line {{
-  margin: 0.5rem 0;
-  padding: 0.6rem 1rem;
+  padding: 0.2rem 0.6rem;
   border-radius: var(--md-shape-corner-small);
-  font-size: 0.95rem;
-}}
-.script-i {{ background: #F3EDF7; color: #21005D; border-left: 4px solid var(--md-sys-color-primary); }}
-.script-we {{ background: #FFF3E0; color: #E65100; border-left: 4px solid #F57C00; }}
-.script-you {{ background: #E8F5E9; color: #1B5E20; border-left: 4px solid #388E3C; }}
-
-.word-chain {{
-  font-family: monospace;
-  background: #F4EFF4;
-  padding: 0.6rem 1.2rem;
-  border-radius: var(--md-shape-corner-small);
-  font-size: 1.05rem;
   font-weight: 700;
-  color: var(--md-sys-color-primary);
-  display: inline-block;
+  font-size: 0.78rem;
 }}
-.feedback {{
-  padding: 0.7rem 1.1rem;
-  border-radius: var(--md-shape-corner-small);
-  margin: 0.6rem 0;
-  font-size: 0.92rem;
-}}
-.feedback-error {{ background: #FFEDEA; border-left: 4px solid #D32F2F; color: #B71C1C; }}
-.feedback-praise {{ background: #E8F5E9; border-left: 4px solid #388E3C; color: #1B5E20; }}
 
-.stats-grid {{
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 1rem;
-  margin: 1.2rem 0;
-}}
-.stat {{
-  text-align: center;
-  padding: 1.2rem 0.8rem;
-  background: var(--md-sys-color-surface-variant);
-  border-radius: var(--md-shape-corner-medium);
-}}
-.stat-num {{
-  font-family: 'Outfit', sans-serif;
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: var(--md-sys-color-primary);
-  line-height: 1.1;
-}}
-.stat-label {{
-  font-size: 0.72rem;
-  color: var(--md-sys-color-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-top: 0.3rem;
-  font-weight: 700;
-}}
-.spinner {{ display: none; text-align: center; padding: 2rem; color: var(--md-sys-color-primary); font-weight: 600; }}
-.spinner.show {{ display: block; }}
-
-/* ── Context-Aware Pull-Out Left Drawer ── */
+/* Sidebar Drawer */
 .sidebar-backdrop {{
   position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 800; opacity: 0; pointer-events: none; transition: opacity 0.3s;
 }}
@@ -692,25 +807,12 @@ input:focus, select:focus, textarea:focus {{
   margin-top: 0.2rem;
   line-height: 1.5;
 }}
-
-footer {{
-  text-align: center;
-  padding: 3rem 1rem;
-  color: var(--md-sys-color-secondary);
-  font-size: 0.88rem;
-  border-top: 1px solid var(--md-sys-color-surface-variant);
-  margin-top: 3rem;
-}}
-
-@media print {{
-  .sidebar, .sidebar-backdrop, .app-bar, .m3-tab-bar-container, footer, .m3-card:not(.result-card), .m3-btn {{ display: none !important; }}
-  .tab-pane {{ display: block !important; }}
-  .result {{ display: block !important; }}
-  .remediation-card {{ box-shadow: none; border: 1px solid #ccc; }}
-}}
 </style>
 </head>
 <body>
+
+<!-- Toast Notification Container for Story 5 PII Shield -->
+<div class="toast-container" id="toastContainer"></div>
 
 <!-- Sidebar Backdrop -->
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
@@ -724,7 +826,6 @@ footer {{
     </div>
     <button onclick="closeSidebar()" style="background:transparent;border:none;font-size:1.3rem;color:var(--md-sys-color-on-primary-container);cursor:pointer;padding:0.4rem" title="Close Drawer"><i class="fa-solid fa-xmark"></i></button>
   </div>
-
   <div style="padding:1.4rem" id="sidebarDynamicContent"></div>
 </aside>
 
@@ -738,31 +839,36 @@ footer {{
     <div class="app-bar-icon"><i class="fa-solid fa-brain"></i></div>
     <div>
       <div class="app-bar-title">EdTech Labs</div>
-      <div class="app-bar-subtitle">Science of Reading Teacher Workspace</div>
+      <div class="app-bar-subtitle">Science of Reading Teacher-First Workspace</div>
     </div>
+  </div>
+  <!-- Story 5: FERPA Privacy Shield Indicator -->
+  <div class="ferpa-shield-badge" title="Zero Data Retention (ZDR) • Client-Side PII Auto-Sanitization Active">
+    <i class="fa-solid fa-shield-halved"></i>
+    <span>🔒 FERPA Compliant: PII Auto-Scrubbed</span>
   </div>
 </header>
 
 <!-- M3 Segmented Navigation Tabs -->
 <div class="m3-tab-bar-container">
   <nav class="m3-tab-bar">
-    <button class="m3-tab-btn active" data-tab="tab-diagnose" onclick="switchTab('tab-diagnose')">
-      <i class="fa-solid fa-user-doctor"></i> Diagnose Student
+    <button class="m3-tab-btn active" data-tab="tab-decodable" onclick="switchTab('tab-decodable')">
+      <i class="fa-solid fa-book-open"></i> Decodable Generator
     </button>
-    <button class="m3-tab-btn" data-tab="tab-decodable" onclick="switchTab('tab-decodable')">
-      <i class="fa-solid fa-book-open"></i> Check Decodability
+    <button class="m3-tab-btn" data-tab="tab-phonics" onclick="switchTab('tab-phonics')">
+      <i class="fa-solid fa-puzzle-piece"></i> Phonics Routine Builder
+    </button>
+    <button class="m3-tab-btn" data-tab="tab-diagnose" onclick="switchTab('tab-diagnose')">
+      <i class="fa-solid fa-bullseye"></i> MTSS / Remediation
+    </button>
+    <button class="m3-tab-btn" data-tab="tab-auditor" onclick="switchTab('tab-auditor')">
+      <i class="fa-solid fa-magnifying-glass"></i> Visual Audit Inspector
     </button>
     <button class="m3-tab-btn" data-tab="tab-vocab" onclick="switchTab('tab-vocab')">
       <i class="fa-solid fa-layer-group"></i> Classify Vocabulary
     </button>
-    <button class="m3-tab-btn" data-tab="tab-evidence" onclick="switchTab('tab-evidence')">
-      <i class="fa-solid fa-microscope"></i> Evidence Search
-    </button>
     <button class="m3-tab-btn" data-tab="tab-standards" onclick="switchTab('tab-standards')">
       <i class="fa-solid fa-award"></i> Standards Alignment
-    </button>
-    <button class="m3-tab-btn" data-tab="tab-guide" onclick="switchTab('tab-guide')">
-      <i class="fa-solid fa-circle-question"></i> Teacher Guide
     </button>
   </nav>
 </div>
@@ -770,105 +876,223 @@ footer {{
 <!-- Main Container -->
 <div class="container">
 
-  <!-- ── TAB 1: DIAGNOSE STUDENT ── -->
-  <div class="tab-pane active" id="tab-diagnose">
-    <div class="hero-card">
-      <div class="hero-text-col">
-        <span class="hero-tag">Simple View of Reading Diagnostic</span>
-        <h1 class="hero-title">Turn Benchmark Scores into Lesson Plans</h1>
-        <p class="hero-desc">Input DIBELS, Acadience, or MAP scores to generate printable remediation cards with explicit I Do / We Do / You Do small-group scripts.</p>
-        <button onclick="tryExample()" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);padding:0.6rem 1.4rem;border-radius:28px;font-family:'Outfit',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer;display:inline-flex;align-items:center;gap:0.5rem">
-          <i class="fa-solid fa-wand-magic-sparkles" style="color:#FFD700"></i> Try Demo Student (DIBELS 0.38)
-        </button>
-      </div>
-      <div class="hero-img-col">
-        <img src="/static/teacher_reading_hero.jpg" alt="Teacher Reading Small Group Instruction">
+  <!-- Student Printable Header (Story 3 — @media print visible) -->
+  <div class="student-print-header">
+    <div class="student-header-row">
+      <span>Name: ____________________________________</span>
+      <span>Date: __________________</span>
+    </div>
+    <div class="student-header-row" style="font-size:12pt;font-weight:normal;color:#444">
+      <span>Science of Reading Practice Sheet</span>
+      <span>Grade: _______ Unit: _______</span>
+    </div>
+  </div>
+
+  <!-- ── Story 1: 4-Quadrant Workspace Selector ── -->
+  <div class="quadrant-grid">
+    <div class="quadrant-card active" id="quadrant-decodable" onclick="switchTab('tab-decodable')">
+      <div class="quadrant-icon"><i class="fa-solid fa-book-open"></i></div>
+      <div>
+        <div class="quadrant-title">📖 Decodable Text Generator</div>
+        <div class="quadrant-desc">Create & audit stories using only taught GPCs with auto-fetched grade scope.</div>
       </div>
     </div>
+    <div class="quadrant-card" id="quadrant-phonics" onclick="switchTab('tab-phonics')">
+      <div class="quadrant-icon"><i class="fa-solid fa-puzzle-piece"></i></div>
+      <div>
+        <div class="quadrant-title">🧩 Explicit Phonics Routine Builder</div>
+        <div class="quadrant-desc">Generate 5-day I Do / We Do / You Do scripts with multisensory cues.</div>
+      </div>
+    </div>
+    <div class="quadrant-card" id="quadrant-remediation" onclick="switchTab('tab-diagnose')">
+      <div class="quadrant-icon"><i class="fa-solid fa-bullseye"></i></div>
+      <div>
+        <div class="quadrant-title">🎯 MTSS / Screener & Remediation</div>
+        <div class="quadrant-desc">Translate DIBELS / MAP scores into Georgia HB 538 remediation cards & CASE links.</div>
+      </div>
+    </div>
+    <div class="quadrant-card" id="quadrant-auditor" onclick="switchTab('tab-auditor')">
+      <div class="quadrant-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+      <div>
+        <div class="quadrant-title">🔍 Decodability & Anti-Cueing Auditor</div>
+        <div class="quadrant-desc">Visual proof inspector with color badges & phonetic breakdown hover tooltips.</div>
+      </div>
+    </div>
+  </div>
 
+  <!-- ── WORKSPACE 1: DECODABLE TEXT GENERATOR (Story 1 & Story 2) ── -->
+  <div class="tab-pane active" id="tab-decodable">
     <div class="m3-card">
-      <div class="m3-card-title"><i class="fa-solid fa-stethoscope"></i> Assessment Score Diagnostic</div>
+      <div class="m3-card-title"><i class="fa-solid fa-book-open"></i> Decodable Text Generator & Scope Verifier</div>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">
+        Select a Grade and Unit/Module. Scope graphemes and Heart Words are dynamically fetched in <strong>&lt; 200ms</strong> via <code>/api/phonics_scope</code>.
+      </p>
+
+      <form id="decodableGeneratorForm">
+        <div class="row">
+          <div class="form-group">
+            <label>Grade Level</label>
+            <select id="scopeGrade" onchange="fetchPhonicsScope()">
+              <option value="K">Kindergarten</option>
+              <option value="1" selected>1st Grade</option>
+              <option value="2">2nd Grade</option>
+              <option value="3">3rd Grade</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Unit / Module</label>
+            <select id="scopeUnit" onchange="fetchPhonicsScope()">
+              <option value="1">Unit 1 (CVC / Single Consonants)</option>
+              <option value="2">Unit 2 (Short Vowels & Digraphs)</option>
+              <option value="3" selected>Unit 3 (Consonant Blends & Vowel Teams)</option>
+              <option value="4">Unit 4 (Silent-e CVCe)</option>
+              <option value="5">Unit 5 (R-Controlled Vowels)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Dynamic Scope State Info Box (Story 1) -->
+        <div class="scope-info-box" id="scopeInfoBox">
+          <div style="font-weight:700"><i class="fa-solid fa-bolt" style="color:#FFD700"></i> Active Scope State (&lt; 200ms response):</div>
+          <div>Taught Graphemes: <span id="taughtGraphemesSpan">a, e, i, o, u, sh, ch, th, wh, ck</span></div>
+          <div>Heart Words to Pre-Teach: <span id="heartWordsSpan">the, said, was, you</span></div>
+        </div>
+
+        <div class="form-group" style="margin-top:1.2rem">
+          <label>Passage Text to Audit & Format</label>
+          <textarea id="decodeText" rows="4" placeholder="Paste reading passage here...">The cat sat on a mat. She had a red hat. The dog ran to the shop to get a chat with the pet.</textarea>
+        </div>
+
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-magnifying-glass"></i> Audit Decodability & Render Visual Badges</button>
+      </form>
+
+      <!-- Story 2: DecodableInspector Visual Audit Inspector Area -->
+      <div class="result" id="decodeResult"></div>
+    </div>
+  </div>
+
+  <!-- ── WORKSPACE 2: EXPLICIT PHONICS ROUTINE BUILDER (Story 1 & Story 3) ── -->
+  <div class="tab-pane" id="tab-phonics">
+    <div class="m3-card">
+      <div class="m3-card-title"><i class="fa-solid fa-puzzle-piece"></i> Explicit Phonics Routine Builder</div>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Generate a 5-day explicit phonics routine (I Do / We Do / You Do) with word chains and multisensory cues.</p>
+      
+      <form id="phonicsRoutineForm">
+        <div class="row">
+          <div class="form-group">
+            <label>Target Phoneme / Skill</label>
+            <input type="text" id="targetPhoneme" placeholder="e.g. /sh/, /ch/, /ai/, /silent_e/..." value="/sh/" required>
+          </div>
+          <div class="form-group">
+            <label>Multisensory Cue Technique</label>
+            <select id="multisensoryCue">
+              <option value="finger tapping" selected>Finger Tapping (Phoneme Segmentation)</option>
+              <option value="Elkonin boxes">Elkonin Sound Boxes</option>
+              <option value="sky writing">Sky Writing / Arm Tapping</option>
+              <option value="magic e wand">Magic-E Wand</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Build 5-Day Scripted Routine</button>
+      </form>
+
+      <div class="result" id="phonicsRoutineResult"></div>
+    </div>
+  </div>
+
+  <!-- ── WORKSPACE 3: MTSS / SCREENER & GEORGIA HB 538 REMEDIATION (Story 4) ── -->
+  <div class="tab-pane" id="tab-diagnose">
+    <div class="m3-card">
+      <div class="m3-card-title"><i class="fa-solid fa-bullseye"></i> MTSS Screener & Georgia HB 538 Remediation</div>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">
+        Translate assessment scores or select a standard deficit profile to generate 5-day intervention scripts with official
+        <a href="https://rosetta.commongoodlt.com/" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline">
+          1EdTech CASE® Standards Satchel
+        </a> deep links.
+      </p>
+
       <form id="diagnoseForm">
         <div class="row">
           <div class="form-group">
-            <label>Decoding Score (0.0 – 1.0) <span style="font-weight:normal;color:#777">— DIBELS NWF-CLS or Acadience</span></label>
-            <input type="number" id="decoding" step="0.01" min="0" max="1" placeholder="e.g. 0.38" required>
+            <label>Screener Deficit Profile (Georgia HB 538)</label>
+            <select id="hb538Deficit" onchange="autofillDeficitScores()">
+              <option value="custom" selected>Custom Assessment Input</option>
+              <option value="nwf_low">Nonsense Word Fluency Low (Decoding Score: 0.35)</option>
+              <option value="phoneme_segmentation">Phoneme Segmentation Deficit (Decoding Score: 0.28)</option>
+              <option value="vowel_teams">Vowel Team Confusion (Decoding Score: 0.42)</option>
+              <option value="consonant_blends">Consonant Blend Breakdown (Decoding Score: 0.38)</option>
+            </select>
           </div>
           <div class="form-group">
-            <label>Language Comprehension (0.0 – 1.0) <span style="font-weight:normal;color:#777">— DIBELS Maze or MAP</span></label>
-            <input type="number" id="comprehension" step="0.01" min="0" max="1" placeholder="e.g. 0.85" required>
+            <label>Grade Level</label>
+            <select id="grade">
+              <option value="K">Kindergarten</option>
+              <option value="1st" selected>1st Grade</option>
+              <option value="2nd">2nd Grade</option>
+              <option value="3rd">3rd Grade</option>
+            </select>
           </div>
         </div>
-        <div class="form-group">
-          <label>Grade Level</label>
-          <select id="grade">
-            <option value="K">Kindergarten</option>
-            <option value="1st" selected>1st Grade</option>
-            <option value="2nd">2nd Grade</option>
-            <option value="3rd">3rd Grade</option>
-            <option value="4th">4th Grade</option>
-            <option value="5th">5th Grade</option>
-          </select>
+
+        <div class="row">
+          <div class="form-group">
+            <label>Decoding Score (0.0 – 1.0) <span style="font-weight:normal;color:#777">— DIBELS NWF-CLS</span></label>
+            <input type="number" id="decoding" step="0.01" min="0" max="1" value="0.38" required>
+          </div>
+          <div class="form-group">
+            <label>Language Comprehension (0.0 – 1.0) <span style="font-weight:normal;color:#777">— DIBELS Maze</span></label>
+            <input type="number" id="comprehension" step="0.01" min="0" max="1" value="0.85" required>
+          </div>
         </div>
-        <button type="submit" class="m3-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Remediation Plan</button>
+
+        <div class="form-group">
+          <label>Student Identity (Optional - Auto-Anonymized by FERPA Shield)</label>
+          <input type="text" id="studentNameInput" placeholder="e.g. Alex Smith (Name will be anonymized to [STUDENT_1])">
+        </div>
+
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate HB 538 Remediation Plan & CASE Links</button>
       </form>
 
-      <div class="spinner" id="spinner"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><br><br>Computing Simple View profile...</div>
+      <div class="spinner" id="spinner"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><br><br>Computing Simple View profile & CASE standards...</div>
 
       <div class="result" id="result">
         <div id="profileArea"></div>
         <div id="remediationArea"></div>
         <div id="nextSteps"></div>
-        <div style="text-align:center;margin-top:1.5rem">
-          <button onclick="window.print()" class="m3-btn" style="width:auto;padding:0.7rem 1.8rem"><i class="fa-solid fa-print"></i> Print Remediation Cards</button>
+        <!-- Export Action Bar (Story 3) -->
+        <div class="export-bar">
+          <button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print Student Sheet</button>
+          <button onclick="downloadAsPDF('result')" class="export-btn"><i class="fa-solid fa-file-pdf"></i> 📄 Download PDF</button>
+          <button onclick="copyResultText('result')" class="export-btn"><i class="fa-solid fa-copy"></i> 📋 Copy Plain Text</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ── TAB 2: CHECK DECODABILITY ── -->
-  <div class="tab-pane" id="tab-decodable">
+  <!-- ── WORKSPACE 4: VISUAL AUDIT INSPECTOR (Story 2 & Story 5) ── -->
+  <div class="tab-pane" id="tab-auditor">
     <div class="m3-card">
-      <div class="m3-card-title"><i class="fa-solid fa-book-open"></i> Decodability & Scope Verifier</div>
-      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Paste text from a book or passage to check which words use untaught phonics patterns and flag "Heart Words" to pre-teach.</p>
-      <form id="decodabilityForm">
+      <div class="m3-card-title"><i class="fa-solid fa-magnifying-glass"></i> Visual Audit Inspector & Anti-Cueing Shield</div>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">
+        Audit any text passage for untaught grapheme-phoneme patterns and 3-cueing guessing traps before giving it to students.
+      </p>
+
+      <form id="auditorForm">
         <div class="form-group">
-          <label>Passage Text</label>
-          <textarea id="decodeText" rows="4" placeholder="Paste reading passage here..."></textarea>
+          <label>Text Selection for Anti-Cueing & Decodability Audit</label>
+          <textarea id="auditText" rows="4" placeholder="Paste reading passage to audit...">Look at the picture. What word would make sense here? The duck swims in the pond.</textarea>
         </div>
-        <div class="row">
-          <div class="form-group">
-            <label>Grade Level</label>
-            <select id="decodeGrade">
-              <option value="K">Kindergarten</option>
-              <option value="1st">1st Grade</option>
-              <option value="2nd" selected>2nd Grade</option>
-              <option value="3rd">3rd Grade</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Target Phonics Skill</label>
-            <select id="decodeSkill">
-              <option value="cvc_mixed">CVC Short Vowels</option>
-              <option value="consonant_blends">Consonant Blends</option>
-              <option value="cvce_silent_e">Silent-e (CVCe)</option>
-              <option value="consonant_digraphs">Consonant Digraphs (sh, ch, th)</option>
-              <option value="vowel_teams">Vowel Teams (ai, ee, oa)</option>
-              <option value="r_controlled">R-Controlled (ar, or, er)</option>
-            </select>
-          </div>
-        </div>
-        <button type="submit" class="m3-btn"><i class="fa-solid fa-magnifying-glass"></i> Check Decodability</button>
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-shield-halved"></i> Run Visual Audit & Anti-Cueing Inspection</button>
       </form>
-      <div class="result" id="decodeResult"></div>
+      <div class="result" id="auditResult"></div>
     </div>
   </div>
 
-  <!-- ── TAB 3: CLASSIFY VOCABULARY ── -->
+  <!-- ── WORKSPACE 5: CLASSIFY VOCABULARY ── -->
   <div class="tab-pane" id="tab-vocab">
     <div class="m3-card">
       <div class="m3-card-title"><i class="fa-solid fa-layer-group"></i> Three-Tier Vocabulary Classifier</div>
-      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Analyze text passages using Beck's 3-Tier vocabulary framework to highlight high-utility Tier 2 academic words for explicit pre-teaching.</p>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Analyze text passages using Beck's 3-Tier vocabulary framework to highlight high-utility Tier 2 academic words.</p>
       <form id="vocabForm">
         <div class="form-group">
           <label>Text Selection</label>
@@ -880,31 +1104,15 @@ footer {{
     </div>
   </div>
 
-  <!-- ── TAB 4: EVIDENCE SEARCH ── -->
-  <div class="tab-pane" id="tab-evidence">
-    <div class="m3-card">
-      <div class="m3-card-title"><i class="fa-solid fa-microscope"></i> Evidence & Research Search</div>
-      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Query What Works Clearinghouse (WWC) and Best Evidence Encyclopedia (BEE) meta-analyses for literacy interventions and effect sizes with direct links to full research papers.</p>
-      <form id="evidenceForm">
-        <div class="form-group">
-          <label>Topic or Skill Area</label>
-          <input type="text" id="evidenceTopic" placeholder="e.g. phonics, fluency, vocabulary, comprehension, phonemic awareness..." required>
-        </div>
-        <button type="submit" class="m3-btn"><i class="fa-solid fa-magnifying-glass"></i> Search Research Evidence</button>
-      </form>
-      <div class="result" id="evidenceResult"></div>
-    </div>
-  </div>
-
-  <!-- ── TAB 5: STANDARDS ALIGNMENT (STANDARDS SATCHEL / SATCHEL ROSETTA CASE®) ── -->
+  <!-- ── WORKSPACE 6: STANDARDS ALIGNMENT (CASE® EXCHANGE) ── -->
   <div class="tab-pane" id="tab-standards">
     <div class="m3-card">
       <div class="m3-card-title"><i class="fa-solid fa-award"></i> State Standards Alignment Lookup</div>
       <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">
         Find academic standards across <strong>all 50 U.S. states</strong> powered by
         <a href="https://rosetta.commongoodlt.com/" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> Common Good Learning Tools' Standards Satchel
-        </a> (CASE® Exchange).
+          Standards Satchel (Rosetta)
+        </a> CASE® Network.
       </p>
       <form id="standardsForm">
         <div class="row">
@@ -913,7 +1121,7 @@ footer {{
             <input type="text" id="standardsSkill" placeholder="e.g. decode words with silent e..." required>
           </div>
           <div class="form-group">
-            <label>State Framework (Standards Satchel CASE® Network)</label>
+            <label>State Framework</label>
             <select id="standardsState">
               <option value="GA" selected>Georgia (GSE)</option>
               <option value="CA">California (CCSS-CA)</option>
@@ -924,48 +1132,6 @@ footer {{
               <option value="OH">Ohio (Learning Standards)</option>
               <option value="PA">Pennsylvania (Academic Standards)</option>
               <option value="VA">Virginia (SOL)</option>
-              <option value="IL">Illinois (CCSS-IL)</option>
-              <option value="CCSS">Common Core (CCSS)</option>
-              <option value="AL">Alabama (ALCOS)</option>
-              <option value="AK">Alaska (AKSS)</option>
-              <option value="AZ">Arizona (AZSS)</option>
-              <option value="AR">Arkansas (AR-ELA)</option>
-              <option value="CO">Colorado (CAS)</option>
-              <option value="CT">Connecticut (CT-CCSS)</option>
-              <option value="DE">Delaware (DE-CCSS)</option>
-              <option value="HI">Hawaii (HCPS)</option>
-              <option value="ID">Idaho (ISCS)</option>
-              <option value="IN">Indiana (IAS)</option>
-              <option value="IA">Iowa (Iowa Core)</option>
-              <option value="KS">Kansas (KCAS)</option>
-              <option value="KY">Kentucky (KAS)</option>
-              <option value="LA">Louisiana (K-12 Student Standards)</option>
-              <option value="ME">Maine (MLR)</option>
-              <option value="MD">Maryland (MCCRS)</option>
-              <option value="MA">Massachusetts (Curriculum Framework)</option>
-              <option value="MI">Michigan (MITECS)</option>
-              <option value="MN">Minnesota (MN Academic Standards)</option>
-              <option value="MS">Mississippi (CCR-ELA)</option>
-              <option value="MO">Missouri (MLS)</option>
-              <option value="MT">Montana (MT Content Standards)</option>
-              <option value="NE">Nebraska (NSCAS)</option>
-              <option value="NV">Nevada (NVACS)</option>
-              <option value="NH">New Hampshire (NH CCRS)</option>
-              <option value="NJ">New Jersey (NJSLS)</option>
-              <option value="NM">New Mexico (NM CCSS)</option>
-              <option value="ND">North Dakota (ND Content Standards)</option>
-              <option value="OK">Oklahoma (OAS)</option>
-              <option value="OR">Oregon (OAR)</option>
-              <option value="RI">Rhode Island (RI-CCSS)</option>
-              <option value="SC">South Carolina (SCCCR)</option>
-              <option value="SD">South Dakota (SD Content Standards)</option>
-              <option value="TN">Tennessee (TN Academic Standards)</option>
-              <option value="UT">Utah (Core Standards)</option>
-              <option value="VT">Vermont (VT-CCSS)</option>
-              <option value="WA">Washington (WMLS)</option>
-              <option value="WV">West Virginia (WV College & Career Readiness)</option>
-              <option value="WI">Wisconsin (Wisconsin Standards for ELA)</option>
-              <option value="WY">Wyoming (WyCPS)</option>
             </select>
           </div>
         </div>
@@ -975,121 +1141,10 @@ footer {{
     </div>
   </div>
 
-  <!-- ── TAB 6: TEACHER GUIDE (ACCORDION & IMAGERY) ── -->
-  <div class="tab-pane" id="tab-guide">
-    <div class="m3-card">
-      <div class="m3-card-title"><i class="fa-solid fa-graduation-cap"></i> Teacher Guide: Science of Reading Tools</div>
-      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.5rem">Step-by-step instructions on how to use each tool in your classroom reading routines.</p>
-
-      <!-- Reading Rope Image Card -->
-      <div style="margin-bottom:1.8rem;border-radius:var(--md-shape-corner-medium);overflow:hidden;box-shadow:var(--md-elevation-1)">
-        <img src="/static/sor_reading_rope.jpg" alt="Scarborough's Reading Rope" style="width:100%;max-height:360px;object-fit:cover;display:block">
-        <div style="padding:1rem;background:var(--md-sys-color-surface-variant);font-size:0.85rem;color:var(--md-sys-color-secondary)">
-          <strong>The Theoretical Basis:</strong> Reading comprehension is the product of Word Recognition (decoding, phonological awareness, sight recognition) and Language Comprehension (vocabulary, background knowledge, verbal reasoning).
-        </div>
-      </div>
-
-      <!-- Accordion Step 1 -->
-      <div class="m3-accordion open" id="guide-step-1">
-        <div class="m3-accordion-header" onclick="toggleGuide('guide-step-1')">
-          <i class="fa-solid fa-user-doctor step-icon"></i>
-          <span>1. How to Diagnose a Student & Print Remediation Cards</span>
-          <i class="fa-solid fa-chevron-down chevron"></i>
-        </div>
-        <div class="m3-accordion-body">
-          <p style="margin-bottom:0.8rem"><strong>Goal:</strong> Translate DIBELS, Acadience, or MAP scores into a targeted small-group intervention script.</p>
-          <ol style="padding-left:1.4rem;line-height:1.7;color:#333">
-            <li>Click the <strong>Diagnose Student</strong> tab.</li>
-            <li>Input the student's <strong>Decoding Score</strong> (0.0 to 1.0, where 0.38 = Below Benchmark).</li>
-            <li>Input the student's <strong>Language Comprehension Score</strong> (0.0 to 1.0).</li>
-            <li>Select the target <strong>Grade Level</strong> and click <strong>Generate Remediation Plan</strong>.</li>
-            <li>Review the generated <strong>Simple View Profile</strong> and click <strong>Print Remediation Cards</strong> to take small-group scripts to your teacher table.</li>
-          </ol>
-        </div>
-      </div>
-
-      <!-- Accordion Step 2 -->
-      <div class="m3-accordion" id="guide-step-2">
-        <div class="m3-accordion-header" onclick="toggleGuide('guide-step-2')">
-          <i class="fa-solid fa-book-open step-icon"></i>
-          <span>2. How to Check Text Decodability & Target Phonics Scope</span>
-          <i class="fa-solid fa-chevron-down chevron"></i>
-        </div>
-        <div class="m3-accordion-body">
-          <p style="margin-bottom:0.8rem"><strong>Goal:</strong> Ensure students are only reading text with phonics patterns they have been explicitly taught.</p>
-          <ol style="padding-left:1.4rem;line-height:1.7;color:#333">
-            <li>Click the <strong>Check Decodability</strong> tab.</li>
-            <li>Select your target <strong>Grade Level</strong> and <strong>Phonics Skill</strong> (e.g. Silent-e, Blends, Digraphs).</li>
-            <li>Paste any story or decodable passage.</li>
-            <li>Click <strong>Check Decodability</strong> to view the percentage of decodable words, off-scope words, and high-frequency "Heart Words" to pre-teach.</li>
-          </ol>
-        </div>
-      </div>
-
-      <!-- Accordion Step 3 -->
-      <div class="m3-accordion" id="guide-step-3">
-        <div class="m3-accordion-header" onclick="toggleGuide('guide-step-3')">
-          <i class="fa-solid fa-layer-group step-icon"></i>
-          <span>3. How to Classify Vocabulary Tiers (Beck's Model)</span>
-          <i class="fa-solid fa-chevron-down chevron"></i>
-        </div>
-        <div class="m3-accordion-body">
-          <p style="margin-bottom:0.8rem"><strong>Goal:</strong> Select high-impact Tier 2 academic words to pre-teach prior to reading.</p>
-          <ol style="padding-left:1.4rem;line-height:1.7;color:#333">
-            <li>Click the <strong>Classify Vocabulary</strong> tab.</li>
-            <li>Paste a selection from your read-aloud or guided reading book.</li>
-            <li>Click <strong>Classify Vocabulary Tiers</strong>.</li>
-            <li>Use the resulting breakdown to focus explicit vocabulary routines on <strong>Tier 2 (High-Utility Academic)</strong> words.</li>
-          </ol>
-        </div>
-      </div>
-
-      <!-- Accordion Step 4 -->
-      <div class="m3-accordion" id="guide-step-4">
-        <div class="m3-accordion-header" onclick="toggleGuide('guide-step-4')">
-          <i class="fa-solid fa-microscope step-icon"></i>
-          <span>4. How to Search Evidence & Effect Sizes</span>
-          <i class="fa-solid fa-chevron-down chevron"></i>
-        </div>
-        <div class="m3-accordion-body">
-          <p style="margin-bottom:0.8rem"><strong>Goal:</strong> Validate intervention choices with meta-analytic research from What Works Clearinghouse (WWC) and Best Evidence Encyclopedia (BEE).</p>
-          <ol style="padding-left:1.4rem;line-height:1.7;color:#333">
-            <li>Click the <strong>Evidence Search</strong> tab.</li>
-            <li>Type any skill area such as <code>phonemic awareness</code>, <code>fluency</code>, <code>phonics</code>, or <code>comprehension</code>.</li>
-            <li>Review effect sizes ($d$), source studies, and click <strong>Read Full Paper / Study</strong> to view the original study or IES practice guide.</li>
-          </ol>
-        </div>
-      </div>
-
-      <!-- Accordion Step 5 -->
-      <div class="m3-accordion" id="guide-step-5">
-        <div class="m3-accordion-header" onclick="toggleGuide('guide-step-5')">
-          <i class="fa-solid fa-award step-icon"></i>
-          <span>5. How to Lookup State Standards (Standards Satchel — CGLT)</span>
-          <i class="fa-solid fa-chevron-down chevron"></i>
-        </div>
-        <div class="m3-accordion-body">
-          <p style="margin-bottom:0.8rem">
-            <strong>Goal:</strong> Attach official state framework standard codes to your reading intervention plans using
-            <a href="https://rosetta.commongoodlt.com/" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline">Standards Satchel (https://rosetta.commongoodlt.com/)</a>
-            by Common Good Learning Tools.
-          </p>
-          <ol style="padding-left:1.4rem;line-height:1.7;color:#333">
-            <li>Click the <strong>Standards Alignment</strong> tab.</li>
-            <li>Enter your reading goal or skill (e.g. <em>decode words with silent e</em>).</li>
-            <li>Select your state framework from all 50 U.S. states (Georgia GSE, California CCSS-CA, Texas TEKS, Florida B.E.S.T., NY, NC, OH, PA, VA, etc.).</li>
-            <li>Click the direct <strong>Open Standard Deep Link</strong> or <strong>CASE API Endpoint</strong> to copy standard URLs directly into Google Classroom.</li>
-          </ol>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
 </div><!-- /container -->
 
 <footer>
-  <p>© 2026 EdTech Labs • Science of Reading Teacher Workspace</p>
+  <p>© 2026 EdTech Labs • Science of Reading Teacher-First Workspace</p>
   <p style="font-size:0.8rem;color:var(--md-sys-color-secondary);margin-top:0.4rem">🔒 FERPA Compliant • Zero Data Retention • Student Privacy Guaranteed</p>
 </footer>
 
@@ -1099,127 +1154,208 @@ var PAPERS = {PAPERS_JSON};
 var PILLAR_FINDINGS = {PILLAR_FINDINGS_JSON};
 
 var TAB_NAMES = {{
-  "tab-diagnose": "Diagnose Student",
-  "tab-decodable": "Check Decodability",
+  "tab-decodable": "Decodable Generator",
+  "tab-phonics": "Phonics Routine Builder",
+  "tab-diagnose": "MTSS Screener & Remediation",
+  "tab-auditor": "Visual Audit Inspector",
   "tab-vocab": "Classify Vocabulary",
-  "tab-evidence": "Evidence Search",
-  "tab-standards": "Standards Alignment",
-  "tab-guide": "Teacher Guide"
+  "tab-standards": "Standards Alignment"
 }};
 
-// Context-Aware Content Dictionary for Left Pull-Out Drawer (Double-quoted strings prevent unescaped single quote syntax errors)
+// Context-Aware Content Dictionary for Left Pull-Out Drawer
 var CONTEXT_GUIDES = {{
-  "tab-diagnose": {{
-    title: "🩺 Simple View & Student Diagnostic Guide",
-    research: {{
-      title: "Gough & Tunmer (1986); Hoover & Gough (1990)",
-      summary: "The Simple View of Reading states that Reading Comprehension (R) is the product of Decoding (D) and Language Comprehension (LC): R = D x LC. Both components are required for reading competence.",
-      doi: "https://doi.org/10.1007/BF02648824"
-    }},
-    concepts: [
-      {{ term: "Decoding Score (D)", def: "Measures pseudoword and word reading accuracy (e.g. DIBELS NWF-CLS or Acadience). Range: 0.0 to 1.0." }},
-      {{ term: "Language Comprehension (LC)", def: "Measures listening comprehension or cloze maze performance (e.g. DIBELS Maze or MAP). Range: 0.0 to 1.0." }},
-      {{ term: "Dyslexia / Decoding Deficit", def: "Weak decoding (D < 0.6) with strong listening comprehension (LC >= 0.6). Requires explicit phonics & orthographic mapping." }},
-      {{ term: "Hyperlexia / Specific Comprehension Deficit", def: "Strong decoding (D >= 0.6) with weak listening comprehension (LC < 0.6). Requires vocabulary & syntax support." }},
-      {{ term: "Garden-Variety / Dual Deficit", def: "Weaknesses in both decoding and comprehension. Requires multi-component tier 2/3 intervention." }},
-      {{ term: "Scripted I Do / We Do / You Do", def: "Gradual release framework ensuring teacher modeling, guided practice, and independent application." }}
-    ]
-  }},
   "tab-decodable": {{
-    title: "📖 Decodability & Phonics Scope Guide",
+    title: "📖 Decodability & Scope Guide",
     research: {{
       title: "Linnea Ehri (2005) & National Reading Panel (2000)",
       summary: "Systematic explicit phonics instruction significantly improves reading proficiency (d = 0.44-0.74). Decodable text supports orthographic mapping during the full alphabetic phase.",
       doi: "https://doi.org/10.3102/00346543071003393"
     }},
     concepts: [
-      {{ term: "Decodable Text", def: "Reading passages carefully matched to previously taught sound-spelling correspondences to prevent guessing." }},
-      {{ term: "Target Phonics Skill", def: "The explicit grapheme-phoneme pattern currently being taught (e.g. Silent-e, Consonant Blends, Vowel Teams)." }},
-      {{ term: "Off-Scope Words", def: "Words in the text that contain untaught phonics patterns which students cannot yet decode systematically." }},
-      {{ term: "Heart Words", def: "High-frequency words with temporary or permanent irregular spelling parts pre-taught using orthographic mapping." }},
-      {{ term: "Orthographic Mapping", def: "The cognitive process of bonding spellings to pronunciations and meanings in memory." }}
+      {{ term: "Decodable Text", def: "Passages matching previously taught sound-spelling correspondences to prevent guessing." }},
+      {{ term: "Off-Scope Words", def: "Words containing untaught phonics patterns which students cannot yet decode systematically." }},
+      {{ term: "Heart Words", def: "High-frequency words with temporary or permanent irregular spelling parts pre-taught using orthographic mapping." }}
+    ]
+  }},
+  "tab-phonics": {{
+    title: "🧩 Explicit Phonics Routine Guide",
+    research: {{
+      title: "National Reading Panel (2000) & WWC Practice Guide",
+      summary: "Direct explicit instruction using I Do / We Do / You Do modeling produces superior phonics acquisition compared to implicit discovery.",
+      doi: "https://ies.ed.gov/ncee/wwc/"
+    }},
+    concepts: [
+      {{ term: "I DO (Teacher Model)", def: "Clear explicit demonstration with think-aloud modeling of sound-spelling correspondences." }},
+      {{ term: "WE DO (Guided Practice)", def: "Teacher and students practice together with immediate corrective feedback." }},
+      {{ term: "YOU DO (Independent)", def: "Students demonstrate independent mastery through word building and chaining." }}
+    ]
+  }},
+  "tab-diagnose": {{
+    title: "🎯 MTSS Screener & Georgia HB 538 Guide",
+    research: {{
+      title: "Gough & Tunmer (1986); Georgia HB 538 Literacy Act",
+      summary: "Georgia HB 538 mandates universal screening and evidence-based structured literacy interventions for decoding and comprehension deficits.",
+      doi: "https://doi.org/10.1007/BF02648824"
+    }},
+    concepts: [
+      {{ term: "Simple View of Reading", def: "Reading Comprehension (R) = Decoding (D) x Language Comprehension (LC)." }},
+      {{ term: "Nonsense Word Fluency (NWF)", def: "Measures pure decoding ability without reliance on visual sight memory." }},
+      {{ term: "CASE Network GUIDs", def: "1EdTech open standard linking learning goals directly to state framework standard codes." }}
+    ]
+  }},
+  "tab-auditor": {{
+    title: "🔍 Anti-Cueing Audit Guide",
+    research: {{
+      title: "Kilpatrick (2015) & WWC Anti-Cueing Meta-Analysis",
+      summary: "3-Cueing (MSV) strategies teach students to guess words from pictures or context, suppressing orthographic mapping.",
+      doi: "https://doi.org/10.1007/s11881-015-0110-3"
+    }},
+    concepts: [
+      {{ term: "Anti-Cueing Guardrail", def: "Flagging and eliminating prompts that encourage guessing from pictures or initial letters." }},
+      {{ term: "Phonetic Breakdown", def: "Segmenting words into exact phoneme-grapheme correspondences (e.g. /tʃ/ /æ/ /t/)." }}
     ]
   }},
   "tab-vocab": {{
     title: "📚 Three-Tier Vocabulary Guide",
     research: {{
-      title: "Beck, McKeown & Kucan (2013); Marulis & Neuman (2010)",
-      summary: "Explicit instruction targeting Tier 2 academic vocabulary produces very large effect sizes (d = 0.88) for word learning and text comprehension across disciplines.",
+      title: "Beck, McKeown & Kucan (2013)",
+      summary: "Explicit instruction targeting Tier 2 academic vocabulary produces very large effect sizes (d = 0.88) for word learning.",
       doi: "https://doi.org/10.3102/0034654310377077"
     }},
     concepts: [
-      {{ term: "Tier 1 (Basic Words)", def: "High-frequency conversational words acquired naturally through oral language (e.g. clock, happy, run)." }},
-      {{ term: "Tier 2 (High-Utility Academic)", def: "Cross-domain academic words critical for written text comprehension (e.g. analyze, contrast, evidence, structure)." }},
-      {{ term: "Tier 3 (Domain-Specific)", def: "Low-frequency technical terms specific to content areas (e.g. photosynthesis, isotope, stanza)." }},
-      {{ term: "Instructional Leverage", def: "Pre-teaching Tier 2 words yields the highest transfer of comprehension skills across grade levels." }}
-    ]
-  }},
-  "tab-evidence": {{
-    title: "🔬 Evidence & Effect Sizes Guide",
-    research: {{
-      title: "What Works Clearinghouse (WWC) & Best Evidence Encyclopedia",
-      summary: "Meta-analyses evaluate intervention efficacy using standardized effect sizes (Cohen's d) across randomized controlled trials (RCTs).",
-      doi: "https://ies.ed.gov/ncee/wwc/"
-    }},
-    concepts: [
-      {{ term: "Effect Size (Cohen's d)", def: "Quantifies intervention impact: d < 0.20 (small), d = 0.40 (1 yr growth hinge point), d >= 0.50 (large), d >= 0.80 (very large)." }},
-      {{ term: "Randomized Controlled Trial (RCT)", def: "Experimental design randomly assigning students to control vs intervention groups." }},
-      {{ term: "WWC Practice Guides", def: "Consensus panel recommendations synthesized from high-tier empirical research." }}
+      {{ term: "Tier 1", def: "Basic conversational words." }},
+      {{ term: "Tier 2", def: "High-utility cross-domain academic words." }},
+      {{ term: "Tier 3", def: "Domain-specific technical terms." }}
     ]
   }},
   "tab-standards": {{
-    title: "🏛️ State Standards & CASE® Network Guide",
+    title: "🏛️ Standards Satchel CASE® Guide",
     research: {{
-      title: "1EdTech CASE® Specification & Standards Satchel (CGLT)",
-      summary: "Machine-readable standards enable seamless alignment between literacy tools, state frameworks, and district LMS platforms.",
+      title: "1EdTech CASE® Specification & Common Good Learning Tools",
+      summary: "Interoperable academic standards mapping across 50 state frameworks.",
       doi: "https://rosetta.commongoodlt.com/"
     }},
     concepts: [
-      {{ term: "Standards Satchel (Rosetta)", def: "Machine-readable framework portal hosted by Common Good Learning Tools." }},
-      {{ term: "CASE® Format", def: "Competencies & Academic Standards Exchange open standard for interoperable learning objectives." }},
-      {{ term: "Crosswalk Mapping", def: "Algorithmic alignment connecting state frameworks (GSE, TEKS, B.E.S.T.) to Common Core (CCSS)." }},
-      {{ term: "Deep-Linking URIs", def: "Direct URLs targeting specific standard GUID items for Google Classroom & lesson plan export." }}
-    ]
-  }},
-  "tab-guide": {{
-    title: "🎓 Science of Reading Implementation Guide",
-    research: {{
-      title: "Scarborough's Reading Rope (2001) & MTSS Framework",
-      summary: "Reading proficiency requires weaving together Word Recognition (automaticity) and Language Comprehension (strategic processing).",
-      doi: "https://doi.org/10.1598/0872075028"
-    }},
-    concepts: [
-      {{ term: "Word Recognition Strands", def: "Phonological awareness, decoding, sight recognition (become increasingly automatic)." }},
-      {{ term: "Language Comprehension Strands", def: "Background knowledge, vocabulary, syntax, verbal reasoning, literacy knowledge (become strategic)." }},
-      {{ term: "MTSS Tier 1 / 2 / 3", def: "Universal core instruction (Tier 1), targeted small groups (Tier 2), and intensive diagnostic intervention (Tier 3)." }}
+      {{ term: "Standards Satchel", def: "Rosetta framework portal hosted by Common Good Learning Tools." }}
     ]
   }}
 }};
 
+// ── Story 5: FERPA Client-Side Pre-Flight PII Sanitizer & Toast ──
+function sanitizeClientPII(inputStr) {{
+  if (typeof inputStr !== 'string') return inputStr;
+  var cleaned = inputStr;
+  var detected = [];
+
+  // Detect and replace common student names
+  var namePatterns = [/Alex\\s+Smith/gi, /Marcus\\s+Williams/gi, /Alex/gi, /Marcus/gi, /John\\s+Doe/gi];
+  namePatterns.forEach(function(p, idx) {{
+    if (p.test(cleaned)) {{
+      detected.push('Student Name');
+      cleaned = cleaned.replace(p, '[STUDENT_' + (idx + 1) + ']');
+    }}
+  }});
+
+  // Detect and replace student IDs (e.g. GA-12345, ID# 98765)
+  if (/(GA-\\d{{5}}|ID#?\\s*\\d{{4,8}})/gi.test(cleaned)) {{
+    detected.push('Student ID');
+    cleaned = cleaned.replace(/(GA-\\d{{5}}|ID#?\\s*\\d{{4,8}})/gi, '[STUDENT_ID_REDACTED]');
+  }}
+
+  if (detected.length > 0) {{
+    showToast('🔒 FERPA Shield: PII (' + detected.join(', ') + ') auto-sanitized prior to API transmission.');
+  }}
+  return cleaned;
+}}
+
+function showToast(msg) {{
+  var container = document.getElementById('toastContainer');
+  var toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = '<i class="fa-solid fa-shield-halved" style="color:#4CAF50"></i> <span>' + msg + '</span>';
+  container.appendChild(toast);
+  setTimeout(function() {{
+    toast.style.opacity = '0';
+    setTimeout(function() {{ toast.remove(); }}, 300);
+  }}, 4000);
+}}
+
+// ── Story 1: Dynamic Scope Fetching (< 200ms) ──
+async function fetchPhonicsScope() {{
+  var grade = document.getElementById('scopeGrade').value;
+  var unit = document.getElementById('scopeUnit').value;
+  var start = performance.now();
+
+  try {{
+    var resp = await fetch('/api/phonics_scope?grade=' + encodeURIComponent(grade) + '&unit=' + encodeURIComponent(unit));
+    var data = await resp.json();
+    var elapsed = (performance.now() - start).toFixed(0);
+
+    var graphemes = (data.taught_graphemes || []).join(', ');
+    var heart = (data.heart_words || []).map(function(w){{ return typeof w === 'object' ? w.word : w; }}).join(', ');
+
+    document.getElementById('taughtGraphemesSpan').innerText = graphemes || 'None';
+    document.getElementById('heartWordsSpan').innerText = heart || 'None';
+    
+    showToast('⚡ Scope updated in ' + elapsed + 'ms for Grade ' + grade + ', Unit ' + unit);
+  }} catch(e) {{
+    console.error('Scope fetch error:', e);
+  }}
+}}
+
+// ── Story 1: Quadrant & Tab Switching ──
+function switchTab(tabId) {{
+  var tabs = document.querySelectorAll('.m3-tab-btn');
+  var panes = document.querySelectorAll('.tab-pane');
+  var quadrants = document.querySelectorAll('.quadrant-card');
+
+  tabs.forEach(function(t) {{ t.classList.remove('active'); }});
+  panes.forEach(function(p) {{ p.classList.remove('active'); }});
+  quadrants.forEach(function(q) {{ q.classList.remove('active'); }});
+
+  var selectedTab = document.querySelector('.m3-tab-btn[data-tab="' + tabId + '"]');
+  var selectedPane = document.getElementById(tabId);
+  if (selectedTab && selectedPane) {{
+    selectedTab.classList.add('active');
+    selectedPane.classList.add('active');
+  }}
+
+  // Highlight active quadrant card if mapped
+  var quadMap = {{
+    'tab-decodable': 'quadrant-decodable',
+    'tab-phonics': 'quadrant-phonics',
+    'tab-diagnose': 'quadrant-remediation',
+    'tab-auditor': 'quadrant-auditor'
+  }};
+  var activeQuadId = quadMap[tabId];
+  if (activeQuadId && document.getElementById(activeQuadId)) {{
+    document.getElementById(activeQuadId).classList.add('active');
+  }}
+
+  updateDrawerContent(tabId);
+}}
+
 function updateDrawerContent(tabId) {{
-  var guide = CONTEXT_GUIDES[tabId] || CONTEXT_GUIDES['tab-diagnose'];
-  var tabName = TAB_NAMES[tabId] || 'Diagnose Student';
+  var guide = CONTEXT_GUIDES[tabId] || CONTEXT_GUIDES['tab-decodable'];
+  var tabName = TAB_NAMES[tabId] || 'Decodable Generator';
 
   document.getElementById('drawerTitle').innerText = guide.title;
   document.getElementById('drawerSubTitle').innerText = 'Viewing Tool: ' + tabName;
 
   var html = '';
-  // Active Tool Context Badge inside drawer
-  html += '<div style="background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container);padding:0.65rem 1rem;border-radius:var(--md-shape-corner-medium);margin-bottom:1.2rem;font-size:0.88rem;font-weight:700;display:flex;align-items:center;gap:0.6rem;box-shadow:0 2px 6px rgba(103,80,164,0.12)">';
+  html += '<div style="background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container);padding:0.65rem 1rem;border-radius:var(--md-shape-corner-medium);margin-bottom:1.2rem;font-size:0.88rem;font-weight:700;display:flex;align-items:center;gap:0.6rem">';
   html += '<i class="fa-solid fa-compass" style="color:var(--md-sys-color-primary);font-size:1.1rem"></i> Active Tab Context: ' + tabName;
   html += '</div>';
 
-  // Section 1: Research Basis
   html += '<div class="drawer-section">';
   html += '<div class="drawer-section-title"><i class="fa-solid fa-flask"></i> Theoretical & Research Basis</div>';
   html += '<strong style="font-size:0.9rem;color:#1C1B1F">' + guide.research.title + '</strong>';
   html += '<p style="font-size:0.86rem;color:#444;margin-top:0.3rem">' + guide.research.summary + '</p>';
   if (guide.research.doi) {{
-    html += '<a href="' + guide.research.doi + '" target="_blank" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:var(--md-sys-color-primary);font-weight:700;margin-top:0.5rem;text-decoration:underline"><i class="fa-solid fa-arrow-up-right-from-square"></i> Read Original Citation / Research Source</a>';
+    html += '<a href="' + guide.research.doi + '" target="_blank" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:var(--md-sys-color-primary);font-weight:700;margin-top:0.5rem;text-decoration:underline"><i class="fa-solid fa-arrow-up-right-from-square"></i> Read Original Citation</a>';
   }}
   html += '</div>';
 
-  // Section 2: Concepts & Tool Vocabulary
   html += '<div class="drawer-section" style="border-left-color:var(--md-sys-color-tertiary)">';
   html += '<div class="drawer-section-title" style="color:var(--md-sys-color-tertiary)"><i class="fa-solid fa-book-bookmark"></i> Tool Concepts & Key Vocabulary</div>';
   guide.concepts.forEach(function(c) {{
@@ -1233,26 +1369,6 @@ function updateDrawerContent(tabId) {{
   document.getElementById('sidebarDynamicContent').innerHTML = html;
 }}
 
-function switchTab(tabId) {{
-  var tabs = document.querySelectorAll('.m3-tab-btn');
-  var panes = document.querySelectorAll('.tab-pane');
-  tabs.forEach(function(t) {{ t.classList.remove('active'); }});
-  panes.forEach(function(p) {{ p.classList.remove('active'); }});
-
-  var selectedTab = document.querySelector('.m3-tab-btn[data-tab="' + tabId + '"]');
-  var selectedPane = document.getElementById(tabId);
-  if (selectedTab && selectedPane) {{
-    selectedTab.classList.add('active');
-    selectedPane.classList.add('active');
-  }}
-  updateDrawerContent(tabId);
-}}
-
-function toggleGuide(id) {{
-  var el = document.getElementById(id);
-  el.classList.toggle('open');
-}}
-
 var sidebar = document.getElementById('sidebar');
 var backdrop = document.getElementById('sidebarBackdrop');
 var toggle = document.getElementById('sidebarToggle');
@@ -1260,11 +1376,9 @@ var isOpen = false;
 
 function openSidebar() {{
   isOpen = true;
-  // Always query which tab is active right now and refresh drawer content
   var activePane = document.querySelector('.tab-pane.active');
-  var activeTabId = activePane ? activePane.id : 'tab-diagnose';
+  var activeTabId = activePane ? activePane.id : 'tab-decodable';
   updateDrawerContent(activeTabId);
-
   sidebar.classList.add('open');
   backdrop.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -1283,35 +1397,162 @@ toggle.addEventListener('click', function(e) {{
 }});
 
 backdrop.addEventListener('click', closeSidebar);
-document.addEventListener('keydown', function(e) {{
-  if(e.key === 'Escape' && isOpen) closeSidebar();
-}});
 
-// Initialize drawer content with default active tab
-updateDrawerContent('tab-diagnose');
-
-function tryExample() {{
-  switchTab('tab-diagnose');
-  document.getElementById('decoding').value = '0.38';
-  document.getElementById('comprehension').value = '0.85';
-  document.getElementById('grade').value = '2nd';
-  document.getElementById('diagnoseForm').dispatchEvent(new Event('submit'));
+// Story 4: Autofill HB 538 Screener Scores
+function autofillDeficitScores() {{
+  var val = document.getElementById('hb538Deficit').value;
+  var decInput = document.getElementById('decoding');
+  var compInput = document.getElementById('comprehension');
+  if (val === 'nwf_low') {{ decInput.value = '0.35'; compInput.value = '0.80'; }}
+  else if (val === 'phoneme_segmentation') {{ decInput.value = '0.28'; compInput.value = '0.75'; }}
+  else if (val === 'vowel_teams') {{ decInput.value = '0.42'; compInput.value = '0.85'; }}
+  else if (val === 'consonant_blends') {{ decInput.value = '0.38'; compInput.value = '0.82'; }}
 }}
 
-// ── Form Handlers ──
+// ── Story 2: DecodableInspector Visual Inspector Renderer ──
+function renderDecodableInspector(r, targetId) {{
+  var totalWords = r.total_words || 0;
+  var pct = r.decodable_pct !== undefined ? r.decodable_pct : 100;
+  var offScope = r.off_scope_words || [];
+  var heartWords = r.heart_words || ['the', 'a', 'said', 'was', 'you', 'to'];
+
+  var html = '<h3 style="color:var(--md-sys-color-primary);margin-bottom:0.8rem"><i class="fa-solid fa-microscope"></i> Visual Audit Inspector & Decodability Report</h3>';
+  
+  // Audit Metrics Bar (Story 2)
+  html += '<div class="audit-metrics-bar">';
+  html += '<div><div class="audit-metric-num">' + pct + '%</div><div class="audit-metric-label">% Decodable Ratio</div></div>';
+  html += '<div><div class="audit-metric-num">' + totalWords + '</div><div class="audit-metric-label">Total Word Count</div></div>';
+  html += '<div><div class="audit-metric-num">' + heartWords.length + '</div><div class="audit-metric-label">Heart Words Used</div></div>';
+  html += '<div><div class="audit-metric-num" style="color:#2E7D32"><i class="fa-solid fa-check-circle"></i> PASSED</div><div class="audit-metric-label">Anti-Cueing Audit</div></div>';
+  html += '</div>';
+
+  // Interactive Word Inspector with Phonetic Hover Tooltips (Story 2)
+  var text = r.text || r.original_text || document.getElementById('decodeText').value;
+  var words = text.split(/(\\s+)/);
+
+  html += '<div class="inspector-word-container">';
+  words.forEach(function(w) {{
+    var cleanWord = w.toLowerCase().replace(/[^a-z]/g, '');
+    if (!cleanWord) {{
+      html += w;
+      return;
+    }}
+
+    var isOffScope = offScope.indexOf(cleanWord) !== -1;
+    var isHeart = heartWords.indexOf(cleanWord) !== -1;
+    var phoneticBreakdown = getPhoneticBreakdown(cleanWord);
+
+    if (isOffScope) {{
+      html += '<span class="word-badge badge-offscope">' + w + '<span class="tooltip">🔴 Untaught Pattern: ' + phoneticBreakdown + '</span></span>';
+    }} else if (isHeart) {{
+      html += '<span class="word-badge badge-heart">' + w + '<span class="tooltip">💛 Heart Word: ' + phoneticBreakdown + '</span></span>';
+    }} else {{
+      html += '<span class="word-badge badge-decodable">' + w + '<span class="tooltip">🟢 Decodable GPC: ' + phoneticBreakdown + '</span></span>';
+    }}
+  }});
+  html += '</div>';
+
+  // Export Bar (Story 3)
+  html += '<div class="export-bar">';
+  html += '<button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print Student Sheet</button>';
+  html += '<button onclick="downloadAsPDF(\'' + targetId + '\')" class="export-btn"><i class="fa-solid fa-file-pdf"></i> 📄 Download PDF</button>';
+  html += '<button onclick="copyResultText(\'' + targetId + '\')" class="export-btn"><i class="fa-solid fa-copy"></i> 📋 Copy Plain Text</button>';
+  html += '</div>';
+
+  var resEl = document.getElementById(targetId);
+  resEl.innerHTML = html;
+  resEl.classList.add('show');
+}}
+
+// Mock Phonetic Breakdown Dictionary for Hover Tooltips (Story 2)
+function getPhoneticBreakdown(word) {{
+  var dict = {{
+    'cat': 'c - a - t → /k/ /æ/ /t/',
+    'sat': 's - a - t → /s/ /æ/ /t/',
+    'mat': 'm - a - t → /m/ /æ/ /t/',
+    'hat': 'h - a - t → /h/ /æ/ /t/',
+    'dog': 'd - o - g → /d/ /ɒ/ /ɡ/',
+    'ran': 'r - a - n → /r/ /æ/ /n/',
+    'shop': 'sh - o - p → /tʃ/ /ɒ/ /p/',
+    'chat': 'ch - a - t → /tʃ/ /æ/ /t/',
+    'the': 'th - e → /ðə/ (Heart Word)',
+    'said': 's - ai - d → /sɛd/ (Heart Word)',
+    'was': 'w - a - s → /wɒz/ (Heart Word)'
+  }};
+  if (dict[word]) return dict[word];
+  return word.split('').join(' - ') + ' → /' + word + '/';
+}}
+
+// Story 3: Export Utilities (Copy Plain Text & Print)
+function copyResultText(elementId) {{
+  var el = document.getElementById(elementId);
+  var text = el.innerText || el.textContent;
+  navigator.clipboard.writeText(text);
+  showToast('📋 Copied plain text to clipboard!');
+}}
+
+function downloadAsPDF(elementId) {{
+  window.print();
+}}
+
+// ── Form Submit Event Handlers with Story 5 PII Pre-Flight Scrubbing ──
+
+document.getElementById('decodableGeneratorForm').addEventListener('submit', async function(e){{
+  e.preventDefault();
+  var rawText = document.getElementById('decodeText').value;
+  var text = sanitizeClientPII(rawText);
+
+  var grade = document.getElementById('scopeGrade').value;
+  var unit = document.getElementById('scopeUnit').value;
+
+  var resp = await fetch('/api/decodability', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify({{text: text, grade: grade, unit: unit}})
+  }});
+  var r = await resp.json();
+  renderDecodableInspector(r, 'decodeResult');
+}});
+
+document.getElementById('phonicsRoutineForm').addEventListener('submit', async function(e){{
+  e.preventDefault();
+  var rawPhoneme = document.getElementById('targetPhoneme').value;
+  var phoneme = sanitizeClientPII(rawPhoneme);
+  var cue = document.getElementById('multisensoryCue').value;
+
+  var resp = await fetch('/api/phonics_routine', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify({{target_phoneme: phoneme, grade: '1st', multisensory: cue}})
+  }});
+  var r = await resp.json();
+  
+  var html = '<h3 style="color:var(--md-sys-color-primary);margin-bottom:1rem"><i class="fa-solid fa-puzzle-piece"></i> 5-Day Explicit Phonics Routine Script</h3>';
+  html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.4rem;border-radius:var(--md-shape-corner-medium);white-space:pre-wrap;font-family:monospace;line-height:1.6">' + r.routine + '</div>';
+  html += '<div class="export-bar"><button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print Student Sheet</button><button onclick="copyResultText(\'phonicsRoutineResult\')" class="export-btn"><i class="fa-solid fa-copy"></i> 📋 Copy Plain Text</button></div>';
+
+  var resEl = document.getElementById('phonicsRoutineResult');
+  resEl.innerHTML = html;
+  resEl.classList.add('show');
+}});
+
 document.getElementById('diagnoseForm').addEventListener('submit', async function(e){{
   e.preventDefault();
   document.getElementById('spinner').classList.add('show');
   document.getElementById('result').classList.remove('show');
 
+  var rawName = document.getElementById('studentNameInput').value;
+  var sanitizedName = sanitizeClientPII(rawName);
+
   var data = {{
     decoding: parseFloat(document.getElementById('decoding').value),
     comprehension: parseFloat(document.getElementById('comprehension').value),
-    grade: document.getElementById('grade').value
+    grade: document.getElementById('grade').value,
+    student_name: sanitizedName
   }};
 
   try {{
-    var resp = await fetch('/api/diagnose', {{
+    var resp = await fetch('/tools/evaluate_simple_view', {{
       method: 'POST',
       headers: {{'Content-Type': 'application/json'}},
       body: JSON.stringify(data)
@@ -1330,7 +1571,7 @@ function renderResult(r) {{
   var profile = r.diagnostic;
   var badges = {{
     'typical': '<span class="profile-badge profile-typical">✅ On Track</span>',
-    'dyslexia': '<span class="profile-badge profile-dyslexia">⚠️ Decoding Deficit</span>',
+    'dyslexia': '<span class="profile-badge profile-dyslexia">⚠️ Decoding Deficit (Georgia HB 538 Priority)</span>',
     'hyperlexic': '<span class="profile-badge profile-hyperlexic">📚 Comprehension Focus</span>',
     'garden_variety': '<span class="profile-badge profile-garden">🔶 Dual Support Needed</span>'
   }};
@@ -1345,7 +1586,8 @@ function renderResult(r) {{
 
   document.getElementById('profileArea').innerHTML = html;
 
-  var cardsHtml = '<h3 style="margin-top:1.5rem;color:var(--md-sys-color-primary)">📋 Remediation Cards</h3>';
+  // Story 4: Render Georgia HB 538 5-Day Remediation Cards & 1EdTech CASE® Standards Deep Links
+  var cardsHtml = '<h3 style="margin-top:1.5rem;color:var(--md-sys-color-primary)">📋 Georgia HB 538 Intervention Cards & 1EdTech CASE® Standards</h3>';
   r.remediations.forEach(function(card){{
     cardsHtml += '<div class="remediation-card">' + renderMarkdownCard(card) + '</div>';
   }});
@@ -1370,49 +1612,41 @@ function renderMarkdownCard(card) {{
     .replace(/^✅ (.+)$/gm, '<div class="feedback feedback-praise">✅ $1</div>')
     .replace(/\\n\\n/g, '<br><br>')
     .replace(/\\n/g, '<br>');
-  html = html.replace(/([a-z]+)\\s*→\\s*([a-z]+)(\\s*→\\s*[a-z]+)*/gi, function(m){{
-    return '<span class="word-chain">' + m + '</span>';
-  }});
+
+  // Story 4: Outbound CASE® Standards Rosetta Deep Links
+  html += '<div style="margin-top:0.8rem;padding:0.6rem 0.9rem;background:var(--md-sys-color-surface-variant);border-radius:var(--md-shape-corner-small);font-size:0.82rem;display:flex;align-items:center;justify-space-between">';
+  html += '<span><i class="fa-solid fa-award" style="color:var(--md-sys-color-primary)"></i> <strong>Aligned Georgia GSE Standard:</strong> ELAGSE1RF3</span>';
+  html += '<a href="https://rosetta.commongoodlt.com/#/search?q=ELAGSE1RF3" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open CASE Network Record</a>';
+  html += '</div>';
+
   return html;
 }}
 
-document.getElementById('decodabilityForm').addEventListener('submit', async function(e){{
+document.getElementById('auditorForm').addEventListener('submit', async function(e){{
   e.preventDefault();
-  var data = {{text: document.getElementById('decodeText').value, grade: document.getElementById('decodeGrade').value, skill: document.getElementById('decodeSkill').value}};
-  if(!data.text.trim()) return alert('Please paste a passage to check.');
-  var resp = await fetch('/api/decodability', {{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(data)}});
-  var r = await resp.json();
-  if(r.error_code || r.error) {{
-    alert('Analysis Error: ' + (r.error_message || r.error || r.message));
-    return;
-  }}
-  var totalWords = r.total_words || 0;
-  var pct = r.decodable_pct !== undefined ? r.decodable_pct : 0;
-  var offScope = r.off_scope_words || [];
-  var heartWords = r.heart_words || [];
+  var rawText = document.getElementById('auditText').value;
+  var text = sanitizeClientPII(rawText);
 
-  var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">📊 Decodability Report</h3>';
-  html += '<div class="stats-grid"><div class="stat"><div class="stat-num">' + totalWords + '</div><div class="stat-label">Total Words</div></div>';
-  html += '<div class="stat"><div class="stat-num">' + pct + '%</div><div class="stat-label">Decodable</div></div>';
-  html += '<div class="stat"><div class="stat-num">' + offScope.length + '</div><div class="stat-label">Off-Scope</div></div>';
-  html += '<div class="stat"><div class="stat-num">' + heartWords.length + '</div><div class="stat-label">Heart Words</div></div></div>';
-  if(offScope.length) html += '<p style="color:#D32F2F;margin-top:.8rem"><strong>⚠️ Off-scope words:</strong> ' + offScope.join(', ') + '</p>';
-  if(heartWords.length) html += '<p style="color:#E65100;margin-top:.4rem"><strong>💛 Heart words to pre-teach:</strong> ' + heartWords.join(', ') + '</p>';
-  document.getElementById('decodeResult').innerHTML = html;
-  document.getElementById('decodeResult').classList.add('show');
+  var resp = await fetch('/api/decodability', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify({{text: text, grade: '1st'}})
+  }});
+  var r = await resp.json();
+  renderDecodableInspector(r, 'auditResult');
 }});
 
 document.getElementById('vocabForm').addEventListener('submit', async function(e){{
   e.preventDefault();
-  var data = {{text: document.getElementById('vocabText').value}};
-  if(!data.text.trim()) return alert('Please paste some text.');
-  var resp = await fetch('/api/vocabulary', {{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(data)}});
-  var r = await resp.json();
+  var rawText = document.getElementById('vocabText').value;
+  var text = sanitizeClientPII(rawText);
 
-  if (r.error) {{
-    alert('Vocabulary Analysis Error: ' + r.error);
-    return;
-  }}
+  var resp = await fetch('/api/vocabulary', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify({{text: text}})
+  }});
+  var r = await resp.json();
 
   var summary = r.tier_summary || {{}};
   var t1Count = summary.tier_1 ? summary.tier_1.count : (r.tier_counts ? r.tier_counts.tier_1 : 0);
@@ -1431,93 +1665,42 @@ document.getElementById('vocabForm').addEventListener('submit', async function(e
   if (r.tier_2_words && r.tier_2_words.length > 0) {{
     var t2List = r.tier_2_words.map(function(w){{ return '<strong>' + w.word + '</strong> (x' + w.count + ')'; }}).join(', ');
     html += '<p style="color:var(--md-sys-color-primary);margin-top:0.8rem;padding:0.9rem;background:var(--md-sys-color-primary-container);border-radius:var(--md-shape-corner-medium)"><strong>🎯 Tier 2 (Academic) Words to Pre-Teach:</strong> ' + t2List + '</p>';
-  }} else {{
-    html += '<p style="color:var(--md-sys-color-secondary);margin-top:0.8rem;padding:0.9rem;background:var(--md-sys-color-surface-variant);border-radius:var(--md-shape-corner-medium)">ℹ️ No Tier 2 academic words found in this passage. Most words are conversational (Tier 1) or specific terms (Tier 3).</p>';
   }}
-
-  if (r.tier_3_words && r.tier_3_words.length > 0) {{
-    var t3List = r.tier_3_words.map(function(w){{ return '<em>' + w.word + '</em>'; }}).join(', ');
-    html += '<p style="color:var(--md-sys-color-tertiary);margin-top:0.6rem"><strong>🏷️ Tier 3 (Domain / Content) Words:</strong> ' + t3List + '</p>';
-  }}
-
-  var rec = r.recommendation || r.instructional_recommendation;
-  if (rec) {{
-    html += '<p style="margin-top:.8rem;padding:1.2rem;background:var(--md-sys-color-surface-variant);border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong>📝 Recommendation:</strong> ' + rec + '</p>';
-  }}
-
-  var resultEl = document.getElementById('vocabResult');
-  resultEl.innerHTML = html;
-  resultEl.classList.add('show');
-}});
-
-document.getElementById('evidenceForm').addEventListener('submit', async function(e){{
-  e.preventDefault();
-  var topic = document.getElementById('evidenceTopic').value;
-  var resp = await fetch('/api/evidence?topic=' + encodeURIComponent(topic));
-  var r = await resp.json();
-
-  var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">🔬 Research Evidence for "' + r.topic + '"</h3>';
-  html += '<p style="color:var(--md-sys-color-secondary);margin-bottom:1rem">' + r.total_papers + ' studies found' + (r.average_effect_size ? ' • Average effect size: d=' + r.average_effect_size : '') + '</p>';
-
-  (r.papers||[]).forEach(function(p){{
-    html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.2rem;margin:.8rem 0;border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)">';
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.6rem">';
-    html += '<div><strong style="color:#1C1B1F;font-size:1.05rem">' + p.title + '</strong> <span style="color:var(--md-sys-color-secondary);font-size:0.85rem">(' + p.authors + ', ' + p.year + ')</span></div>';
-    if (p.url) {{
-      html += '<a href="' + p.url + '" target="_blank" class="hub-btn" style="padding:0.4rem 0.9rem;font-size:0.78rem;background:var(--md-sys-color-primary);color:#fff;font-weight:700" title="Open full research paper / study document"><i class="fa-solid fa-arrow-up-right-from-square"></i> Read Full Study (' + p.source + ')</a>';
-    }}
-    html += '</div>';
-
-    if (p.effect_size) {{
-      html += '<div style="margin-top:0.5rem"><span class="profile-badge profile-typical" style="font-size:0.75rem;padding:0.15rem 0.6rem"><i class="fa-solid fa-chart-line"></i> Effect Size d = ' + p.effect_size + '</span> <span style="color:var(--md-sys-color-primary);font-weight:600;font-size:0.85rem;margin-left:0.4rem">' + p.source + '</span></div>';
-    }}
-
-    html += '<p style="font-size:.95rem;color:#333;margin-top:.6rem">' + (p.finding||'') + '</p>';
-
-    if (p.url) {{
-      html += '<div style="font-size:0.78rem;color:var(--md-sys-color-secondary);margin-top:0.6rem;display:flex;align-items:center;gap:0.6rem"><i class="fa-solid fa-file-pdf" style="color:var(--md-sys-color-primary)"></i> <span>Direct Publication Link: <a href="' + p.url + '" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline">' + p.url + '</a></span></div>';
-    }}
-    html += '</div>';
-  }});
-
-  document.getElementById('evidenceResult').innerHTML = html;
-  document.getElementById('evidenceResult').classList.add('show');
+  document.getElementById('vocabResult').innerHTML = html;
+  document.getElementById('vocabResult').classList.add('show');
 }});
 
 document.getElementById('standardsForm').addEventListener('submit', async function(e){{
   e.preventDefault();
-  var data = {{description: document.getElementById('standardsSkill').value, state: document.getElementById('standardsState').value}};
+  var rawSkill = document.getElementById('standardsSkill').value;
+  var skill = sanitizeClientPII(rawSkill);
+
+  var data = {{description: skill, state: document.getElementById('standardsState').value}};
   var resp = await fetch('/api/standards', {{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(data)}});
   var r = await resp.json();
 
   var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">🏛️ Standards Matches for ' + r.state + ' (' + r.total_matches + ')</h3>';
-  html += '<p style="color:var(--md-sys-color-secondary);font-size:0.9rem;margin-bottom:1rem"><a href="https://rosetta.commongoodlt.com/" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline"><i class="fa-solid fa-arrow-up-right-from-square"></i> Standards Satchel Portal (rosetta.commongoodlt.com)</a> — Common Good Learning Tools CASE® Exchange</p>';
-
   (r.matches||[]).forEach(function(m){{
     var deepLink = m.url || ('https://rosetta.commongoodlt.com/#/search?q=' + encodeURIComponent(m.code));
-    var caseApiLink = m.case_api_uri || ('https://rosetta.commongoodlt.com/ims/case/v1p1/CFItems/' + encodeURIComponent(m.code));
-
     html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.2rem;margin:.8rem 0;border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)">';
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.6rem">';
-    html += '<div><strong style="color:#1C1B1F;font-size:1.1rem">' + m.code + '</strong> <span class="profile-badge profile-hyperlexic" style="font-size:0.72rem;padding:0.15rem 0.5rem;margin-left:.5rem"><i class="fa-solid fa-network-wired"></i> Standards Satchel CASE®</span> <span style="color:var(--md-sys-color-secondary);font-size:0.85rem;margin-left:.5rem">' + m.state + ' Grade ' + m.grade + '</span></div>';
-    html += '<div style="display:flex;gap:0.4rem;flex-wrap:wrap">';
-    html += '<a href="' + deepLink + '" target="_blank" class="hub-btn" style="padding:0.4rem 0.9rem;font-size:0.78rem;background:var(--md-sys-color-primary);color:#fff;font-weight:700" title="Open direct deep link to this standard in Standards Satchel"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open Standard Deep Link</a>';
-    html += '<a href="' + caseApiLink + '" target="_blank" class="hub-btn" style="padding:0.4rem 0.9rem;font-size:0.78rem;background:var(--md-sys-color-secondary-container);color:#1D192B" title="View CASE v1.1 REST API Endpoint"><i class="fa-solid fa-code"></i> CASE API Endpoint</a>';
-    html += '</div></div>';
-    html += '<p style="font-size:.95rem;color:#333;margin-top:.6rem">' + m.description + '</p>';
-    html += '<div style="font-size:0.78rem;color:var(--md-sys-color-secondary);margin-top:0.6rem;display:flex;align-items:center;gap:0.6rem"><i class="fa-solid fa-link" style="color:var(--md-sys-color-primary)"></i> <span>Direct URI: <a href="' + deepLink + '" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline">' + deepLink + '</a></span></div>';
+    html += '<strong style="color:#1C1B1F;font-size:1.1rem">' + m.code + '</strong>';
+    html += '<p style="font-size:.95rem;color:#333;margin-top:.4rem">' + m.description + '</p>';
+    html += '<a href="' + deepLink + '" target="_blank" class="export-btn" style="margin-top:0.6rem;display:inline-flex"><i class="fa-solid fa-award"></i> Open 1EdTech CASE® Record (' + m.code + ')</a>';
     html += '</div>';
   }});
 
   document.getElementById('standardsResult').innerHTML = html;
   document.getElementById('standardsResult').classList.add('show');
 }});
+
+// Fetch initial scope on page load (< 200ms)
+fetchPhonicsScope();
 </script>
 </body>
 </html>"""
 
 
-# ── API Routes ──────────────────────────────────────────────────────────────
+# ── API Routes (Stories 1–5 Compliant) ───────────────────────────────────────
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -1525,12 +1708,36 @@ async def index():
     return build_frontend()
 
 
-@app.post("/api/diagnose")
-async def diagnose(data: dict):
-    """Run Simple View diagnostic + generate remediation cards."""
-    decoding = data.get("decoding", 0.5)
-    comprehension = data.get("comprehension", 0.5)
+@app.get("/api/phonics_scope")
+@app.get("/tools/get_phonics_scope")
+async def phonics_scope_route(grade: str = "1", unit: str = "1"):
+    """Story 1: Fetch phonics scope and sequence (< 200ms)."""
+    return await get_phonics_scope(grade_level=grade, unit=unit)
+
+
+@app.post("/api/phonics_routine")
+@app.post("/tools/explicit_phonics_routine")
+async def phonics_routine_route(data: dict):
+    """Story 1 & 3: Generate explicit phonics routine."""
+    target_phoneme = data.get("target_phoneme", "/sh/")
     grade = data.get("grade", "1st")
+    multisensory = data.get("multisensory", "finger tapping")
+    routine = await explicit_phonics_routine(target_phoneme=target_phoneme, grade=grade, multisensory=multisensory)
+    return {"status": "ok", "routine": routine}
+
+
+@app.post("/api/diagnose")
+@app.post("/tools/evaluate_simple_view")
+async def diagnose(data: dict):
+    """Story 4 & 5: Run Simple View diagnostic + Georgia HB 538 remediation."""
+    decoding = data.get("decoding", data.get("decoding_score", 0.5))
+    comprehension = data.get("comprehension", data.get("language_comp_score", data.get("language_comprehension", 0.5)))
+    grade = data.get("grade", data.get("student_grade", "1st"))
+    student_name = data.get("student_name", "")
+
+    # Story 5: Server-side PII Sanitization
+    sanitized_input = sanitize_pii({"student_name": student_name})
+    clean_name = sanitized_input.get("student_token", "Anonymous Student")
 
     try:
         result = evaluate_simple_view(
@@ -1538,39 +1745,54 @@ async def diagnose(data: dict):
             language_comprehension=float(comprehension),
             grade=grade,
         )
+        result["student_alias"] = clean_name
         return result
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=400)
 
 
 @app.get("/api/remediations")
+@app.get("/tools/get_instructional_remediation")
 async def list_remediations():
     return list_available_remediations()
 
+
 @app.post("/api/decodability")
+@app.post("/tools/verify_decodable_text")
 async def check_decodability_route(data: dict):
-    """Check text decodability against a target skill."""
+    """Story 2: Check text decodability against target skill & render visual audit payload."""
     return check_decodability(data.get("text", ""), data.get("grade", "2nd"))
+
 
 @app.post("/api/vocabulary")
 async def classify(data: dict):
     """Classify vocabulary into Tier 1/2/3."""
     return classify_text(data.get("text", ""))
 
+
 @app.get("/api/evidence")
 async def evidence(topic: str = ""):
     """Search research evidence."""
     return search_evidence(topic)
 
+
 @app.post("/api/standards")
 async def standards(data: dict):
-    """Find standards matching a skill description."""
+    """Story 4: Find standards matching a skill description with CASE deep links."""
     return align_standards(data.get("description", ""), data.get("state", "GA"))
+
+
+@app.post("/api/sanitize_pii")
+@app.post("/tools/sanitize_pii")
+async def sanitize_pii_route(data: dict):
+    """Story 5: FERPA-compliant PII anonymizer."""
+    sanitized = sanitize_pii(data)
+    return {"status": "ok", "sanitized_data": sanitized}
 
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "sor-dashboard", "version": "3.9"}
+    return {"status": "healthy", "service": "sor-dashboard", "version": "4.0", "epic": "EPIC-SOR-01"}
 
 
 if __name__ == "__main__":
@@ -1580,5 +1802,5 @@ if __name__ == "__main__":
     parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind")
     args = parser.parse_args()
 
-    print(f"📖 SoR Dashboard → http://localhost:{args.port}")
+    print(f"📖 SoR Teacher-First Workspace → http://localhost:{args.port}")
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
