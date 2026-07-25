@@ -1,12 +1,11 @@
 """SoR Web Dashboard — Teacher-First Workspace for the Science of Reading MCP server.
 
 EPIC-SOR-01 Implementation:
-  - Story 1: Task-Based Workspace Architecture & 4-Quadrant Workspace Selector (Grade & Unit Scope fetching < 200ms)
-  - Story 2: Decodable Text Generator & Visual Audit Inspector (Color-coded phonetic badges & hover breakdown tooltips)
-  - Story 3: Print-First CSS & Classroom Export Options (@media print, Atkinson Hyperlegible, student headers)
-  - Story 4: Georgia HB 538 Remediation & 1EdTech CASE® Standards Mapper (Rosetta deep links)
-  - Story 5: FERPA Privacy Shield & Client-Side PII Safeguard (Pre-flight PII scrubbing & toast notifications)
-  - Story 6: Google Classroom OAuth & Coursework Export (GET /v1/courses, POST /v1/courses/{id}/courseWork)
+  - Step 1: MTSS Screener & Georgia HB 538 Remediation (Diagnostic-First Default Landing)
+  - Step 2: Decodable Text Generator & Scope Verifier (Grade & Unit Scope fetching < 200ms)
+  - Step 3: Explicit Phonics Routine Builder (5-Day I Do / We Do / You Do scripts with multisensory cues)
+  - Step 4: Visual Audit Inspector & Anti-Cueing Shield (Color-coded badges & hover tooltips)
+  - Classroom Exports: Print-First CSS (@media print, Atkinson Hyperlegible) & Google Classroom OAuth2 v1
 
 Usage: python3 webapp.py  (runs on localhost:8093 by default)
 """
@@ -164,7 +163,7 @@ def _build_pillar_findings(papers):
 # ── Build Frontend ───────────────────────────────────────────────────────────
 
 def build_frontend() -> str:
-    """Build the Material Design 3 HTML frontend."""
+    """Build the Material Design 3 HTML frontend with Diagnostic-First sequential workflow."""
     data = _load_sidebar_data()
 
     FRAMEWORKS_JSON = json.dumps(data["frameworks"])
@@ -287,7 +286,7 @@ h1, h2, h3, h4, .font-heading {{
   font-weight: 500;
 }}
 
-/* Story 5: FERPA Security Trust Indicator Badge */
+/* FERPA Security Trust Indicator Badge */
 .ferpa-shield-badge {{
   background: #E8F5E9;
   color: #1B5E20;
@@ -330,7 +329,21 @@ h1, h2, h3, h4, .font-heading {{
   to {{ opacity: 1; transform: translateY(0); }}
 }}
 
-/* ── Story 1: 4-Quadrant Workspace Selector ── */
+/* ── Diagnostic-First Sequential 4-Step Quadrant Grid ── */
+.workflow-header-banner {{
+  background: var(--md-sys-color-surface-variant);
+  border-radius: var(--md-shape-corner-medium);
+  padding: 0.8rem 1.2rem;
+  margin-bottom: 1.2rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--md-sys-color-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border-left: 4px solid var(--md-sys-color-primary);
+}}
+
 .quadrant-grid {{
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -352,6 +365,7 @@ h1, h2, h3, h4, .font-heading {{
   display: flex;
   align-items: flex-start;
   gap: 1rem;
+  position: relative;
 }}
 .quadrant-card:hover {{
   border-color: var(--md-sys-color-primary);
@@ -363,6 +377,24 @@ h1, h2, h3, h4, .font-heading {{
   background: var(--md-sys-color-primary-container);
   box-shadow: var(--md-elevation-2);
 }}
+.quadrant-step-badge {{
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-primary);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--md-shape-corner-small);
+  letter-spacing: 0.05em;
+}}
+.quadrant-card.active .quadrant-step-badge {{
+  background: var(--md-sys-color-primary);
+  color: #fff;
+}}
+
 .quadrant-icon {{
   width: 48px;
   height: 48px;
@@ -381,13 +413,13 @@ h1, h2, h3, h4, .font-heading {{
 }}
 .quadrant-title {{
   font-family: 'Outfit', sans-serif;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: #1C1B1F;
   margin-bottom: 0.2rem;
 }}
 .quadrant-desc {{
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   color: var(--md-sys-color-secondary);
   line-height: 1.4;
 }}
@@ -478,7 +510,7 @@ h1, h2, h3, h4, .font-heading {{
   gap: 0.7rem;
 }}
 
-/* ── Story 2: DecodableInspector Word Badges & Audit Bar ── */
+/* DecodableInspector Word Badges & Audit Bar */
 .audit-metrics-bar {{
   background: var(--md-sys-color-surface-variant);
   border-radius: var(--md-shape-corner-medium);
@@ -546,7 +578,6 @@ h1, h2, h3, h4, .font-heading {{
   border: 2px solid #EF5350;
 }}
 
-/* Phonetic Breakdown Tooltip */
 .word-badge .tooltip {{
   visibility: hidden;
   opacity: 0;
@@ -569,7 +600,6 @@ h1, h2, h3, h4, .font-heading {{
   opacity: 1;
 }}
 
-/* ── Story 3 & 6: Export Bar & Print Classroom Sheet ── */
 .export-bar {{
   display: flex;
   gap: 0.8rem;
@@ -598,12 +628,11 @@ h1, h2, h3, h4, .font-heading {{
   color: #fff;
 }}
 
-/* Student Worksheet Print Header (Hidden on screen) */
 .student-print-header {{
   display: none;
 }}
 
-/* ── Story 3: Print-First CSS (@media print) ── */
+/* Print-First CSS (@media print) */
 @media print {{
   @page {{
     size: letter portrait;
@@ -618,9 +647,8 @@ h1, h2, h3, h4, .font-heading {{
     line-height: 1.6 !important;
   }}
 
-  /* Hide interactive elements, sidebars, buttons, headers */
   .app-bar, .m3-tab-bar-container, .sidebar, .sidebar-backdrop, footer,
-  .quadrant-grid, .m3-btn, .export-bar, form, .m3-card-title i, .ferpa-shield-badge {{
+  .quadrant-grid, .workflow-header-banner, .m3-btn, .export-bar, form, .m3-card-title i, .ferpa-shield-badge {{
     display: none !important;
   }}
 
@@ -638,7 +666,6 @@ h1, h2, h3, h4, .font-heading {{
     background: transparent !important;
   }}
 
-  /* Render Student Printable Header */
   .student-print-header {{
     display: block !important;
     border-bottom: 2px solid #000;
@@ -734,7 +761,6 @@ input:focus, select:focus, textarea:focus {{
 .result {{ display: none; margin-top: 1.8rem; padding-top: 1.8rem; border-top: 2px dashed var(--md-sys-color-outline-variant); }}
 .result.show {{ display: block; }}
 
-/* Scope State Badge Display (Story 1) */
 .scope-info-box {{
   background: var(--md-sys-color-primary-container);
   color: var(--md-sys-color-on-primary-container);
@@ -815,7 +841,7 @@ input:focus, select:focus, textarea:focus {{
 </head>
 <body>
 
-<!-- Toast Notification Container for Story 5 PII Shield -->
+<!-- Toast Notification Container for FERPA Shield -->
 <div class="toast-container" id="toastContainer"></div>
 
 <!-- Sidebar Backdrop -->
@@ -833,7 +859,7 @@ input:focus, select:focus, textarea:focus {{
   <div style="padding:1.4rem" id="sidebarDynamicContent"></div>
 </aside>
 
-<!-- Story 6: Google Classroom Export Modal Dialog -->
+<!-- Google Classroom Export Modal Dialog -->
 <div class="sidebar-backdrop" id="gcModalBackdrop" style="z-index:2000"></div>
 <div id="gcModal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:var(--md-shape-corner-large);max-width:550px;width:92vw;padding:1.8rem;box-shadow:var(--md-elevation-3);z-index:2100;display:none">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem">
@@ -896,27 +922,26 @@ input:focus, select:focus, textarea:focus {{
       <div class="app-bar-subtitle">Science of Reading Teacher-First Workspace</div>
     </div>
   </div>
-  <!-- Story 5: FERPA Security Trust Indicator Badge -->
   <div class="ferpa-shield-badge" title="Zero Data Retention (ZDR) • Client-Side PII Auto-Sanitization Active">
     <i class="fa-solid fa-shield-halved"></i>
     <span>🔒 FERPA Compliant: PII Auto-Scrubbed</span>
   </div>
 </header>
 
-<!-- M3 Segmented Navigation Tabs -->
+<!-- M3 Segmented Navigation Tabs (Diagnostic-First Sequential Ordering) -->
 <div class="m3-tab-bar-container">
   <nav class="m3-tab-bar">
-    <button class="m3-tab-btn active" data-tab="tab-decodable" onclick="switchTab('tab-decodable')">
-      <i class="fa-solid fa-book-open"></i> Decodable Generator
+    <button class="m3-tab-btn active" data-tab="tab-diagnose" onclick="switchTab('tab-diagnose')">
+      <i class="fa-solid fa-bullseye"></i> Step 1: MTSS Screener
+    </button>
+    <button class="m3-tab-btn" data-tab="tab-decodable" onclick="switchTab('tab-decodable')">
+      <i class="fa-solid fa-book-open"></i> Step 2: Decodable Generator
     </button>
     <button class="m3-tab-btn" data-tab="tab-phonics" onclick="switchTab('tab-phonics')">
-      <i class="fa-solid fa-puzzle-piece"></i> Phonics Routine Builder
-    </button>
-    <button class="m3-tab-btn" data-tab="tab-diagnose" onclick="switchTab('tab-diagnose')">
-      <i class="fa-solid fa-bullseye"></i> MTSS / Remediation
+      <i class="fa-solid fa-puzzle-piece"></i> Step 3: Phonics Routine
     </button>
     <button class="m3-tab-btn" data-tab="tab-auditor" onclick="switchTab('tab-auditor')">
-      <i class="fa-solid fa-magnifying-glass"></i> Visual Audit Inspector
+      <i class="fa-solid fa-magnifying-glass"></i> Step 4: Visual Auditor
     </button>
     <button class="m3-tab-btn" data-tab="tab-vocab" onclick="switchTab('tab-vocab')">
       <i class="fa-solid fa-layer-group"></i> Classify Vocabulary
@@ -930,7 +955,7 @@ input:focus, select:focus, textarea:focus {{
 <!-- Main Container -->
 <div class="container">
 
-  <!-- Student Printable Header (Story 3 — @media print visible) -->
+  <!-- Student Printable Header (@media print visible) -->
   <div class="student-print-header">
     <div class="student-header-row">
       <span>Name: ____________________________________</span>
@@ -942,124 +967,54 @@ input:focus, select:focus, textarea:focus {{
     </div>
   </div>
 
-  <!-- ── Story 1: 4-Quadrant Workspace Selector ── -->
+  <!-- Diagnostic Workflow Banner -->
+  <div class="workflow-header-banner">
+    <i class="fa-solid fa-circle-nodes"></i>
+    <span>Diagnostic-to-Classroom Workflow: Step 1 (Diagnose) → Step 2 (Select Scope & Generate) → Step 3 (Script Routine) → Step 4 (Audit & Export)</span>
+  </div>
+
+  <!-- ── Diagnostic-First 4-Step Quadrant Grid ── -->
   <div class="quadrant-grid">
-    <div class="quadrant-card active" id="quadrant-decodable" onclick="switchTab('tab-decodable')">
+    <div class="quadrant-card active" id="quadrant-remediation" onclick="switchTab('tab-diagnose')">
+      <div class="quadrant-step-badge">STEP 1</div>
+      <div class="quadrant-icon"><i class="fa-solid fa-bullseye"></i></div>
+      <div>
+        <div class="quadrant-title">🎯 MTSS Screener & Remediation</div>
+        <div class="quadrant-desc">Diagnose DIBELS scores into Simple View profiles & Georgia HB 538 plans.</div>
+      </div>
+    </div>
+    <div class="quadrant-card" id="quadrant-decodable" onclick="switchTab('tab-decodable')">
+      <div class="quadrant-step-badge">STEP 2</div>
       <div class="quadrant-icon"><i class="fa-solid fa-book-open"></i></div>
       <div>
         <div class="quadrant-title">📖 Decodable Text Generator</div>
-        <div class="quadrant-desc">Create & audit stories using only taught GPCs with auto-fetched grade scope.</div>
+        <div class="quadrant-desc">Select Grade & Unit scope to generate & audit decodable text (< 200ms).</div>
       </div>
     </div>
     <div class="quadrant-card" id="quadrant-phonics" onclick="switchTab('tab-phonics')">
+      <div class="quadrant-step-badge">STEP 3</div>
       <div class="quadrant-icon"><i class="fa-solid fa-puzzle-piece"></i></div>
       <div>
         <div class="quadrant-title">🧩 Explicit Phonics Routine Builder</div>
         <div class="quadrant-desc">Generate 5-day I Do / We Do / You Do scripts with multisensory cues.</div>
       </div>
     </div>
-    <div class="quadrant-card" id="quadrant-remediation" onclick="switchTab('tab-diagnose')">
-      <div class="quadrant-icon"><i class="fa-solid fa-bullseye"></i></div>
-      <div>
-        <div class="quadrant-title">🎯 MTSS / Screener & Remediation</div>
-        <div class="quadrant-desc">Translate DIBELS / MAP scores into Georgia HB 538 remediation cards & CASE links.</div>
-      </div>
-    </div>
     <div class="quadrant-card" id="quadrant-auditor" onclick="switchTab('tab-auditor')">
+      <div class="quadrant-step-badge">STEP 4</div>
       <div class="quadrant-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
       <div>
-        <div class="quadrant-title">🔍 Decodability & Anti-Cueing Auditor</div>
-        <div class="quadrant-desc">Visual proof inspector with color badges & phonetic breakdown hover tooltips.</div>
+        <div class="quadrant-title">🔍 Visual Audit & Anti-Cueing Shield</div>
+        <div class="quadrant-desc">Visual proof inspector with color badges & Google Classroom export.</div>
       </div>
     </div>
   </div>
 
-  <!-- ── WORKSPACE 1: DECODABLE TEXT GENERATOR (Story 1 & Story 2) ── -->
-  <div class="tab-pane active" id="tab-decodable">
+  <!-- ── STEP 1: MTSS / SCREENER & GEORGIA HB 538 REMEDIATION (Default Landing) ── -->
+  <div class="tab-pane active" id="tab-diagnose">
     <div class="m3-card">
-      <div class="m3-card-title"><i class="fa-solid fa-book-open"></i> Decodable Text Generator & Scope Verifier</div>
+      <div class="m3-card-title"><i class="fa-solid fa-bullseye"></i> Step 1: MTSS Screener & Georgia HB 538 Remediation</div>
       <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">
-        Select a Grade and Unit/Module. Scope graphemes and Heart Words are dynamically fetched in <strong>&lt; 200ms</strong> via <code>/api/phonics_scope</code>.
-      </p>
-
-      <form id="decodableGeneratorForm">
-        <div class="row">
-          <div class="form-group">
-            <label>Grade Level</label>
-            <select id="scopeGrade" onchange="fetchPhonicsScope()">
-              <option value="K">Kindergarten</option>
-              <option value="1" selected>1st Grade</option>
-              <option value="2">2nd Grade</option>
-              <option value="3">3rd Grade</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Unit / Module</label>
-            <select id="scopeUnit" onchange="fetchPhonicsScope()">
-              <option value="1">Unit 1 (CVC / Single Consonants)</option>
-              <option value="2">Unit 2 (Short Vowels & Digraphs)</option>
-              <option value="3" selected>Unit 3 (Consonant Blends & Vowel Teams)</option>
-              <option value="4">Unit 4 (Silent-e CVCe)</option>
-              <option value="5">Unit 5 (R-Controlled Vowels)</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Dynamic Scope State Info Box (Story 1) -->
-        <div class="scope-info-box" id="scopeInfoBox">
-          <div style="font-weight:700"><i class="fa-solid fa-bolt" style="color:#FFD700"></i> Active Scope State (&lt; 200ms response):</div>
-          <div>Taught Graphemes: <span id="taughtGraphemesSpan">a, e, i, o, u, sh, ch, th, wh, ck</span></div>
-          <div>Heart Words to Pre-Teach: <span id="heartWordsSpan">the, said, was, you</span></div>
-        </div>
-
-        <div class="form-group" style="margin-top:1.2rem">
-          <label>Passage Text to Audit & Format</label>
-          <textarea id="decodeText" rows="4" placeholder="Paste reading passage here...">The cat sat on a mat. She had a red hat. The dog ran to the shop to get a chat with the pet.</textarea>
-        </div>
-
-        <button type="submit" class="m3-btn"><i class="fa-solid fa-magnifying-glass"></i> Audit Decodability & Render Visual Badges</button>
-      </form>
-
-      <!-- Story 2: DecodableInspector Visual Audit Inspector Area -->
-      <div class="result" id="decodeResult"></div>
-    </div>
-  </div>
-
-  <!-- ── WORKSPACE 2: EXPLICIT PHONICS ROUTINE BUILDER (Story 1 & Story 3) ── -->
-  <div class="tab-pane" id="tab-phonics">
-    <div class="m3-card">
-      <div class="m3-card-title"><i class="fa-solid fa-puzzle-piece"></i> Explicit Phonics Routine Builder</div>
-      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Generate a 5-day explicit phonics routine (I Do / We Do / You Do) with word chains and multisensory cues.</p>
-      
-      <form id="phonicsRoutineForm">
-        <div class="row">
-          <div class="form-group">
-            <label>Target Phoneme / Skill</label>
-            <input type="text" id="targetPhoneme" placeholder="e.g. /sh/, /ch/, /ai/, /silent_e/..." value="/sh/" required>
-          </div>
-          <div class="form-group">
-            <label>Multisensory Cue Technique</label>
-            <select id="multisensoryCue">
-              <option value="finger tapping" selected>Finger Tapping (Phoneme Segmentation)</option>
-              <option value="Elkonin boxes">Elkonin Sound Boxes</option>
-              <option value="sky writing">Sky Writing / Arm Tapping</option>
-              <option value="magic e wand">Magic-E Wand</option>
-            </select>
-          </div>
-        </div>
-        <button type="submit" class="m3-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Build 5-Day Scripted Routine</button>
-      </form>
-
-      <div class="result" id="phonicsRoutineResult"></div>
-    </div>
-  </div>
-
-  <!-- ── WORKSPACE 3: MTSS / SCREENER & GEORGIA HB 538 REMEDIATION (Story 4) ── -->
-  <div class="tab-pane" id="tab-diagnose">
-    <div class="m3-card">
-      <div class="m3-card-title"><i class="fa-solid fa-bullseye"></i> MTSS Screener & Georgia HB 538 Remediation</div>
-      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">
-        Translate assessment scores or select a standard deficit profile to generate 5-day intervention scripts with official
+        Translate assessment scores or select a standard deficit profile to diagnose the student's Simple View reading profile, generate 5-day intervention scripts, and map
         <a href="https://rosetta.commongoodlt.com/" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline">
           1EdTech CASE® Standards Satchel
         </a> deep links.
@@ -1104,7 +1059,7 @@ input:focus, select:focus, textarea:focus {{
           <input type="text" id="studentNameInput" placeholder="e.g. Alex Smith (Name will be anonymized to [STUDENT_1])">
         </div>
 
-        <button type="submit" class="m3-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate HB 538 Remediation Plan & CASE Links</button>
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Step 1: Run Diagnostic & Generate HB 538 Plan</button>
       </form>
 
       <div class="spinner" id="spinner"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><br><br>Computing Simple View profile & CASE standards...</div>
@@ -1113,7 +1068,6 @@ input:focus, select:focus, textarea:focus {{
         <div id="profileArea"></div>
         <div id="remediationArea"></div>
         <div id="nextSteps"></div>
-        <!-- Export Action Bar (Story 3 & Story 6) -->
         <div class="export-bar">
           <button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print Student Sheet</button>
           <button onclick="downloadAsPDF('result')" class="export-btn"><i class="fa-solid fa-file-pdf"></i> 📄 Download PDF</button>
@@ -1124,10 +1078,88 @@ input:focus, select:focus, textarea:focus {{
     </div>
   </div>
 
-  <!-- ── WORKSPACE 4: VISUAL AUDIT INSPECTOR (Story 2 & Story 5) ── -->
+  <!-- ── STEP 2: DECODABLE TEXT GENERATOR & SCOPE VERIFIER ── -->
+  <div class="tab-pane" id="tab-decodable">
+    <div class="m3-card">
+      <div class="m3-card-title"><i class="fa-solid fa-book-open"></i> Step 2: Decodable Text Generator & Scope Verifier</div>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">
+        Select a Grade and Unit/Module. Scope graphemes and Heart Words are dynamically fetched in <strong>&lt; 200ms</strong> via <code>/api/phonics_scope</code>.
+      </p>
+
+      <form id="decodableGeneratorForm">
+        <div class="row">
+          <div class="form-group">
+            <label>Grade Level</label>
+            <select id="scopeGrade" onchange="fetchPhonicsScope()">
+              <option value="K">Kindergarten</option>
+              <option value="1" selected>1st Grade</option>
+              <option value="2">2nd Grade</option>
+              <option value="3">3rd Grade</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Unit / Module Focus</label>
+            <select id="scopeUnit" onchange="fetchPhonicsScope()">
+              <option value="1">Unit 1 (CVC / Single Consonants)</option>
+              <option value="2">Unit 2 (Short Vowels & Digraphs)</option>
+              <option value="3" selected>Unit 3 (Consonant Blends & Vowel Teams)</option>
+              <option value="4">Unit 4 (Silent-e CVCe)</option>
+              <option value="5">Unit 5 (R-Controlled Vowels)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="scope-info-box" id="scopeInfoBox">
+          <div style="font-weight:700"><i class="fa-solid fa-bolt" style="color:#FFD700"></i> Active Scope State (&lt; 200ms response):</div>
+          <div>Taught Graphemes: <span id="taughtGraphemesSpan">a, e, i, o, u, sh, ch, th, wh, ck</span></div>
+          <div>Heart Words to Pre-Teach: <span id="heartWordsSpan">the, said, was, you</span></div>
+        </div>
+
+        <div class="form-group" style="margin-top:1.2rem">
+          <label>Passage Text to Audit & Format</label>
+          <textarea id="decodeText" rows="4" placeholder="Paste reading passage here...">The cat sat on a mat. She had a red hat. The dog ran to the shop to get a chat with the pet.</textarea>
+        </div>
+
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-magnifying-glass"></i> Step 2: Audit Decodability & Render Visual Badges</button>
+      </form>
+
+      <div class="result" id="decodeResult"></div>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: EXPLICIT PHONICS ROUTINE BUILDER ── -->
+  <div class="tab-pane" id="tab-phonics">
+    <div class="m3-card">
+      <div class="m3-card-title"><i class="fa-solid fa-puzzle-piece"></i> Step 3: Explicit Phonics Routine Builder</div>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Generate a 5-day explicit phonics routine (I Do / We Do / You Do) with word chains and multisensory cues.</p>
+      
+      <form id="phonicsRoutineForm">
+        <div class="row">
+          <div class="form-group">
+            <label>Target Phoneme / Skill</label>
+            <input type="text" id="targetPhoneme" placeholder="e.g. /sh/, /ch/, /ai/, /silent_e/..." value="/sh/" required>
+          </div>
+          <div class="form-group">
+            <label>Multisensory Cue Technique</label>
+            <select id="multisensoryCue">
+              <option value="finger tapping" selected>Finger Tapping (Phoneme Segmentation)</option>
+              <option value="Elkonin boxes">Elkonin Sound Boxes</option>
+              <option value="sky writing">Sky Writing / Arm Tapping</option>
+              <option value="magic e wand">Magic-E Wand</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Step 3: Build 5-Day Scripted Routine</button>
+      </form>
+
+      <div class="result" id="phonicsRoutineResult"></div>
+    </div>
+  </div>
+
+  <!-- ── STEP 4: VISUAL AUDIT INSPECTOR & ANTI-CUEING SHIELD ── -->
   <div class="tab-pane" id="tab-auditor">
     <div class="m3-card">
-      <div class="m3-card-title"><i class="fa-solid fa-magnifying-glass"></i> Visual Audit Inspector & Anti-Cueing Shield</div>
+      <div class="m3-card-title"><i class="fa-solid fa-magnifying-glass"></i> Step 4: Visual Audit Inspector & Anti-Cueing Shield</div>
       <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">
         Audit any text passage for untaught grapheme-phoneme patterns and 3-cueing guessing traps before giving it to students.
       </p>
@@ -1137,7 +1169,7 @@ input:focus, select:focus, textarea:focus {{
           <label>Text Selection for Anti-Cueing & Decodability Audit</label>
           <textarea id="auditText" rows="4" placeholder="Paste reading passage to audit...">Look at the picture. What word would make sense here? The duck swims in the pond.</textarea>
         </div>
-        <button type="submit" class="m3-btn"><i class="fa-solid fa-shield-halved"></i> Run Visual Audit & Anti-Cueing Inspection</button>
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-shield-halved"></i> Step 4: Run Visual Audit & Anti-Cueing Inspection</button>
       </form>
       <div class="result" id="auditResult"></div>
     </div>
@@ -1209,18 +1241,31 @@ var PAPERS = {PAPERS_JSON};
 var PILLAR_FINDINGS = {PILLAR_FINDINGS_JSON};
 
 var TAB_NAMES = {{
-  "tab-decodable": "Decodable Generator",
-  "tab-phonics": "Phonics Routine Builder",
-  "tab-diagnose": "MTSS Screener & Remediation",
-  "tab-auditor": "Visual Audit Inspector",
+  "tab-diagnose": "Step 1: MTSS Screener & Remediation",
+  "tab-decodable": "Step 2: Decodable Generator",
+  "tab-phonics": "Step 3: Phonics Routine Builder",
+  "tab-auditor": "Step 4: Visual Audit Inspector",
   "tab-vocab": "Classify Vocabulary",
   "tab-standards": "Standards Alignment"
 }};
 
 // Context-Aware Content Dictionary for Left Pull-Out Drawer
 var CONTEXT_GUIDES = {{
+  "tab-diagnose": {{
+    title: "🎯 Step 1: MTSS Screener & Georgia HB 538 Guide",
+    research: {{
+      title: "Gough & Tunmer (1986); Georgia HB 538 Literacy Act",
+      summary: "Georgia HB 538 mandates universal screening and evidence-based structured literacy interventions for decoding and comprehension deficits.",
+      doi: "https://doi.org/10.1007/BF02648824"
+    }},
+    concepts: [
+      {{ term: "Simple View of Reading", def: "Reading Comprehension (R) = Decoding (D) x Language Comprehension (LC)." }},
+      {{ term: "Nonsense Word Fluency (NWF)", def: "Measures pure decoding ability without reliance on visual sight memory." }},
+      {{ term: "CASE Network GUIDs", def: "1EdTech open standard linking learning goals directly to state framework standard codes." }}
+    ]
+  }},
   "tab-decodable": {{
-    title: "📖 Decodability & Scope Guide",
+    title: "📖 Step 2: Decodability & Scope Guide",
     research: {{
       title: "Linnea Ehri (2005) & National Reading Panel (2000)",
       summary: "Systematic explicit phonics instruction significantly improves reading proficiency (d = 0.44-0.74). Decodable text supports orthographic mapping during the full alphabetic phase.",
@@ -1233,7 +1278,7 @@ var CONTEXT_GUIDES = {{
     ]
   }},
   "tab-phonics": {{
-    title: "🧩 Explicit Phonics Routine Guide",
+    title: "🧩 Step 3: Explicit Phonics Routine Guide",
     research: {{
       title: "National Reading Panel (2000) & WWC Practice Guide",
       summary: "Direct explicit instruction using I Do / We Do / You Do modeling produces superior phonics acquisition compared to implicit discovery.",
@@ -1245,21 +1290,8 @@ var CONTEXT_GUIDES = {{
       {{ term: "YOU DO (Independent)", def: "Students demonstrate independent mastery through word building and chaining." }}
     ]
   }},
-  "tab-diagnose": {{
-    title: "🎯 MTSS Screener & Georgia HB 538 Guide",
-    research: {{
-      title: "Gough & Tunmer (1986); Georgia HB 538 Literacy Act",
-      summary: "Georgia HB 538 mandates universal screening and evidence-based structured literacy interventions for decoding and comprehension deficits.",
-      doi: "https://doi.org/10.1007/BF02648824"
-    }},
-    concepts: [
-      {{ term: "Simple View of Reading", def: "Reading Comprehension (R) = Decoding (D) x Language Comprehension (LC)." }},
-      {{ term: "Nonsense Word Fluency (NWF)", def: "Measures pure decoding ability without reliance on visual sight memory." }},
-      {{ term: "CASE Network GUIDs", def: "1EdTech open standard linking learning goals directly to state framework standard codes." }}
-    ]
-  }},
   "tab-auditor": {{
-    title: "🔍 Anti-Cueing Audit Guide",
+    title: "🔍 Step 4: Anti-Cueing Audit Guide",
     research: {{
       title: "Kilpatrick (2015) & WWC Anti-Cueing Meta-Analysis",
       summary: "3-Cueing (MSV) strategies teach students to guess words from pictures or context, suppressing orthographic mapping.",
@@ -1296,7 +1328,6 @@ var CONTEXT_GUIDES = {{
   }}
 }};
 
-// ── Story 5: FERPA Client-Side Pre-Flight PII Sanitizer & Toast ──
 function sanitizeClientPII(inputStr) {{
   if (typeof inputStr !== 'string') return inputStr;
   var cleaned = inputStr;
@@ -1333,7 +1364,6 @@ function showToast(msg) {{
   }}, 4000);
 }}
 
-// ── Story 6: Google Classroom Modal Helpers ──
 function openGCModal(title, content) {{
   document.getElementById('gcTitle').value = title || 'Decodable Reading Assignment';
   document.getElementById('gcContent').value = content || document.getElementById('decodeText').value;
@@ -1394,7 +1424,6 @@ document.getElementById('gcPublishForm').addEventListener('submit', async functi
   }}
 }});
 
-// ── Story 1: Dynamic Scope Fetching (< 200ms) ──
 async function fetchPhonicsScope() {{
   var grade = document.getElementById('scopeGrade').value;
   var unit = document.getElementById('scopeUnit').value;
@@ -1417,7 +1446,6 @@ async function fetchPhonicsScope() {{
   }}
 }}
 
-// ── Story 1: Quadrant & Tab Switching ──
 function switchTab(tabId) {{
   var tabs = document.querySelectorAll('.m3-tab-btn');
   var panes = document.querySelectorAll('.tab-pane');
@@ -1435,9 +1463,9 @@ function switchTab(tabId) {{
   }}
 
   var quadMap = {{
+    'tab-diagnose': 'quadrant-remediation',
     'tab-decodable': 'quadrant-decodable',
     'tab-phonics': 'quadrant-phonics',
-    'tab-diagnose': 'quadrant-remediation',
     'tab-auditor': 'quadrant-auditor'
   }};
   var activeQuadId = quadMap[tabId];
@@ -1449,8 +1477,8 @@ function switchTab(tabId) {{
 }}
 
 function updateDrawerContent(tabId) {{
-  var guide = CONTEXT_GUIDES[tabId] || CONTEXT_GUIDES['tab-decodable'];
-  var tabName = TAB_NAMES[tabId] || 'Decodable Generator';
+  var guide = CONTEXT_GUIDES[tabId] || CONTEXT_GUIDES['tab-diagnose'];
+  var tabName = TAB_NAMES[tabId] || 'Step 1: MTSS Screener & Remediation';
 
   document.getElementById('drawerTitle').innerText = guide.title;
   document.getElementById('drawerSubTitle').innerText = 'Viewing Tool: ' + tabName;
@@ -1490,7 +1518,7 @@ var isOpen = false;
 function openSidebar() {{
   isOpen = true;
   var activePane = document.querySelector('.tab-pane.active');
-  var activeTabId = activePane ? activePane.id : 'tab-decodable';
+  var activeTabId = activePane ? activePane.id : 'tab-diagnose';
   updateDrawerContent(activeTabId);
   sidebar.classList.add('open');
   backdrop.classList.add('open');
@@ -1521,7 +1549,6 @@ function autofillDeficitScores() {{
   else if (val === 'consonant_blends') {{ decInput.value = '0.38'; compInput.value = '0.82'; }}
 }}
 
-// ── Story 2: DecodableInspector Visual Inspector Renderer ──
 function renderDecodableInspector(r, targetId) {{
   var totalWords = r.total_words || 0;
   var pct = r.decodable_pct !== undefined ? r.decodable_pct : 100;
@@ -1562,7 +1589,6 @@ function renderDecodableInspector(r, targetId) {{
   }});
   html += '</div>';
 
-  // Export Bar (Story 3 & Story 6)
   html += '<div class="export-bar">';
   html += '<button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print Student Sheet</button>';
   html += '<button onclick="downloadAsPDF(' + "'" + targetId + "'" + ')" class="export-btn"><i class="fa-solid fa-file-pdf"></i> 📄 Download PDF</button>';
@@ -1798,6 +1824,7 @@ document.getElementById('standardsForm').addEventListener('submit', async functi
   document.getElementById('standardsResult').classList.add('show');
 }});
 
+// Fetch initial scope on page load (< 200ms)
 fetchPhonicsScope();
 </script>
 </body>

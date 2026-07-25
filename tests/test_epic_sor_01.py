@@ -45,7 +45,7 @@ def test_story1_workspace_quadrant_selector_rendered() -> None:
     assert "quadrant-grid" in html
     assert "Decodable Text Generator" in html
     assert "Explicit Phonics Routine Builder" in html
-    assert "MTSS / Screener" in html
+    assert "MTSS Screener" in html
     assert "Visual Audit Inspector" in html
 
 
