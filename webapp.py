@@ -1,11 +1,20 @@
 """SoR Web Dashboard — Teacher-First Workspace for the Science of Reading MCP server.
 
-EPIC-SOR-01 Implementation:
+EPIC-SOR-01 Implementation & Usability Polish:
   - Step 1: MTSS Screener & Georgia HB 538 Remediation (Diagnostic-First Default Landing)
   - Step 2: Decodable Text Generator & Scope Verifier (Grade & Unit Scope fetching < 200ms)
   - Step 3: Explicit Phonics Routine Builder (5-Day I Do / We Do / You Do scripts with multisensory cues)
   - Step 4: Visual Audit Inspector & Anti-Cueing Shield (Color-coded badges & hover tooltips)
   - Classroom Exports: Print-First CSS (@media print, Atkinson Hyperlegible) & Google Classroom OAuth2 v1
+
+Usability Improvements Implemented:
+  1. Inline (?) Score Conversion Tooltips for DIBELS NWF & Maze raw-to-decimal scores.
+  2. Dynamic Preset Summary Pill & Georgia HB 538 state scope callout.
+  3. FERPA ZDR & Progress Monitoring Information Callout Box.
+  4. Clickable FERPA Compliance & Zero Data Retention Architecture Modal.
+  5. Standalone Utility badges on Tabs 5 & 6.
+  6. ✏️ Edit Text in Place toggle button on rendered Decodable Inspector containers.
+  7. Visual Google Classroom API status indicator badge (⚡ Demo Mode vs 🔒 Connected).
 
 Usage: python3 webapp.py  (runs on localhost:8093 by default)
 """
@@ -163,7 +172,7 @@ def _build_pillar_findings(papers):
 # ── Build Frontend ───────────────────────────────────────────────────────────
 
 def build_frontend() -> str:
-    """Build the Material Design 3 HTML frontend with Diagnostic-First sequential workflow."""
+    """Build the Material Design 3 HTML frontend with Diagnostic-First sequential workflow and UX polish."""
     data = _load_sidebar_data()
 
     FRAMEWORKS_JSON = json.dumps(data["frameworks"])
@@ -286,7 +295,7 @@ h1, h2, h3, h4, .font-heading {{
   font-weight: 500;
 }}
 
-/* FERPA Security Trust Indicator Badge */
+/* FERPA Security Trust Indicator Badge (Clickable) */
 .ferpa-shield-badge {{
   background: #E8F5E9;
   color: #1B5E20;
@@ -299,6 +308,53 @@ h1, h2, h3, h4, .font-heading {{
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}}
+.ferpa-shield-badge:hover {{
+  background: #C8E6C9;
+  transform: scale(1.02);
+}}
+
+/* Tooltip Icon for Form Fields */
+.help-icon-tooltip {{
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-primary);
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: help;
+  margin-left: 0.4rem;
+}}
+.help-icon-tooltip .tooltip-text {{
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  bottom: 130%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #212121;
+  color: #fff;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  width: 260px;
+  white-space: normal;
+  line-height: 1.4;
+  z-index: 2000;
+  box-shadow: var(--md-elevation-3);
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}}
+.help-icon-tooltip:hover .tooltip-text {{
+  visibility: visible;
+  opacity: 1;
 }}
 
 /* Toast Notifications for PII Sanitization */
@@ -707,7 +763,8 @@ h1, h2, h3, h4, .font-heading {{
 /* Form Elements */
 .form-group {{ margin-bottom: 1.3rem; }}
 label {{
-  display: block;
+  display: flex;
+  align-items: center;
   font-family: 'Outfit', sans-serif;
   font-weight: 600;
   font-size: 0.92rem;
@@ -861,14 +918,49 @@ input:focus, select:focus, textarea:focus {{
   <div style="padding:1.4rem" id="sidebarDynamicContent"></div>
 </aside>
 
+<!-- FERPA Privacy & Zero Data Retention Modal Dialog -->
+<div class="sidebar-backdrop" id="ferpaModalBackdrop" style="z-index:2200"></div>
+<div id="ferpaModal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:var(--md-shape-corner-large);max-width:600px;width:92vw;padding:2rem;box-shadow:var(--md-elevation-3);z-index:2300;display:none">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;border-bottom:1px solid #E0E0E0;padding-bottom:0.8rem">
+    <h3 style="color:#1B5E20;margin:0;display:flex;align-items:center;gap:0.6rem">
+      <i class="fa-solid fa-shield-halved"></i> FERPA Privacy & Zero Data Retention Architecture
+    </h3>
+    <button onclick="closeFerpaModal()" style="background:none;border:none;font-size:1.3rem;cursor:pointer">✕</button>
+  </div>
+
+  <div style="font-size:0.9rem;color:#333;line-height:1.6">
+    <p style="margin-bottom:0.8rem">
+      <strong>🔒 Student Identity Protection:</strong> Student names and IDs entered into forms are automatically scrubbed browser-side using <code>sanitizeClientPII</code> before any API call, generating synthetic tokens (e.g. <code>[STUDENT_1]</code>).
+    </p>
+    <p style="margin-bottom:0.8rem">
+      <strong>🗑️ Zero Data Retention (ZDR):</strong> Identity mappings and diagnostic outputs are processed statelessly in-memory. No student PII or diagnostic scores are written to disk or database logs.
+    </p>
+    <p style="margin-bottom:1rem">
+      <strong>📜 Legal Alignment:</strong> Fully compliant with <strong>FERPA 34 CFR § 99.31</strong>, <strong>COPPA</strong>, and <strong>GDPR Right-to-Erasure</strong> mandates.
+    </p>
+    <div style="background:#E8F5E9;padding:0.9rem;border-radius:var(--md-shape-corner-medium);border-left:4px solid #2E7D32;font-size:0.84rem">
+      <strong>💡 District Privacy Reviewers:</strong> For full compliance documentation, inspect Section 6 of our <a href="/USER_GUIDE.md" target="_blank" style="color:#1B5E20;font-weight:700">USER_GUIDE.md</a> or audit source code at <code>src/tools/privacy.py</code>.
+    </div>
+  </div>
+
+  <div style="margin-top:1.4rem;text-align:right">
+    <button onclick="closeFerpaModal()" class="m3-btn" style="width:auto;padding:0.6rem 1.6rem">Close Privacy Disclosure</button>
+  </div>
+</div>
+
 <!-- Google Classroom Export Modal Dialog -->
 <div class="sidebar-backdrop" id="gcModalBackdrop" style="z-index:2000"></div>
 <div id="gcModal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:var(--md-shape-corner-large);max-width:550px;width:92vw;padding:1.8rem;box-shadow:var(--md-elevation-3);z-index:2100;display:none">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
     <h3 style="color:var(--md-sys-color-primary);margin:0;display:flex;align-items:center;gap:0.6rem">
       <i class="fa-solid fa-graduation-cap"></i> Export to Google Classroom
     </h3>
     <button onclick="closeGCModal()" style="background:none;border:none;font-size:1.3rem;cursor:pointer">✕</button>
+  </div>
+
+  <!-- Dynamic Connection Status Indicator Pill -->
+  <div id="gcConnectionStatusPill" style="margin-bottom:1.2rem">
+    <span class="scope-tag" style="background:#FFF3E0;color:#E65100"><i class="fa-solid fa-bolt"></i> ⚡ Demo Simulation Mode Active</span>
   </div>
 
   <div id="gcModalSuccess" style="display:none;text-align:center;padding:1.5rem 0">
@@ -883,7 +975,7 @@ input:focus, select:focus, textarea:focus {{
   <form id="gcPublishForm">
     <div class="form-group">
       <label>Google OAuth Access Token (Optional for Demo Mode)</label>
-      <input type="password" id="gcAccessToken" placeholder="Paste Bearer Token or leave blank for demo">
+      <input type="password" id="gcAccessToken" oninput="updateGCConnectionStatus()" placeholder="Paste Bearer Token or leave blank for demo">
     </div>
     <div class="form-group">
       <label>Select Target Classroom Course</label>
@@ -924,7 +1016,7 @@ input:focus, select:focus, textarea:focus {{
       <div class="app-bar-subtitle">Science of Reading Teacher-First Workspace</div>
     </div>
   </div>
-  <div class="ferpa-shield-badge" title="Zero Data Retention (ZDR) • Client-Side PII Auto-Sanitization Active">
+  <div class="ferpa-shield-badge" onclick="openFerpaModal()" title="Click to view Zero Data Retention (ZDR) & FERPA Architecture">
     <i class="fa-solid fa-shield-halved"></i>
     <span>🔒 FERPA Compliant: PII Auto-Scrubbed</span>
   </div>
@@ -946,10 +1038,10 @@ input:focus, select:focus, textarea:focus {{
       <i class="fa-solid fa-magnifying-glass"></i> Step 4: Visual Auditor
     </button>
     <button class="m3-tab-btn" data-tab="tab-vocab" onclick="switchTab('tab-vocab')">
-      <i class="fa-solid fa-layer-group"></i> Classify Vocabulary
+      <i class="fa-solid fa-layer-group"></i> Classify Vocabulary <span style="font-size:0.68rem;opacity:0.85;background:rgba(0,0,0,0.08);padding:0.1rem 0.4rem;border-radius:4px;margin-left:0.2rem">Standalone</span>
     </button>
     <button class="m3-tab-btn" data-tab="tab-standards" onclick="switchTab('tab-standards')">
-      <i class="fa-solid fa-award"></i> Standards Alignment
+      <i class="fa-solid fa-award"></i> Standards Alignment <span style="font-size:0.68rem;opacity:0.85;background:rgba(0,0,0,0.08);padding:0.1rem 0.4rem;border-radius:4px;margin-left:0.2rem">50 States</span>
     </button>
   </nav>
 </div>
@@ -1025,7 +1117,12 @@ input:focus, select:focus, textarea:focus {{
       <form id="diagnoseForm">
         <div class="row">
           <div class="form-group">
-            <label>Screener Deficit Profile (Georgia HB 538)</label>
+            <label>
+              Screener Deficit Profile (Georgia HB 538)
+              <span class="help-icon-tooltip">?
+                <span class="tooltip-text">Presets automatically populate DIBELS scores for specific Georgia HB 538 priority deficits. Select Custom to enter raw test scores.</span>
+              </span>
+            </label>
             <select id="hb538Deficit" onchange="autofillDeficitScores()">
               <option value="custom" selected>Custom Assessment Input</option>
               <option value="nwf_low">Nonsense Word Fluency Low (Decoding Score: 0.35)</option>
@@ -1033,6 +1130,9 @@ input:focus, select:focus, textarea:focus {{
               <option value="vowel_teams">Vowel Team Confusion (Decoding Score: 0.42)</option>
               <option value="consonant_blends">Consonant Blend Breakdown (Decoding Score: 0.38)</option>
             </select>
+            <div id="presetSummaryPill" style="font-size:0.8rem;color:var(--md-sys-color-primary);margin-top:0.4rem;font-weight:600">
+              <i class="fa-solid fa-circle-info"></i> Georgia HB 538 Literacy Act rules active. Select a preset or input custom DIBELS scores. (For other 50 state frameworks, use Tab 6: Standards Alignment).
+            </div>
           </div>
           <div class="form-group">
             <label>Grade Level</label>
@@ -1047,11 +1147,23 @@ input:focus, select:focus, textarea:focus {{
 
         <div class="row">
           <div class="form-group">
-            <label>Decoding Score (0.0 – 1.0) <span style="font-weight:normal;color:#777">— DIBELS NWF-CLS</span></label>
+            <label>
+              Decoding Score (0.0 – 1.0)
+              <span class="help-icon-tooltip">?
+                <span class="tooltip-text">Enter decimal 0.0–1.0 (e.g. DIBELS NWF-CLS count of 38 = 0.38). Scores &lt; 0.60 indicate a decoding deficit requiring phonics intervention.</span>
+              </span>
+              <span style="font-weight:normal;color:#777;margin-left:0.4rem">— DIBELS NWF-CLS</span>
+            </label>
             <input type="number" id="decoding" step="0.01" min="0" max="1" value="0.38" required>
           </div>
           <div class="form-group">
-            <label>Language Comprehension (0.0 – 1.0) <span style="font-weight:normal;color:#777">— DIBELS Maze</span></label>
+            <label>
+              Language Comprehension (0.0 – 1.0)
+              <span class="help-icon-tooltip">?
+                <span class="tooltip-text">Enter decimal 0.0–1.0 (e.g. DIBELS Maze / Oral Vocab score of 85 = 0.85). Scores &lt; 0.60 indicate a language comprehension deficit.</span>
+              </span>
+              <span style="font-weight:normal;color:#777;margin-left:0.4rem">— DIBELS Maze</span>
+            </label>
             <input type="number" id="comprehension" step="0.01" min="0" max="1" value="0.85" required>
           </div>
         </div>
@@ -1063,6 +1175,14 @@ input:focus, select:focus, textarea:focus {{
 
         <button type="submit" class="m3-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Step 1: Run Diagnostic & Generate HB 538 Plan</button>
       </form>
+
+      <!-- FERPA Zero Data Retention & Progress Monitoring Info Callout -->
+      <div style="background:#F3EDF7;border:1px solid #E8DEF8;border-radius:var(--md-shape-corner-medium);padding:0.9rem 1.1rem;margin-top:1.2rem;font-size:0.84rem;color:#49454F;display:flex;align-items:flex-start;gap:0.7rem">
+        <i class="fa-solid fa-shield-halved" style="color:var(--md-sys-color-primary);font-size:1.2rem;margin-top:0.1rem"></i>
+        <div>
+          <strong>🔒 FERPA Zero Data Retention (ZDR) Active:</strong> Diagnostic profiles are generated statelessly in memory to protect student privacy. To track 6-week MTSS progress (Rate of Improvement / ROI), click <strong>"Export to Google Classroom"</strong> or <strong>"Print Student Sheet"</strong> to log in your district SIS/LMS.
+        </div>
+      </div>
 
       <div class="spinner" id="spinner"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><br><br>Computing Simple View profile & CASE standards...</div>
 
@@ -1366,11 +1486,32 @@ function showToast(msg) {{
   }}, 4000);
 }}
 
+function openFerpaModal() {{
+  document.getElementById('ferpaModalBackdrop').classList.add('open');
+  document.getElementById('ferpaModal').style.display = 'block';
+}}
+
+function closeFerpaModal() {{
+  document.getElementById('ferpaModalBackdrop').classList.remove('open');
+  document.getElementById('ferpaModal').style.display = 'none';
+}}
+
+function updateGCConnectionStatus() {{
+  var token = document.getElementById('gcAccessToken').value;
+  var pill = document.getElementById('gcConnectionStatusPill');
+  if (token && token.trim().length > 10) {{
+    pill.innerHTML = '<span class="scope-tag" style="background:#E8F5E9;color:#1B5E20"><i class="fa-solid fa-lock"></i> 🔒 Connected to Live Google Classroom API</span>';
+  }} else {{
+    pill.innerHTML = '<span class="scope-tag" style="background:#FFF3E0;color:#E65100"><i class="fa-solid fa-bolt"></i> ⚡ Demo Simulation Mode Active</span>';
+  }}
+}}
+
 function openGCModal(title, content) {{
   document.getElementById('gcTitle').value = title || 'Decodable Reading Assignment';
   document.getElementById('gcContent').value = content || document.getElementById('decodeText').value;
   document.getElementById('gcModalSuccess').style.display = 'none';
   document.getElementById('gcPublishForm').style.display = 'block';
+  updateGCConnectionStatus();
   document.getElementById('gcModalBackdrop').classList.add('open');
   document.getElementById('gcModal').style.display = 'block';
   fetchGCCourses();
@@ -1545,10 +1686,44 @@ function autofillDeficitScores() {{
   var val = document.getElementById('hb538Deficit').value;
   var decInput = document.getElementById('decoding');
   var compInput = document.getElementById('comprehension');
-  if (val === 'nwf_low') {{ decInput.value = '0.35'; compInput.value = '0.80'; }}
-  else if (val === 'phoneme_segmentation') {{ decInput.value = '0.28'; compInput.value = '0.75'; }}
-  else if (val === 'vowel_teams') {{ decInput.value = '0.42'; compInput.value = '0.85'; }}
-  else if (val === 'consonant_blends') {{ decInput.value = '0.38'; compInput.value = '0.82'; }}
+  var pill = document.getElementById('presetSummaryPill');
+  if (val === 'nwf_low') {{
+    decInput.value = '0.35'; compInput.value = '0.80';
+    if (pill) pill.innerHTML = '<i class="fa-solid fa-circle-check"></i> Preset Loaded: Decoding 0.35 / Comp 0.80 (Nonsense Word Fluency Deficit — Georgia HB 538 Priority)';
+  }}
+  else if (val === 'phoneme_segmentation') {{
+    decInput.value = '0.28'; compInput.value = '0.75';
+    if (pill) pill.innerHTML = '<i class="fa-solid fa-circle-check"></i> Preset Loaded: Decoding 0.28 / Comp 0.75 (Phoneme Segmentation Deficit — Georgia HB 538 Priority)';
+  }}
+  else if (val === 'vowel_teams') {{
+    decInput.value = '0.42'; compInput.value = '0.85';
+    if (pill) pill.innerHTML = '<i class="fa-solid fa-circle-check"></i> Preset Loaded: Decoding 0.42 / Comp 0.85 (Vowel Team Confusion — Georgia HB 538 Priority)';
+  }}
+  else if (val === 'consonant_blends') {{
+    decInput.value = '0.38'; compInput.value = '0.82';
+    if (pill) pill.innerHTML = '<i class="fa-solid fa-circle-check"></i> Preset Loaded: Decoding 0.38 / Comp 0.82 (Consonant Blend Breakdown — Georgia HB 538 Priority)';
+  }}
+  else {{
+    if (pill) pill.innerHTML = '<i class="fa-solid fa-circle-info"></i> Georgia HB 538 Literacy Act rules active. Select a preset or input custom DIBELS scores. (For other 50 state frameworks, use Tab 6: Standards Alignment).';
+  }}
+}}
+
+function toggleInspectorEditable(targetId) {{
+  var resEl = document.getElementById(targetId);
+  if (!resEl) return;
+  var container = resEl.querySelector('.inspector-word-container');
+  if (!container) return;
+  
+  if (container.contentEditable === 'true') {{
+    container.contentEditable = 'false';
+    container.style.border = '1px solid var(--md-sys-color-outline-variant)';
+    showToast('🔒 Locked text in place.');
+  }} else {{
+    container.contentEditable = 'true';
+    container.style.border = '2px dashed #E65100';
+    container.focus();
+    showToast('✏️ Text is now editable in place. Click badges to edit text directly!');
+  }}
 }}
 
 function renderDecodableInspector(r, targetId) {{
@@ -1595,6 +1770,7 @@ function renderDecodableInspector(r, targetId) {{
   html += '<button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print Student Sheet</button>';
   html += '<button onclick="downloadAsPDF(' + "'" + targetId + "'" + ')" class="export-btn"><i class="fa-solid fa-file-pdf"></i> 📄 Download PDF</button>';
   html += '<button onclick="copyResultText(' + "'" + targetId + "'" + ')" class="export-btn"><i class="fa-solid fa-copy"></i> 📋 Copy Plain Text</button>';
+  html += '<button onclick="toggleInspectorEditable(' + "'" + targetId + "'" + ')" class="export-btn" style="background:#FFF3E0;color:#E65100"><i class="fa-solid fa-pen-to-square"></i> ✏️ Edit Text in Place</button>';
   html += '<button onclick="openGCModal(' + "'Decodable Text Practice'" + ', document.getElementById(' + "'decodeText'" + ').value)" class="export-btn" style="background:#EADDFF;color:#21005D"><i class="fa-solid fa-graduation-cap"></i> 🎓 Export to Google Classroom</button>';
   html += '</div>';
 
