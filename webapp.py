@@ -29,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -939,7 +939,7 @@ input:focus, select:focus, textarea:focus {{
       <strong>📜 Legal Alignment:</strong> Fully compliant with <strong>FERPA 34 CFR § 99.31</strong>, <strong>COPPA</strong>, and <strong>GDPR Right-to-Erasure</strong> mandates.
     </p>
     <div style="background:#E8F5E9;padding:0.9rem;border-radius:var(--md-shape-corner-medium);border-left:4px solid #2E7D32;font-size:0.84rem">
-      <strong>💡 District Privacy Reviewers:</strong> For full compliance documentation, inspect Section 6 of our <a href="/USER_GUIDE.md" target="_blank" style="color:#1B5E20;font-weight:700">USER_GUIDE.md</a> or audit source code at <code>src/tools/privacy.py</code>.
+      <strong>💡 District Privacy Reviewers:</strong> For full compliance documentation, inspect Section 6 of our <a href="https://github.com/kosburn0408/sor-mcp-server/blob/main/USER_GUIDE.md#6-data-privacy--ferpa-shield" target="_blank" style="color:#1B5E20;font-weight:700">USER_GUIDE.md on GitHub</a> or audit source code at <code>src/tools/privacy.py</code>.
     </div>
   </div>
 
@@ -2096,6 +2096,22 @@ async def sanitize_pii_route(data: dict):
     """Story 5: FERPA-compliant PII anonymizer."""
     sanitized = sanitize_pii(data)
     return {"status": "ok", "sanitized_data": sanitized}
+
+
+@app.get("/USER_GUIDE.md")
+@app.get("/user_guide.md")
+@app.get("/USER_GUIDE")
+@app.get("/user_guide")
+async def user_guide_redirect():
+    return RedirectResponse(url="https://github.com/kosburn0408/sor-mcp-server/blob/main/USER_GUIDE.md", status_code=302)
+
+
+@app.get("/README.md")
+@app.get("/readme.md")
+@app.get("/README")
+@app.get("/readme")
+async def readme_redirect():
+    return RedirectResponse(url="https://github.com/kosburn0408/sor-mcp-server/blob/main/README.md", status_code=302)
 
 
 @app.get("/health")
