@@ -241,11 +241,17 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
     if not description or not description.strip():
         return {"error": "No description provided", "matches": []}
 
-    from db.database import get_connection
-    conn = get_connection()
-
     state_input = str(state).strip().upper()
     state_code = STATE_ALIASES.get(state_input, state_input)
+
+    live_status = "not_attempted"
+    if state_code == "GA":
+        live_result, live_status = _georgia_live_matches(description, grade)
+        if live_result is not None:
+            return live_result
+
+    from db.database import get_connection
+    conn = get_connection()
 
     desc_lower = description.lower()
     matched_frameworks = []
@@ -299,7 +305,6 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
             "provider": "Common Good Learning Tools",
             "portal": "Standards Satchel",
             "url": f"https://rosetta.commongoodlt.com/#/search?q={encoded_code}",
-            "case_api_uri": f"https://rosetta.commongoodlt.com/ims/case/v1p1/CFItems/{encoded_code}",
             "exchange": "Satchel Rosetta Exchange (CASE® Format)",
             "is_crosswalk": is_crosswalk,
         })
@@ -308,6 +313,14 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
         "description": description,
         "state": state_code,
         "grade_filter": grade,
+        "source": "seeded_table",
+        "live_case_status": live_status,
+        "note": (
+            "These come from a small seeded table that uses older Georgia code formats (ELAGSE...), "
+            "not from the state's live CASE server. Check codes against Georgia's current ELA standards."
+            if state_code == "GA" else
+            "These come from a small seeded table, not a live CASE server."
+        ),
         "satchel_rosetta_integration": {
             "portal": "Standards Satchel",
             "provider": "Common Good Learning Tools",
@@ -319,3 +332,60 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
         "total_matches": len(matches),
         "matches": matches,
     }
+
+
+def _georgia_live_matches(description: str, grade: str | None) -> tuple[dict[str, Any] | None, str]:
+    """Search Georgia's current ELA standards on the state's CASE server.
+
+    Returns (result, status). result is None when the live lookup is off, fails or finds
+    nothing, in which case the caller falls back to the seeded table and reports status.
+    """
+    from src.client import georgia_case
+
+    if not georgia_case.live_enabled():
+        return None, "disabled"
+    try:
+        package = georgia_case.load_package()
+    except georgia_case.GeorgiaCaseError as exc:
+        return None, f"unavailable: {exc}"
+    found = georgia_case.search_standards(package, description, grade)
+    if not found:
+        return None, "no_match_in_current_ela_standards"
+
+    strand_names = {"F": "foundational_skills", "R": "reading", "W": "writing", "L": "language", "S": "speaking_listening"}
+    matches = []
+    for item in found:
+        uri = item.get("uri") or f"{georgia_case._base_url()}/ims/case/v1p1/CFItems/{item.get('identifier')}"
+        matches.append({
+            "state": "GA",
+            "grade": item["grade"],
+            "code": item["code"],
+            "description": item["statement"],
+            "framework": strand_names.get(item["strand"], item["strand"].lower()),
+            "item_type": item["item_type"],
+            "identifier": item["identifier"],
+            "case_item_uri": uri,
+            "url": uri,
+            "provider": "Georgia Department of Education",
+            "portal": "Georgia CASE server",
+            "is_crosswalk": False,
+        })
+    return {
+        "description": description,
+        "state": "GA",
+        "grade_filter": grade,
+        "source": "georgia_case_live" if package.get("fetched_from") == "live" else "georgia_case_disk_cache",
+        "live_case_status": "ok",
+        "standards_package": {
+            "title": package["title"],
+            "case_version": package["version"],
+            "last_change": package["last_change"],
+            "uri": package["package_uri"],
+        },
+        "note": (
+            "Matched by keywords against Georgia's published ELA standards; confirm the best fit "
+            "against the standard's full text before citing it."
+        ),
+        "total_matches": len(matches),
+        "matches": matches,
+    }, "ok"

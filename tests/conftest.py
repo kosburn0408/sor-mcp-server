@@ -181,3 +181,12 @@ def error_api(respx_mock: respx.MockRouter) -> respx.MockRouter:
     respx_mock.get(f"{MOCK_BASE}/orthography/map").mock(return_value=Response(500, json={"error": "Internal Server Error"}))
     respx_mock.get(f"{MOCK_BASE}/standards/competency").mock(return_value=Response(403, json={"error": "Forbidden"}))
     return respx_mock
+
+
+@pytest.fixture(autouse=True)
+def _no_live_case(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests never call Georgia's CASE server unless they opt in."""
+    monkeypatch.setenv("SOR_CASE_LIVE", "false")
+    from src.client import georgia_case
+
+    georgia_case.clear_cache()

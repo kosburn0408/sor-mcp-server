@@ -187,7 +187,7 @@ Access locally at `http://localhost:8093` or live at `https://sor.edtechlabs.dev
 ### Running Unit Tests
 
 ```bash
-# Run complete test suite (147 tests)
+# Run complete test suite (157 tests)
 python3 -m pytest
 ```
 
@@ -206,9 +206,13 @@ The file lists, for each grade (K, 1, 2, 3), ordered groups of graphemes (lowerc
 
 ---
 
-## Standards Alignment (current status)
+## Standards Alignment
 
-The `lookup_competency` / `align_standards` tools use a small seeded table of Georgia ELA codes in the older `ELAGSE…` format, with links that open a search on the CASE Network's Rosetta site. The server does **not** yet read live CASE data from Georgia's CASE server (`case.georgiastandards.org`), and the `identifier` values it generates are local placeholders, not official CASE GUIDs. Georgia's current K–12 ELA standards (full implementation 2025–26) use different codes (for example `1.F.P.2`, "Decoding with Phonics") published as CASE packages. Treat the standards output as a convenience pointer until it is connected to the official source.
+For Georgia (`state="GA"`), `align_standards` reads Georgia's current K-12 ELA standards live from the state's CASE server (`case.georgiastandards.org`, the "English Language Arts - Georgia Department of Education" package) and matches your skill description against them by keyword. Results carry the standard's code (for example `2.F.P.2.a`), its text, its CASE identifier and its official `case_item_uri`, plus the package title, CASE version and last-change date. The package is cached in memory for 24 hours; set `SOR_CASE_CACHE_DIR` to keep a copy on disk for when the server is unreachable.
+
+If the state's server cannot be reached, or nothing matches, the tool falls back to a small seeded table of older `ELAGSE…` codes and says so in `source`, `live_case_status` and `note`. Other states always use the seeded table.
+
+Matching is keyword-based, so confirm the best fit against the standard's full text before citing it. Settings: `SOR_CASE_LIVE=false` turns live lookups off, `SOR_CASE_BASE_URL` and `SOR_CASE_PACKAGE_ID` point to a different server or package. The live connection was written against the published CASE v1p1 format and tested against recorded samples; it has not yet been run end to end from a deployed server, so check it once after deploying.
 
 ---
 
