@@ -971,18 +971,23 @@ input:focus, select:focus, textarea:focus {{
 
   <div id="gcModalSuccess" style="display:none;text-align:center;padding:1.5rem 0">
     <div style="font-size:3rem;margin-bottom:0.8rem">🎉</div>
-    <h4 style="color:#2E7D32;margin-bottom:0.5rem">Assignment Successfully Published!</h4>
-    <p style="font-size:0.9rem;color:#555;margin-bottom:1.2rem">Your decodable reading assignment is now live for your students in Google Classroom.</p>
+    <h4 style="color:#2E7D32;margin-bottom:0.5rem" id="gcSuccessTitle">Assignment Published!</h4>
+    <p style="font-size:0.9rem;color:#555;margin-bottom:1.2rem" id="gcSuccessText">Your decodable reading assignment is now in your Google Classroom course.</p>
     <a id="gcOutboundLink" href="https://classroom.google.com" target="_blank" class="export-btn" style="text-decoration:none;display:inline-flex">
       🔗 Open in Google Classroom
     </a>
   </div>
 
   <form id="gcPublishForm">
-    <div class="form-group">
-      <label>Google OAuth Access Token (Optional for Demo Mode)</label>
-      <input type="password" id="gcAccessToken" oninput="updateGCConnectionStatus()" placeholder="Paste Bearer Token or leave blank for demo">
+    <div class="form-group" id="gcConnectRow" style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center">
+      <button type="button" class="m3-btn" id="gcConnectBtn" onclick="connectGoogleClassroom()"><i class="fa-brands fa-google"></i> Connect Google Classroom</button>
+      <button type="button" class="m3-btn" id="gcDisconnectBtn" style="display:none;background:#fff;color:var(--md-sys-color-primary);border:1px solid var(--md-sys-color-primary)" onclick="disconnectGoogleClassroom()">Disconnect</button>
+      <span id="gcConnectHint" style="font-size:0.8rem;color:var(--md-sys-color-secondary)">Asks Google for permission to list your courses and create assignments. It cannot see students, rosters or grades.</span>
     </div>
+    <details class="form-group" style="margin-bottom:1rem">
+      <summary style="font-size:0.82rem;cursor:pointer;color:var(--md-sys-color-secondary)">Advanced: use an access token you already have</summary>
+      <input type="password" id="gcAccessToken" oninput="updateGCConnectionStatus()" placeholder="Paste a Google access token (optional)" style="margin-top:0.5rem">
+    </details>
     <div class="form-group">
       <label>Select Target Classroom Course</label>
       <select id="gcCourseSelect">
@@ -1532,14 +1537,45 @@ function closeFerpaModal() {{
   document.getElementById('ferpaModal').style.display = 'none';
 }}
 
-function updateGCConnectionStatus() {{
-  var token = document.getElementById('gcAccessToken').value;
-  var pill = document.getElementById('gcConnectionStatusPill');
-  if (token && token.trim().length > 10) {{
-    pill.innerHTML = '<span class="scope-tag" style="background:#E8F5E9;color:#1B5E20"><i class="fa-solid fa-lock"></i> 🔒 Connected to Live Google Classroom API</span>';
+var gcServerState = {{configured: false, connected: false}};
+
+function gcPill(bg, fg, html) {{
+  document.getElementById('gcConnectionStatusPill').innerHTML =
+    '<span class="scope-tag" style="background:' + bg + ';color:' + fg + '">' + html + '</span>';
+}}
+
+async function updateGCConnectionStatus() {{
+  var pasted = (document.getElementById('gcAccessToken').value || '').trim();
+  try {{
+    var resp = await fetch('/api/v1/google-classroom/oauth/status');
+    gcServerState = await resp.json();
+  }} catch(e) {{ gcServerState = {{configured: false, connected: false}}; }}
+
+  document.getElementById('gcConnectBtn').style.display = (gcServerState.connected || !gcServerState.configured) ? 'none' : 'inline-flex';
+  document.getElementById('gcDisconnectBtn').style.display = gcServerState.connected ? 'inline-flex' : 'none';
+  var hint = document.getElementById('gcConnectHint');
+
+  if (gcServerState.connected) {{
+    gcPill('#E8F5E9', '#1B5E20', '<i class="fa-solid fa-lock"></i> Connected to Google Classroom');
+    hint.innerText = 'Connected for about ' + Math.max(1, Math.round(gcServerState.seconds_left / 60)) + ' more minutes. Nothing is stored after that.';
+  }} else if (pasted.length > 10) {{
+    gcPill('#FFF8E1', '#8D6E00', 'Using the access token you pasted (not checked until you publish)');
+  }} else if (!gcServerState.configured) {{
+    gcPill('#FFF3E0', '#E65100', '<i class="fa-solid fa-bolt"></i> Demo mode: nothing is sent to Google');
+    hint.innerText = 'Google sign-in has not been set up on this server, so exports are simulated.';
   }} else {{
-    pill.innerHTML = '<span class="scope-tag" style="background:#FFF3E0;color:#E65100"><i class="fa-solid fa-bolt"></i> ⚡ Demo Simulation Mode Active</span>';
+    gcPill('#FFF3E0', '#E65100', '<i class="fa-solid fa-bolt"></i> Demo mode: connect Google Classroom to publish for real');
   }}
+}}
+
+function connectGoogleClassroom() {{
+  window.location.href = '/api/v1/google-classroom/oauth/start';
+}}
+
+async function disconnectGoogleClassroom() {{
+  await fetch('/api/v1/google-classroom/oauth/logout', {{method: 'POST'}});
+  await updateGCConnectionStatus();
+  fetchGCCourses();
 }}
 
 function openGCModal(title, content) {{
@@ -1553,6 +1589,19 @@ function openGCModal(title, content) {{
   fetchGCCourses();
 }}
 
+(function handleClassroomReturn() {{
+  var flag = new URLSearchParams(window.location.search).get('classroom');
+  if (!flag) return;
+  history.replaceState(null, '', window.location.pathname);
+  if (flag === 'connected') {{
+    setTimeout(function() {{ showToast('Google Classroom connected.'); openGCModal(); }}, 300);
+  }} else if (flag === 'cancelled') {{
+    setTimeout(function() {{ showToast('Google Classroom was not connected. You can try again any time.'); }}, 300);
+  }} else {{
+    setTimeout(function() {{ showToast('Could not connect Google Classroom. Please try again.'); }}, 300);
+  }}
+}})();
+
 function closeGCModal() {{
   document.getElementById('gcModalBackdrop').classList.remove('open');
   document.getElementById('gcModal').style.display = 'none';
@@ -1564,6 +1613,11 @@ async function fetchGCCourses() {{
   try {{
     var resp = await fetch('/api/v1/google-classroom/courses', {{headers: headers}});
     var data = await resp.json();
+    if (!resp.ok) {{
+      showToast('⚠️ ' + (data.detail || 'Could not load your Google Classroom courses.'));
+      await updateGCConnectionStatus();
+      return;
+    }}
     if (data.courses && data.courses.length > 0) {{
       var select = document.getElementById('gcCourseSelect');
       select.innerHTML = '';
@@ -1597,7 +1651,11 @@ document.getElementById('gcPublishForm').addEventListener('submit', async functi
     document.getElementById('gcPublishForm').style.display = 'none';
     document.getElementById('gcOutboundLink').href = r.alternateLink || 'https://classroom.google.com';
     document.getElementById('gcModalSuccess').style.display = 'block';
-    showToast('🎓 Successfully published assignment to Google Classroom!');
+    document.getElementById('gcSuccessTitle').innerText = r.demo_mode ? 'Demo only: nothing was sent to Google' : 'Assignment Published!';
+    document.getElementById('gcSuccessText').innerText = r.demo_mode
+      ? 'This was a simulation. Connect Google Classroom to publish for real.'
+      : 'Your decodable reading assignment is now in your Google Classroom course.';
+    showToast(r.demo_mode ? 'Demo export complete (not sent to Google).' : '🎓 Published to Google Classroom!');
   }} else {{
     alert('Failed to publish: ' + (r.detail || 'Unknown error'));
   }}

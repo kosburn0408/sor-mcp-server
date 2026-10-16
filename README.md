@@ -7,7 +7,7 @@
 [![Standards](https://img.shields.io/badge/Standards-50%20States%20(CASE®)-orange)](https://rosetta.commongoodlt.com)
 [![Google Classroom](https://img.shields.io/badge/Google%20Classroom-OAuth2%20v1-yellow)](https://classroom.google.com)
 
-Production-grade **Science of Reading** Model Context Protocol (MCP) server & Material Design 3 Web Dashboard. Bridges LLMs, K-3 teachers, and literacy specialists to evidence-based reading research (Simple View of Reading, Active View of Reading, Scarborough's Reading Rope, Five Pillars, IES/WWC Practice Guides) under Georgia HB 538 guidelines with Google Classroom coursework export (runs in demo-simulation mode until a Google OAuth token is supplied).
+Production-grade **Science of Reading** Model Context Protocol (MCP) server & Material Design 3 Web Dashboard. Bridges LLMs, K-3 teachers, and literacy specialists to evidence-based reading research (Simple View of Reading, Active View of Reading, Scarborough's Reading Rope, Five Pillars, IES/WWC Practice Guides) under Georgia HB 538 guidelines with Google Classroom coursework export (demo mode until an administrator configures Google sign-in).
 
 🌐 **Live Web Application:** [https://sor.edtechlabs.dev](https://sor.edtechlabs.dev)  
 📖 **Comprehensive Teacher Manual:** [USER_GUIDE.md](USER_GUIDE.md)
@@ -18,7 +18,7 @@ Production-grade **Science of Reading** Model Context Protocol (MCP) server & Ma
 
 **The problem:** teachers are told to use decodable text and evidence-based routines, but have no quick way to check a passage against the phonics their class has actually been taught, or to see the research behind a practice.
 
-**What it does:** paste a passage, choose a grade (K–3) and unit, and see which words are in scope, which are heart words to pre-teach, which are not taught yet, and what decodable words could replace them. Then pull a 5-day I Do / We Do / You Do routine for the gap, print a student sheet or export to Google Classroom (demo mode unless connected), and bring cited research to team meetings.
+**What it does:** paste a passage, choose a grade (K–3) and unit, and see which words are in scope, which are heart words to pre-teach, which are not taught yet, and what decodable words could replace them. Then pull a 5-day I Do / We Do / You Do routine for the gap, print a student sheet or export to Google Classroom (demo mode until Google sign-in is configured), and bring cited research to team meetings.
 
 | Who | What they use it for |
 |---|---|
@@ -40,7 +40,7 @@ Production-grade **Science of Reading** Model Context Protocol (MCP) server & Ma
 - 🔬 **DecodableInspector Visual Auditor:** Cumulative grapheme-scope checking (a word is decodable only if every pattern in it has been taught by the selected grade/unit), anti-cueing flags and decodable substitutions. Color-coded word badges (🟢 Green Decodable, 🟡 Yellow Heart Word, 🔴 Red Untaught/Off-Scope) with interactive phonetic breakdown hover tooltips (e.g. `ch - a - t → /tʃ/ /æ/ /t/`).
 - 🎯 **Georgia HB 538 MTSS Remediation:** Screener deficit selector (Nonsense Word Fluency, Phoneme Segmentation, Vowel Teams, Consonant Blends) outputs 5-day I Do / We Do / You Do intervention cards with direct 1EdTech CASE® Rosetta deep links (`https://rosetta.commongoodlt.com/#/search?q={code}`).
 - 🖨️ **Print-First CSS (@media print):** Automatic printable student worksheet formatting using `Atkinson Hyperlegible` font (18pt–24pt, 1.6 line-spacing) with student headers (`Name: ____________ Date: ________`).
-- 🎓 **Google Classroom OAuth & Coursework Export:** With a valid OAuth token, export decodable reading assignments directly to active Google Classroom streams via `GET /v1/courses` and `POST /v1/courses/{courseId}/courseWork`.
+- 🎓 **Google Classroom Export:** Teachers click *Connect Google Classroom* (OAuth 2.0 with PKCE; only the permissions to list their own courses and create assignments) and publish decodable assignments. The connection is held in server memory for about an hour and never stored. Until an administrator sets the `GOOGLE_OAUTH_*` variables, the export runs in clearly labelled demo mode. See USER_GUIDE.md for the Google Cloud setup steps.
 - 🔒 **FERPA Privacy Shield:** Client-side pre-flight `sanitizeClientPII` auto-anonymizes student names (`[STUDENT_1]`) and student IDs before API transmission.
 
 ---
@@ -187,7 +187,7 @@ Access locally at `http://localhost:8093` or live at `https://sor.edtechlabs.dev
 ### Running Unit Tests
 
 ```bash
-# Run complete test suite (157 tests)
+# Run complete test suite (168 tests)
 python3 -m pytest
 ```
 

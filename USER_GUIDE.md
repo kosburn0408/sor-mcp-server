@@ -172,17 +172,37 @@ Clicking **`Print Student Sheet`** activates specialized print CSS:
 
 ### Publishing Directly to Google Classroom
 
-You can publish decodable passages and phonics routines directly to your Google Classroom stream as an assignment:
+You can publish decodable passages and phonics routines to your Google Classroom as an assignment:
 
 1. Click **`🎓 Export to Google Classroom`** on any generated passage or routine.
-2. An interactive Google Classroom modal opens:
-   - **Google OAuth Access Token:** Paste your Google OAuth bearer token (or leave blank to test in instant Demo Mode).
-   - **Select Course:** Choose your target active class (e.g., *1st Grade Reading — Unit 3*).
-   - **Assignment Title & Instructions:** Pre-filled with your decodable story or 5-day routine script.
-   - **Points:** Set maximum points (default: 100).
-3. Click **`🎓 Publish Assignment`**:
-   - Sends a `POST` request to `https://classroom.googleapis.com/v1/courses/{courseId}/courseWork`.
-   - Displays a success state with a direct outbound link (`🔗 Open in Google Classroom`) to view the live assignment.
+2. In the window that opens, click **Connect Google Classroom** and sign in with your Google account. Google will ask you to allow two things only: seeing your own courses and creating assignments. The app cannot see students, rosters, grades or student work.
+3. Choose your course, check the title and instructions, set the points, and click **`🎓 Publish Assignment`**. You get a link to open the assignment in Classroom.
+
+Good to know:
+- **Demo mode.** If Google sign-in has not been set up on the server (see the administrator steps below), or you have not connected, the export is a simulation. The window says "Demo mode" and nothing is sent to Google.
+- **Connections are short.** The connection lasts about an hour and is kept only in the server's memory. Nothing is stored afterward, and **Disconnect** ends it right away and revokes the permission at Google.
+- **Your school's Google settings.** Some school Google Workspace accounts block apps until an administrator approves them. If Google shows "app blocked", ask your Workspace administrator to allow this app.
+
+#### Administrator setup (once per deployment)
+
+These steps use the Google Cloud Console; menu names change from time to time.
+
+1. Create a project at [console.cloud.google.com](https://console.cloud.google.com) (for example "SoR Helper").
+2. **APIs & Services → Library:** search for **Google Classroom API** and click **Enable**.
+3. **OAuth consent screen** (shown as "Google Auth Platform" in newer consoles):
+   - **User type:** choose *Internal* if every teacher signs in with accounts from your own Google Workspace domain. Choose *External* otherwise. External apps start in *Testing* (named test users only); open sign-in for everyone requires Google's app verification because the Classroom permissions are "sensitive".
+   - Fill in the app name, support email, your domain, and a link to your privacy policy.
+   - **Scopes:** add exactly `https://www.googleapis.com/auth/classroom.courses.readonly` and `https://www.googleapis.com/auth/classroom.coursework.students`.
+4. **Credentials → Create credentials → OAuth client ID → Web application.** Under **Authorized redirect URIs** add `https://YOUR-DOMAIN/api/v1/google-classroom/oauth/callback` (and `http://localhost:8093/api/v1/google-classroom/oauth/callback` for local testing). The address must match exactly.
+5. Copy the client ID and secret into the server's environment (never commit them; `.env` is git-ignored). See `.env.example`:
+
+```bash
+GOOGLE_OAUTH_CLIENT_ID=...apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_SECRET=...
+GOOGLE_OAUTH_REDIRECT_URI=https://YOUR-DOMAIN/api/v1/google-classroom/oauth/callback
+```
+
+6. Restart the web app. The export window should now show **Connect Google Classroom**. Serve the app over HTTPS in production, and treat the client secret like a password.
 
 ---
 

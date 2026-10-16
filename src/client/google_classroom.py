@@ -11,6 +11,14 @@ import httpx
 CLASSROOM_API_BASE = "https://classroom.googleapis.com/v1"
 
 
+class ClassroomAPIError(Exception):
+    """Google Classroom refused a request; ``status`` is Google's HTTP status."""
+
+    def __init__(self, status: int) -> None:
+        super().__init__(f"Google Classroom returned HTTP {status}")
+        self.status = status
+
+
 async def list_courses(access_token: str) -> list[dict[str, Any]]:
     """List active Google Classroom courses where the user is a teacher.
 
@@ -33,7 +41,7 @@ async def list_courses(access_token: str) -> list[dict[str, Any]]:
         )
 
         if response.status_code != 200:
-            return []
+            raise ClassroomAPIError(response.status_code)
 
         data = response.json()
         return data.get("courses", [])
