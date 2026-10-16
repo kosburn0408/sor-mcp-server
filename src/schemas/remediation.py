@@ -52,6 +52,10 @@ class RemediationCard(BaseModel):
     word_chain: WordChain
     corrective_feedback: CorrectiveFeedback
     connected_text: str = Field(description="One decodable sentence using the target pattern")
+    evidence_note: str = Field(
+        default="",
+        description="What the evidence does and does not support for this routine",
+    )
 
     def to_markdown(self) -> str:
         """Render as teacher-friendly Markdown."""
@@ -75,13 +79,14 @@ class RemediationCard(BaseModel):
             f"**Watch for:** _{self.word_chain.non_example}_ "
             f"(this word breaks the pattern — use it to check understanding)\n\n"
             f"### 4. Corrective Feedback Cue\n\n"
-            f"**Multisensory Anchor:** _{self.multisensory_cue.name}_\n\n"
+            f"**Optional Multisensory Anchor:** _{self.multisensory_cue.name}_\n\n"
             f"- **Materials:** {self.multisensory_cue.materials}\n"
             f"- **Procedure:** {self.multisensory_cue.procedure}\n"
             f'- **Say:** "{self.multisensory_cue.verbal_anchor}"\n\n'
             f'**❌ If incorrect:** "{self.corrective_feedback.error_response}"\n'
             f'**✅ If correct:** "{self.corrective_feedback.praise_response}"\n\n'
             f"**📖 Connected Text:**\n> {self.connected_text}\n"
+            + (f"\n> *{self.evidence_note}*\n" if self.evidence_note else "")
         )
 
 
@@ -108,7 +113,10 @@ class SimpleViewResult(BaseModel):
     decoding_score: float = Field(ge=0.0, le=1.0)
     language_comprehension_score: float = Field(ge=0.0, le=1.0)
     reading_profile: str = Field(
-        description="'typical', 'dyslexia', 'hyperlexic', or 'garden_variety'"
+        description=(
+            "'typical', 'decoding_weak', 'language_comprehension_weak', or 'dual_weak'. "
+            "A screening profile, not a diagnosis."
+        )
     )
     deficit_codes: list[str] = Field(default_factory=list)
 

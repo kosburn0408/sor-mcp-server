@@ -23,7 +23,10 @@ FRAMEWORK_MAP: dict[str, list[str]] = {
     "scarborough": ["rope"],
     "rope": ["rope"],
     "reading rope": ["rope"],
-    "foundational skills": ["phonemic_awareness", "phonics", "fluency"],
+    "foundational skills": ["phonemic_awareness", "phonics", "fluency", "foundational_skills"],
+    "active view": ["simple_view"],
+    "orton": ["phonics"],
+    "multisensory": ["phonics"],
     "five pillars": ["phonemic_awareness", "phonics", "fluency", "vocabulary", "comprehension"],
 }
 
@@ -61,18 +64,20 @@ def search_evidence(topic: str) -> dict[str, Any]:
     if frameworks:
         placeholders = ",".join(["?"] * len(frameworks))
         query = f"""
-            SELECT id, title, authors, year, framework, finding, effect_size, source, url
+            SELECT id, title, authors, year, framework, finding, effect_size, source, url,
+                   verification, notes
             FROM research_papers
             WHERE framework IN ({placeholders})
-            ORDER BY effect_size DESC
+            ORDER BY effect_size DESC NULLS LAST, year DESC
         """
         rows = conn.execute(query, frameworks).fetchall()
     else:
         query = """
-            SELECT id, title, authors, year, framework, finding, effect_size, source, url
+            SELECT id, title, authors, year, framework, finding, effect_size, source, url,
+                   verification, notes
             FROM research_papers
             WHERE LOWER(title) LIKE ? OR LOWER(finding) LIKE ?
-            ORDER BY effect_size DESC
+            ORDER BY effect_size DESC NULLS LAST, year DESC
         """
         search_term = f"%{topic_lower}%"
         rows = conn.execute(query, [search_term, search_term]).fetchall()
@@ -89,13 +94,16 @@ def search_evidence(topic: str) -> dict[str, Any]:
             "effect_size": row[6],
             "source": row[7],
             "url": row[8],
+            "verification": row[9],
+            "notes": row[10],
         })
 
-    if papers:
-        effect_sizes = [p["effect_size"] for p in papers if p["effect_size"] is not None]
-        avg_effect = round(sum(effect_sizes) / len(effect_sizes), 2) if effect_sizes else None
-    else:
-        avg_effect = None
+    # Only average effect sizes that were checked against their source.
+    effect_sizes = [
+        p["effect_size"] for p in papers
+        if p["effect_size"] is not None and p["verification"] == "verified"
+    ]
+    avg_effect = round(sum(effect_sizes) / len(effect_sizes), 2) if effect_sizes else None
 
     framework_contexts = _get_framework_context(frameworks)
 
@@ -104,6 +112,12 @@ def search_evidence(topic: str) -> dict[str, Any]:
         "matched_pillars": frameworks if frameworks else ["full_text_search"],
         "total_papers": len(papers),
         "average_effect_size": avg_effect,
+        "effect_sizes_averaged": len(effect_sizes),
+        "evidence_policy": (
+            "Effect sizes are stored only when checked against the source. Entries with no "
+            "effect size (for example WWC practice guides, which report evidence levels) are "
+            "still listed. Effect sizes from different designs are not directly comparable."
+        ),
         "papers": papers,
         "framework_context": framework_contexts,
         "interpretation": _interpret_effect_size(avg_effect) if avg_effect is not None else None,
@@ -132,17 +146,16 @@ def _get_framework_context(frameworks: list[str]) -> list[dict[str, str]]:
 
 
 def _interpret_effect_size(d: float) -> str:
-    """Interpret Cohen's d effect size for educational research."""
+    """Describe a standardized mean difference using Cohen's conventional benchmarks."""
     if d < 0:
-        return "Negative effect — intervention was harmful or counterproductive."
-    elif d < 0.20:
-        return f"Small effect (d={d}) — statistically significant but may have limited practical impact."
-    elif d < 0.50:
-        return f"Moderate effect (d={d}) — likely to produce meaningful improvement."
-    elif d < 0.80:
-        return f"Large effect (d={d}) — strong evidence of effectiveness."
-    else:
-        return f"Very large effect (d={d}) — exceptional impact."
+        return "Negative effect: the comparison condition did better."
+    if d < 0.20:
+        return f"Negligible effect (d = {d})."
+    if d < 0.50:
+        return f"Small effect (d = {d}). Small effects can still matter at scale in education."
+    if d < 0.80:
+        return f"Moderate effect (d = {d})."
+    return f"Large effect (d = {d}). Treat very large effects with caution; they often come from narrow, researcher-made measures."
 
 
 def list_frameworks() -> dict[str, Any]:
@@ -228,11 +241,17 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
     if not description or not description.strip():
         return {"error": "No description provided", "matches": []}
 
-    from db.database import get_connection
-    conn = get_connection()
-
     state_input = str(state).strip().upper()
     state_code = STATE_ALIASES.get(state_input, state_input)
+
+    live_status = "not_attempted"
+    if state_code == "GA":
+        live_result, live_status = _georgia_live_matches(description, grade)
+        if live_result is not None:
+            return live_result
+
+    from db.database import get_connection
+    conn = get_connection()
 
     desc_lower = description.lower()
     matched_frameworks = []
@@ -286,7 +305,6 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
             "provider": "Common Good Learning Tools",
             "portal": "Standards Satchel",
             "url": f"https://rosetta.commongoodlt.com/#/search?q={encoded_code}",
-            "case_api_uri": f"https://rosetta.commongoodlt.com/ims/case/v1p1/CFItems/{encoded_code}",
             "exchange": "Satchel Rosetta Exchange (CASE® Format)",
             "is_crosswalk": is_crosswalk,
         })
@@ -295,6 +313,14 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
         "description": description,
         "state": state_code,
         "grade_filter": grade,
+        "source": "seeded_table",
+        "live_case_status": live_status,
+        "note": (
+            "These come from a small seeded table that uses older Georgia code formats (ELAGSE...), "
+            "not from the state's live CASE server. Check codes against Georgia's current ELA standards."
+            if state_code == "GA" else
+            "These come from a small seeded table, not a live CASE server."
+        ),
         "satchel_rosetta_integration": {
             "portal": "Standards Satchel",
             "provider": "Common Good Learning Tools",
@@ -306,3 +332,60 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
         "total_matches": len(matches),
         "matches": matches,
     }
+
+
+def _georgia_live_matches(description: str, grade: str | None) -> tuple[dict[str, Any] | None, str]:
+    """Search Georgia's current ELA standards on the state's CASE server.
+
+    Returns (result, status). result is None when the live lookup is off, fails or finds
+    nothing, in which case the caller falls back to the seeded table and reports status.
+    """
+    from src.client import georgia_case
+
+    if not georgia_case.live_enabled():
+        return None, "disabled"
+    try:
+        package = georgia_case.load_package()
+    except georgia_case.GeorgiaCaseError as exc:
+        return None, f"unavailable: {exc}"
+    found = georgia_case.search_standards(package, description, grade)
+    if not found:
+        return None, "no_match_in_current_ela_standards"
+
+    strand_names = {"F": "foundational_skills", "R": "reading", "W": "writing", "L": "language", "S": "speaking_listening"}
+    matches = []
+    for item in found:
+        uri = item.get("uri") or f"{georgia_case._base_url()}/ims/case/v1p1/CFItems/{item.get('identifier')}"
+        matches.append({
+            "state": "GA",
+            "grade": item["grade"],
+            "code": item["code"],
+            "description": item["statement"],
+            "framework": strand_names.get(item["strand"], item["strand"].lower()),
+            "item_type": item["item_type"],
+            "identifier": item["identifier"],
+            "case_item_uri": uri,
+            "url": uri,
+            "provider": "Georgia Department of Education",
+            "portal": "Georgia CASE server",
+            "is_crosswalk": False,
+        })
+    return {
+        "description": description,
+        "state": "GA",
+        "grade_filter": grade,
+        "source": "georgia_case_live" if package.get("fetched_from") == "live" else "georgia_case_disk_cache",
+        "live_case_status": "ok",
+        "standards_package": {
+            "title": package["title"],
+            "case_version": package["version"],
+            "last_change": package["last_change"],
+            "uri": package["package_uri"],
+        },
+        "note": (
+            "Matched by keywords against Georgia's published ELA standards; confirm the best fit "
+            "against the standard's full text before citing it."
+        ),
+        "total_matches": len(matches),
+        "matches": matches,
+    }, "ok"

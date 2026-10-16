@@ -14,36 +14,44 @@ from src.errors import (
     format_api_error,
 )
 
-DEFAULT_SCOPES: dict[str, dict[str, Any]] = {
-    "K": {
-        "target_phonemes": ["/m/", "/a/", "/t/", "/s/", "/p/", "/i/", "/n/"],
-        "taught_graphemes": ["m", "a", "t", "s", "p", "i", "n"],
-        "heart_words": [{"word": "the"}, {"word": "a"}, {"word": "is"}, {"word": "to"}],
-        "unit_objectives": ["Identify letter-sound correspondences for single consonants and short vowels"],
-        "prerequisite_skills": ["Phonemic isolation"],
-    },
-    "1": {
-        "target_phonemes": ["/a/", "/e/", "/i/", "/o/", "/u/", "/sh/", "/ch/", "/th/"],
-        "taught_graphemes": ["a", "e", "i", "o", "u", "sh", "ch", "th", "wh", "ck"],
-        "heart_words": [{"word": "the"}, {"word": "said"}, {"word": "was"}, {"word": "you"}],
-        "unit_objectives": ["Decode CVC words, digraphs, and short vowel blends"],
-        "prerequisite_skills": ["CVC decoding"],
-    },
-    "2": {
-        "target_phonemes": ["/ai/", "/ee/", "/oa/", "/oo/", "/ou/"],
-        "taught_graphemes": ["ai", "ay", "ee", "ea", "oa", "ow", "oo", "ou", "oi", "oy"],
-        "heart_words": [{"word": "because"}, {"word": "their"}, {"word": "would"}],
-        "unit_objectives": ["Decode vowel teams, r-controlled vowels, and 2-syllable words"],
-        "prerequisite_skills": ["CVCe and digraphs"],
-    },
-    "3": {
-        "target_phonemes": ["/tion/", "/sion/", "/ture/"],
-        "taught_graphemes": ["tion", "sion", "ture", "able", "ible"],
-        "heart_words": [{"word": "together"}, {"word": "enough"}],
-        "unit_objectives": ["Decode multisyllabic words with derivational affixes"],
-        "prerequisite_skills": ["Vowel teams and 2-syllable division"],
-    },
-}
+GRADE_ORDER = ["K", "1", "2", "3"]
+
+
+def _local_scope(grade_level: str, unit: str) -> dict[str, Any]:
+    """Build the scope from the same cumulative model the decodability checker uses.
+
+    Showing one scope and checking against another confuses teachers, so this is
+    derived from ``scope_engine`` and nothing else.
+    """
+    from src.tools.scope_engine import parse_unit, taught_scope
+
+    modeled = grade_level if grade_level in GRADE_ORDER else "3"
+    unit_n = parse_unit(unit) or 1
+    current = taught_scope(modeled, unit_n)
+    previous = taught_scope(modeled, unit_n - 1) if unit_n > 1 else {"graphemes": set(), "rules": set()}
+    if unit_n == 1 and modeled != "K":
+        previous = taught_scope(GRADE_ORDER[GRADE_ORDER.index(modeled) - 1], None)
+
+    def _order(items: set[str]) -> list[str]:
+        return sorted(items, key=lambda g: (len(g), g))
+
+    new_graphemes = _order(current["graphemes"] - previous["graphemes"])
+    new_rules = sorted(current["rules"] - previous["rules"])
+    return {
+        "target_phonemes": [f"/{g}/" for g in new_graphemes],
+        "target_graphemes": new_graphemes,
+        "taught_graphemes": _order(current["graphemes"]),
+        "taught_rules": sorted(current["rules"]),
+        "heart_words": [{"word": w} for w in sorted(current["heart_words"])],
+        "unit_objectives": [
+            ("New this unit: " + ", ".join(new_graphemes + new_rules)) if (new_graphemes or new_rules) else "No new graphemes this unit; consolidate earlier patterns with fluency practice"
+        ],
+        "prerequisite_skills": [name for name in current["groups"][:-1]][-3:],
+        "note": (
+            "Grades 4-5 are not modeled; showing the Grade 3 scope." if grade_level in {"4", "5"} else
+            "Default sequence is a generic example. Replace it with your program's scope and sequence."
+        ),
+    }
 
 
 async def get_phonics_scope(
@@ -78,16 +86,19 @@ async def get_phonics_scope(
         except Exception:
             pass  # Fall through to local fallback
 
-    scope_data = DEFAULT_SCOPES.get(grade_level, DEFAULT_SCOPES["1"])
+    scope_data = _local_scope(grade_level, unit)
     return {
         "status": "ok",
         "grade_level": grade_level,
         "unit": unit,
         "target_phonemes": scope_data["target_phonemes"],
+        "target_graphemes": scope_data["target_graphemes"],
         "taught_graphemes": scope_data["taught_graphemes"],
+        "taught_rules": scope_data["taught_rules"],
         "heart_words": scope_data["heart_words"],
         "unit_objectives": scope_data["unit_objectives"],
         "prerequisite_skills": scope_data["prerequisite_skills"],
-        "source": "local_scope_repository",
+        "note": scope_data["note"],
+        "source": "local_scope_engine",
         "cached": True,
     }

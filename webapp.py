@@ -37,6 +37,10 @@ import time, uvicorn
 
 from src.routes.google_classroom import router as gc_router
 
+from src.tools.scope_engine import apply_scope_from_env
+
+apply_scope_from_env()  # fail fast if SOR_SCOPE_FILE is set but invalid
+
 app = FastAPI(title="SoR Dashboard", version="4.0")
 app.include_router(gc_router)
 
@@ -122,7 +126,7 @@ def _query_research(base: Path):
 
         papers = []
         for row in conn.execute(
-            "SELECT id, title, authors, year, framework, finding, effect_size, source, url "
+            "SELECT id, title, authors, year, framework, finding, effect_size, source, url, verification, notes "
             "FROM research_papers ORDER BY id"
         ).fetchall():
             papers.append({
@@ -135,6 +139,8 @@ def _query_research(base: Path):
                 "effect_size": round(row[6], 2) if row[6] else None,
                 "source": row[7],
                 "url": row[8] or "",
+                "verification": row[9] or "unverified",
+                "notes": row[10] or "",
             })
 
         conn.close()
@@ -936,7 +942,7 @@ input:focus, select:focus, textarea:focus {{
       <strong>🗑️ Zero Data Retention (ZDR):</strong> Identity mappings and diagnostic outputs are processed statelessly in-memory. No student PII or diagnostic scores are written to disk or database logs.
     </p>
     <p style="margin-bottom:1rem">
-      <strong>📜 Legal Alignment:</strong> Fully compliant with <strong>FERPA 34 CFR § 99.31</strong>, <strong>COPPA</strong>, and <strong>GDPR Right-to-Erasure</strong> mandates.
+      <strong>📜 Legal Alignment:</strong> Designed to support <strong>FERPA (34 CFR § 99.31)</strong>, <strong>COPPA</strong> and <strong>GDPR right-to-erasure</strong> expectations. This tool cannot certify legal compliance; districts should review it against their own data-privacy agreements. The scrubber works on known name and ID fields and does not scan free-text notes.
     </p>
     <div style="background:#E8F5E9;padding:0.9rem;border-radius:var(--md-shape-corner-medium);border-left:4px solid #2E7D32;font-size:0.84rem">
       <strong>💡 District Privacy Reviewers:</strong> For full compliance documentation, inspect Section 6 of our <a href="https://github.com/kosburn0408/sor-mcp-server/blob/main/USER_GUIDE.md#6-data-privacy--ferpa-shield" target="_blank" style="color:#1B5E20;font-weight:700">USER_GUIDE.md on GitHub</a> or audit source code at <code>src/tools/privacy.py</code>.
@@ -965,18 +971,23 @@ input:focus, select:focus, textarea:focus {{
 
   <div id="gcModalSuccess" style="display:none;text-align:center;padding:1.5rem 0">
     <div style="font-size:3rem;margin-bottom:0.8rem">🎉</div>
-    <h4 style="color:#2E7D32;margin-bottom:0.5rem">Assignment Successfully Published!</h4>
-    <p style="font-size:0.9rem;color:#555;margin-bottom:1.2rem">Your decodable reading assignment is now live for your students in Google Classroom.</p>
+    <h4 style="color:#2E7D32;margin-bottom:0.5rem" id="gcSuccessTitle">Assignment Published!</h4>
+    <p style="font-size:0.9rem;color:#555;margin-bottom:1.2rem" id="gcSuccessText">Your decodable reading assignment is now in your Google Classroom course.</p>
     <a id="gcOutboundLink" href="https://classroom.google.com" target="_blank" class="export-btn" style="text-decoration:none;display:inline-flex">
       🔗 Open in Google Classroom
     </a>
   </div>
 
   <form id="gcPublishForm">
-    <div class="form-group">
-      <label>Google OAuth Access Token (Optional for Demo Mode)</label>
-      <input type="password" id="gcAccessToken" oninput="updateGCConnectionStatus()" placeholder="Paste Bearer Token or leave blank for demo">
+    <div class="form-group" id="gcConnectRow" style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center">
+      <button type="button" class="m3-btn" id="gcConnectBtn" onclick="connectGoogleClassroom()"><i class="fa-brands fa-google"></i> Connect Google Classroom</button>
+      <button type="button" class="m3-btn" id="gcDisconnectBtn" style="display:none;background:#fff;color:var(--md-sys-color-primary);border:1px solid var(--md-sys-color-primary)" onclick="disconnectGoogleClassroom()">Disconnect</button>
+      <span id="gcConnectHint" style="font-size:0.8rem;color:var(--md-sys-color-secondary)">Asks Google for permission to list your courses and create assignments. It cannot see students, rosters or grades.</span>
     </div>
+    <details class="form-group" style="margin-bottom:1rem">
+      <summary style="font-size:0.82rem;cursor:pointer;color:var(--md-sys-color-secondary)">Advanced: use an access token you already have</summary>
+      <input type="password" id="gcAccessToken" oninput="updateGCConnectionStatus()" placeholder="Paste a Google access token (optional)" style="margin-top:0.5rem">
+    </details>
     <div class="form-group">
       <label>Select Target Classroom Course</label>
       <select id="gcCourseSelect">
@@ -1018,7 +1029,7 @@ input:focus, select:focus, textarea:focus {{
   </div>
   <div class="ferpa-shield-badge" onclick="openFerpaModal()" title="Click to view Zero Data Retention (ZDR) & FERPA Architecture">
     <i class="fa-solid fa-shield-halved"></i>
-    <span>🔒 FERPA Compliant: PII Auto-Scrubbed</span>
+    <span>🔒 Privacy Shield: Known Name/ID Fields Scrubbed</span>
   </div>
 </header>
 
@@ -1180,7 +1191,7 @@ input:focus, select:focus, textarea:focus {{
       <div style="background:#F3EDF7;border:1px solid #E8DEF8;border-radius:var(--md-shape-corner-medium);padding:0.9rem 1.1rem;margin-top:1.2rem;font-size:0.84rem;color:#49454F;display:flex;align-items:flex-start;gap:0.7rem">
         <i class="fa-solid fa-shield-halved" style="color:var(--md-sys-color-primary);font-size:1.2rem;margin-top:0.1rem"></i>
         <div>
-          <strong>🔒 FERPA Zero Data Retention (ZDR) Active:</strong> Diagnostic profiles are generated statelessly in memory to protect student privacy. To track 6-week MTSS progress (Rate of Improvement / ROI), click <strong>"Export to Google Classroom"</strong> or <strong>"Print Student Sheet"</strong> to log in your district SIS/LMS.
+          <strong>🔒 FERPA Zero Data Retention (ZDR) Active:</strong> Diagnostic profiles are generated statelessly in memory to protect student privacy. To track 6-week MTSS progress (Rate of Improvement / ROI), click <strong>"Export to Google Classroom"</strong> (demo mode unless connected) or <strong>"Print Student Sheet"</strong> and record results in your district SIS/LMS. This tool does not keep them, so whatever you print, export or copy is then covered by your district's own data policies.
         </div>
       </div>
 
@@ -1352,14 +1363,44 @@ input:focus, select:focus, textarea:focus {{
 
 </div><!-- /container -->
 
+<section id="sourcesSection" style="max-width:1100px;margin:2.5rem auto 0;padding:0 1rem">
+  <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.4rem">Research behind this tool</h2>
+  <p style="font-size:0.88rem;color:var(--md-sys-color-secondary);margin-bottom:1rem">Each source shows whether its details were checked against the original. Effect sizes appear only when they match the study. The default grade/unit sequence is a generic example, not any particular program's.</p>
+  <div id="sourcesList" style="display:grid;gap:0.7rem"></div>
+</section>
+
 <footer>
   <p>© 2026 EdTech Labs • Science of Reading Teacher-First Workspace</p>
-  <p style="font-size:0.8rem;color:var(--md-sys-color-secondary);margin-top:0.4rem">🔒 FERPA Compliant • Zero Data Retention • Student Privacy Guaranteed</p>
+  <p style="font-size:0.8rem;color:var(--md-sys-color-secondary);margin-top:0.4rem">🔒 Designed to support FERPA-aligned use • The server does not store student data • Not a compliance certification: review with your district privacy team</p>
 </footer>
 
 <script>
 var FRAMEWORKS = {FRAMEWORKS_JSON};
 var PAPERS = {PAPERS_JSON};
+(function renderSources() {{
+  var host = document.getElementById('sourcesList');
+  if (!host) return;
+  PAPERS.forEach(function(p) {{
+    var card = document.createElement('div');
+    card.style.cssText = 'border:1px solid var(--md-sys-color-surface-variant);border-radius:12px;padding:0.8rem 1rem;background:#fff';
+    var head = document.createElement('div');
+    head.style.cssText = 'display:flex;justify-content:space-between;gap:0.8rem;flex-wrap:wrap;align-items:baseline';
+    var title = document.createElement(p.url && /^https?:/.test(p.url) ? 'a' : 'span');
+    if (title.tagName === 'A') {{ title.href = p.url; title.target = '_blank'; title.rel = 'noopener'; }}
+    title.style.cssText = 'font-weight:700;font-size:0.92rem';
+    title.textContent = (p.authors ? p.authors + ' ' : '') + '(' + p.year + '). ' + p.title;
+    var badge = document.createElement('span');
+    var ok = p.verification === 'verified';
+    badge.style.cssText = 'font-size:0.74rem;font-weight:700;padding:0.15rem 0.55rem;border-radius:999px;background:' + (ok ? '#CDE8D8' : '#F6E3A6');
+    badge.textContent = ok ? 'Checked against source' : (p.verification === 'partial' ? 'Partly checked' : 'Not fully checked');
+    head.appendChild(title); head.appendChild(badge);
+    var body = document.createElement('div');
+    body.style.cssText = 'font-size:0.85rem;color:#49454F;margin-top:0.35rem';
+    body.textContent = p.finding + (p.effect_size !== null && p.effect_size !== undefined ? ' (Effect size d = ' + p.effect_size + ')' : '');
+    card.appendChild(head); card.appendChild(body);
+    host.appendChild(card);
+  }});
+}})();
 var PILLAR_FINDINGS = {PILLAR_FINDINGS_JSON};
 
 var TAB_NAMES = {{
@@ -1376,9 +1417,9 @@ var CONTEXT_GUIDES = {{
   "tab-diagnose": {{
     title: "🎯 Step 1: MTSS Screener & Georgia HB 538 Guide",
     research: {{
-      title: "Gough & Tunmer (1986); Georgia HB 538 Literacy Act",
-      summary: "Georgia HB 538 mandates universal screening and evidence-based structured literacy interventions for decoding and comprehension deficits.",
-      doi: "https://doi.org/10.1007/BF02648824"
+      title: "Gough & Tunmer (1986); Georgia Early Literacy Act (HB 538)",
+      summary: "The Simple View frames reading comprehension as decoding times language comprehension. Georgia's Early Literacy Act (HB 538) requires K-3 screening for reading deficiencies and teacher training in structured literacy. Scores here are a screening profile, not a diagnosis.",
+      doi: "https://doi.org/10.1177/074193258600700104"
     }},
     concepts: [
       {{ term: "Simple View of Reading", def: "Reading Comprehension (R) = Decoding (D) x Language Comprehension (LC)." }},
@@ -1389,8 +1430,8 @@ var CONTEXT_GUIDES = {{
   "tab-decodable": {{
     title: "📖 Step 2: Decodability & Scope Guide",
     research: {{
-      title: "Linnea Ehri (2005) & National Reading Panel (2000)",
-      summary: "Systematic explicit phonics instruction significantly improves reading proficiency (d = 0.44-0.74). Decodable text supports orthographic mapping during the full alphabetic phase.",
+      title: "Ehri, Nunes, Stahl & Willows (2001), National Reading Panel meta-analysis",
+      summary: "Systematic phonics instruction had a moderate overall effect on reading (d = 0.41), larger when it began early (d = 0.55) than after first grade (d = 0.27). The WWC Foundational Skills guide recommends having students read decodable words in isolation and in text.",
       doi: "https://doi.org/10.3102/00346543071003393"
     }},
     concepts: [
@@ -1402,9 +1443,9 @@ var CONTEXT_GUIDES = {{
   "tab-phonics": {{
     title: "🧩 Step 3: Explicit Phonics Routine Guide",
     research: {{
-      title: "National Reading Panel (2000) & WWC Practice Guide",
-      summary: "Direct explicit instruction using I Do / We Do / You Do modeling produces superior phonics acquisition compared to implicit discovery.",
-      doi: "https://ies.ed.gov/ncee/wwc/"
+      title: "WWC Foundational Skills Practice Guide (Foorman et al., 2016)",
+      summary: "The guide rates explicit teaching of sound-letter links and of decoding as strong evidence. I Do / We Do / You Do is a common way to deliver explicit instruction. Multisensory cues are optional supports, not a proven active ingredient.",
+      doi: "https://www.galiteracycenter.org/s/wwc_foundationalreading_040717.pdf"
     }},
     concepts: [
       {{ term: "I DO (Teacher Model)", def: "Clear explicit demonstration with think-aloud modeling of sound-spelling correspondences." }},
@@ -1415,9 +1456,9 @@ var CONTEXT_GUIDES = {{
   "tab-auditor": {{
     title: "🔍 Step 4: Anti-Cueing Audit Guide",
     research: {{
-      title: "Kilpatrick (2015) & WWC Anti-Cueing Meta-Analysis",
-      summary: "3-Cueing (MSV) strategies teach students to guess words from pictures or context, suppressing orthographic mapping.",
-      doi: "https://doi.org/10.1007/s11881-015-0110-3"
+      title: "WWC Foundational Skills Practice Guide (Foorman et al., 2016)",
+      summary: "The guide's strong-evidence recommendations center on teaching students to decode words from letters and word parts. Three-cueing prompts that invite guessing from pictures or context work against that goal, so this audit flags guessing prompts and off-scope words.",
+      doi: "https://www.galiteracycenter.org/s/wwc_foundationalreading_040717.pdf"
     }},
     concepts: [
       {{ term: "Anti-Cueing Guardrail", def: "Flagging and eliminating prompts that encourage guessing from pictures or initial letters." }},
@@ -1427,9 +1468,9 @@ var CONTEXT_GUIDES = {{
   "tab-vocab": {{
     title: "📚 Three-Tier Vocabulary Guide",
     research: {{
-      title: "Beck, McKeown & Kucan (2013)",
-      summary: "Explicit instruction targeting Tier 2 academic vocabulary produces very large effect sizes (d = 0.88) for word learning.",
-      doi: "https://doi.org/10.3102/0034654310377077"
+      title: "Beck, McKeown & Kucan (2013); Marulis & Neuman (2010)",
+      summary: "Beck, McKeown & Kucan describe the three-tier framework. Marulis & Neuman's meta-analysis found d = 0.88 on vocabulary measures for interventions with young children; it is not specific to Tier 2 words. Tiers marked heuristic need teacher review.",
+      doi: "https://doi.org/10.3102/0034654310377087"
     }},
     concepts: [
       {{ term: "Tier 1", def: "Basic conversational words." }},
@@ -1496,14 +1537,45 @@ function closeFerpaModal() {{
   document.getElementById('ferpaModal').style.display = 'none';
 }}
 
-function updateGCConnectionStatus() {{
-  var token = document.getElementById('gcAccessToken').value;
-  var pill = document.getElementById('gcConnectionStatusPill');
-  if (token && token.trim().length > 10) {{
-    pill.innerHTML = '<span class="scope-tag" style="background:#E8F5E9;color:#1B5E20"><i class="fa-solid fa-lock"></i> 🔒 Connected to Live Google Classroom API</span>';
+var gcServerState = {{configured: false, connected: false}};
+
+function gcPill(bg, fg, html) {{
+  document.getElementById('gcConnectionStatusPill').innerHTML =
+    '<span class="scope-tag" style="background:' + bg + ';color:' + fg + '">' + html + '</span>';
+}}
+
+async function updateGCConnectionStatus() {{
+  var pasted = (document.getElementById('gcAccessToken').value || '').trim();
+  try {{
+    var resp = await fetch('/api/v1/google-classroom/oauth/status');
+    gcServerState = await resp.json();
+  }} catch(e) {{ gcServerState = {{configured: false, connected: false}}; }}
+
+  document.getElementById('gcConnectBtn').style.display = (gcServerState.connected || !gcServerState.configured) ? 'none' : 'inline-flex';
+  document.getElementById('gcDisconnectBtn').style.display = gcServerState.connected ? 'inline-flex' : 'none';
+  var hint = document.getElementById('gcConnectHint');
+
+  if (gcServerState.connected) {{
+    gcPill('#E8F5E9', '#1B5E20', '<i class="fa-solid fa-lock"></i> Connected to Google Classroom');
+    hint.innerText = 'Connected for about ' + Math.max(1, Math.round(gcServerState.seconds_left / 60)) + ' more minutes. Nothing is stored after that.';
+  }} else if (pasted.length > 10) {{
+    gcPill('#FFF8E1', '#8D6E00', 'Using the access token you pasted (not checked until you publish)');
+  }} else if (!gcServerState.configured) {{
+    gcPill('#FFF3E0', '#E65100', '<i class="fa-solid fa-bolt"></i> Demo mode: nothing is sent to Google');
+    hint.innerText = 'Google sign-in has not been set up on this server, so exports are simulated.';
   }} else {{
-    pill.innerHTML = '<span class="scope-tag" style="background:#FFF3E0;color:#E65100"><i class="fa-solid fa-bolt"></i> ⚡ Demo Simulation Mode Active</span>';
+    gcPill('#FFF3E0', '#E65100', '<i class="fa-solid fa-bolt"></i> Demo mode: connect Google Classroom to publish for real');
   }}
+}}
+
+function connectGoogleClassroom() {{
+  window.location.href = '/api/v1/google-classroom/oauth/start';
+}}
+
+async function disconnectGoogleClassroom() {{
+  await fetch('/api/v1/google-classroom/oauth/logout', {{method: 'POST'}});
+  await updateGCConnectionStatus();
+  fetchGCCourses();
 }}
 
 function openGCModal(title, content) {{
@@ -1517,6 +1589,19 @@ function openGCModal(title, content) {{
   fetchGCCourses();
 }}
 
+(function handleClassroomReturn() {{
+  var flag = new URLSearchParams(window.location.search).get('classroom');
+  if (!flag) return;
+  history.replaceState(null, '', window.location.pathname);
+  if (flag === 'connected') {{
+    setTimeout(function() {{ showToast('Google Classroom connected.'); openGCModal(); }}, 300);
+  }} else if (flag === 'cancelled') {{
+    setTimeout(function() {{ showToast('Google Classroom was not connected. You can try again any time.'); }}, 300);
+  }} else {{
+    setTimeout(function() {{ showToast('Could not connect Google Classroom. Please try again.'); }}, 300);
+  }}
+}})();
+
 function closeGCModal() {{
   document.getElementById('gcModalBackdrop').classList.remove('open');
   document.getElementById('gcModal').style.display = 'none';
@@ -1528,6 +1613,11 @@ async function fetchGCCourses() {{
   try {{
     var resp = await fetch('/api/v1/google-classroom/courses', {{headers: headers}});
     var data = await resp.json();
+    if (!resp.ok) {{
+      showToast('⚠️ ' + (data.detail || 'Could not load your Google Classroom courses.'));
+      await updateGCConnectionStatus();
+      return;
+    }}
     if (data.courses && data.courses.length > 0) {{
       var select = document.getElementById('gcCourseSelect');
       select.innerHTML = '';
@@ -1561,7 +1651,11 @@ document.getElementById('gcPublishForm').addEventListener('submit', async functi
     document.getElementById('gcPublishForm').style.display = 'none';
     document.getElementById('gcOutboundLink').href = r.alternateLink || 'https://classroom.google.com';
     document.getElementById('gcModalSuccess').style.display = 'block';
-    showToast('🎓 Successfully published assignment to Google Classroom!');
+    document.getElementById('gcSuccessTitle').innerText = r.demo_mode ? 'Demo only: nothing was sent to Google' : 'Assignment Published!';
+    document.getElementById('gcSuccessText').innerText = r.demo_mode
+      ? 'This was a simulation. Connect Google Classroom to publish for real.'
+      : 'Your decodable reading assignment is now in your Google Classroom course.';
+    showToast(r.demo_mode ? 'Demo export complete (not sent to Google).' : '🎓 Published to Google Classroom!');
   }} else {{
     alert('Failed to publish: ' + (r.detail || 'Unknown error'));
   }}
@@ -1882,12 +1976,13 @@ function renderResult(r) {{
   var profile = r.diagnostic;
   var badges = {{
     'typical': '<span class="profile-badge profile-typical">✅ On Track</span>',
-    'dyslexia': '<span class="profile-badge profile-dyslexia">⚠️ Decoding Deficit (Georgia HB 538 Priority)</span>',
-    'hyperlexic': '<span class="profile-badge profile-hyperlexic">📚 Comprehension Focus</span>',
-    'garden_variety': '<span class="profile-badge profile-garden">🔶 Dual Support Needed</span>'
+    'decoding_weak': '<span class="profile-badge profile-dyslexia">⚠️ Decoding Below Screening Threshold</span>',
+    'language_comprehension_weak': '<span class="profile-badge profile-hyperlexic">📚 Language Comprehension Focus</span>',
+    'dual_weak': '<span class="profile-badge profile-garden">🔶 Support Needed in Both Areas</span>'
   }};
 
   var html = '<h3>' + badges[profile.reading_profile] + '</h3>';
+  html += '<p style="font-size:0.85rem;color:#555;margin:0.3rem 0 0.8rem">' + profile.caveat + '</p>';
   html += '<div class="stats-grid">';
   html += '<div class="stat"><div class="stat-num">' + (profile.decoding_score*100).toFixed(0) + '%</div><div class="stat-label">Decoding</div></div>';
   html += '<div class="stat"><div class="stat-num">' + (profile.language_comprehension_score*100).toFixed(0) + '%</div><div class="stat-label">Comprehension</div></div>';
@@ -2093,7 +2188,7 @@ async def standards(data: dict):
 @app.post("/api/sanitize_pii")
 @app.post("/tools/sanitize_pii")
 async def sanitize_pii_route(data: dict):
-    """Story 5: FERPA-compliant PII anonymizer."""
+    """Story 5: PII anonymizer designed to support FERPA obligations."""
     sanitized = sanitize_pii(data)
     return {"status": "ok", "sanitized_data": sanitized}
 

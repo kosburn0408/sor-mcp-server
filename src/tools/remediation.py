@@ -9,8 +9,14 @@ Multisensory Cue → Word Chain → Corrective Feedback → Connected Text.
 Theoretical basis:
 - Orton-Gillingham multisensory structured literacy
 - Explicit Instruction (Archer & Hughes, 2011)
-- WWC Foundational Skills Practice Guide (2016)
-- NRP Phonics findings (d=0.41-0.60)
+- WWC Foundational Skills Practice Guide (Foorman et al., 2016): strong evidence for
+  teaching sound-letter links and decoding, moderate for daily connected-text reading
+- NRP systematic phonics meta-analysis (Ehri et al., 2001): overall d = 0.41
+
+Multisensory cues (finger tapping, hand signals, etc.) are optional engagement supports.
+Reviews of Orton-Gillingham-based programs (Stevens et al., 2021) found no reliable
+advantage for the multisensory package, so the cards keep the cue brief and never let it
+replace sound-letter mapping, blending, spelling, and connected-text reading.
 """
 
 from __future__ import annotations
@@ -25,6 +31,14 @@ from src.schemas.remediation import (
     RemediationCard,
     TeacherScript,
     WordChain,
+)
+
+
+EVIDENCE_NOTE = (
+    "Evidence basis: explicit, systematic instruction in sound-letter links and decoding "
+    "(WWC Foundational Skills guide, strong evidence; NRP/Ehri et al. 2001, d = 0.41 for "
+    "systematic phonics). The multisensory cue is an optional engagement support, not an "
+    "evidence-based active ingredient (Stevens et al., 2021)."
 )
 
 
@@ -46,7 +60,7 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
                 "first vowel sound taught because it is the most stable and "
                 "frequent short vowel in early decodable text."
             ),
-            "research_basis": "NRP Phonics (d=0.41); Ehri's Phases of Word Reading (1995)",
+            "research_basis": "Systematic phonics (Ehri et al., 2001, NRP meta-analysis, d = 0.41); Ehri's phases of word reading (1995)",
         },
         "teacher_script": {
             "i_do": (
@@ -159,7 +173,7 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
                 "preceding vowel to say its long sound (its 'name'). The 'e' does "
                 "not represent a phoneme — it is a marker."
             ),
-            "research_basis": "NRP Phonics (d=0.48); Moats (2020) Speech to Print",
+            "research_basis": "Systematic phonics (Ehri et al., 2001, d = 0.41); WWC Foundational Skills guide (strong evidence for decoding instruction); Moats (2020) Speech to Print",
         },
         "teacher_script": {
             "i_do": (
@@ -191,7 +205,7 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
             "verbal_anchor": "Magic E taps the vowel: 'Say your name!'",
         },
         "word_chain": {
-            "chain": ["cap", "cape", "tape", "tap", "tape", "shape"],
+            "chain": ["cap", "cape", "cane", "can", "fan", "fine"],
             "target_pattern": "CVC ↔ CVCe — toggling short and long vowels",
             "non_example": "have (Even with silent-e, the 'a' stays short — it's a rule breaker!)",
         },
@@ -214,7 +228,7 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
                 "each sound. Unlike digraphs (sh, ch, th) where two letters make "
                 "one new sound, in 'st' in 'stop', you hear /s/ and /t/ separately."
             ),
-            "research_basis": "NRP Phonics (d=0.44); BEE Beginning Reading (Slavin et al., 2008, d=0.32)",
+            "research_basis": "Systematic phonics (Ehri et al., 2001, d = 0.41); WWC Foundational Skills guide (strong evidence for decoding instruction)",
         },
         "teacher_script": {
             "i_do": (
@@ -245,8 +259,8 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
             "verbal_anchor": "Tap each sound. Now slide them together.",
         },
         "word_chain": {
-            "chain": ["stop", "step", "stem", "steam", "stream"],
-            "target_pattern": "s-blends → st- → str- (building complexity)",
+            "chain": ["stop", "slop", "slap", "snap", "snip", "skip"],
+            "target_pattern": "Initial s-blends (st, sl, sn, sk) — change one sound at a time",
             "non_example": "ship (sh is a digraph — two letters make one sound)",
         },
         "corrective_feedback": {
@@ -268,7 +282,7 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
                 "make ONE completely new sound. 'S' and 'h' together don't say "
                 "/s/+/h/ — they say /sh/."
             ),
-            "research_basis": "NRP Phonics (d=0.41); Ehri's Consolidated Phase",
+            "research_basis": "Systematic phonics (Ehri et al., 2001, d = 0.41); Ehri's consolidated alphabetic phase",
         },
         "teacher_script": {
             "i_do": (
@@ -322,7 +336,7 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
                 "its individual sounds (phonemes). This is a critical phonemic "
                 "awareness skill that directly predicts later reading success."
             ),
-            "research_basis": "NRP Phonemic Awareness (d=0.53); Kilpatrick (2015)",
+            "research_basis": "Phonemic awareness instruction (Ehri et al., 2001, RRQ; d = 0.53 on reading, 0.59 on spelling); WWC Foundational Skills guide (strong evidence)",
         },
         "teacher_script": {
             "i_do": (
@@ -376,7 +390,7 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
                 "A prefix is a word part added to the beginning of a base word "
                 "that changes its meaning. 'un-' means 'not' or 'the opposite of.'"
             ),
-            "research_basis": "NRP Vocabulary (d=0.47); Bowers & Kirby (2010)",
+            "research_basis": "Morphological instruction (Bowers & Kirby, 2010); the NRP ran no vocabulary meta-analysis, so no pooled NRP effect size applies",
         },
         "teacher_script": {
             "i_do": (
@@ -420,6 +434,121 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
             "praise_response": "You spotted the prefix and used it to figure out the meaning!",
         },
         "connected_text": "It was unfair that Tim was unable to unlock the box.",
+    },
+    "vowel_teams": {
+        "skill_name": "Vowel Teams (ai, ay, ee, ea, oa)",
+        "grade_levels": ["2nd", "3rd"],
+        "micro_pd": {
+            "principle": "Vowel Teams — Two Letters, One Vowel Sound",
+            "explanation": (
+                "A vowel team is two letters that together spell one vowel sound, as in "
+                "'rain', 'see' and 'boat'. Teach the most common teams one at a time, and "
+                "tell students that some teams (like 'ea' in 'bread') can spell more than one "
+                "sound, so they should try the usual sound first and then flex. Avoid the "
+                "'first vowel does the talking' rule; it fails too often to rely on."
+            ),
+            "research_basis": (
+                "WWC Foundational Skills guide (strong evidence for teaching decoding and word "
+                "parts); systematic phonics (Ehri et al., 2001, d = 0.41)"
+            ),
+        },
+        "teacher_script": {
+            "i_do": (
+                "Watch me. The letters a-i sit together in 'rain'. I treat 'ai' as one team "
+                "that spells one sound, /ā/. I touch under each part: r, then the whole 'ai' "
+                "team, then n. /r/.../ā/.../n/... rain!"
+            ),
+            "we_do": (
+                "Let's do one together. Point to 'train'. Touch under t-r, then the 'ai' team, "
+                "then n. Say it with me: /t/ /r/ /ā/ /n/... train! Now you lead with 'pail'."
+            ),
+            "you_do": (
+                "Read these on your own. Underline each team first: paint, tail, wait, sail."
+            ),
+            "time_per_stage": "~1-2 min each",
+        },
+        "multisensory_cue": {
+            "name": "Team Underline",
+            "materials": "Whiteboard and marker, or word cards",
+            "procedure": (
+                "1. Student draws one smooth line under the vowel team. "
+                "2. Student traces the line and says the team's one sound. "
+                "3. Student taps the remaining sounds, then sweeps a finger under the whole "
+                "word to blend."
+            ),
+            "verbal_anchor": "Team up. Say one sound. Blend it.",
+        },
+        "word_chain": {
+            "chain": ["mail", "rail", "rain", "train", "brain", "braid"],
+            "target_pattern": "Vowel team ai — change one sound at a time",
+            "non_example": "said (ai says /e/ here — a heart word)",
+        },
+        "corrective_feedback": {
+            "error_response": (
+                "Look for the team first. Underline it — that is one sound. What sound does "
+                "the team make? Now blend the whole word again."
+            ),
+            "praise_response": "You treated the team as one sound and blended the whole word!",
+        },
+        "connected_text": "Gail waits for the mail in the rain.",
+    },
+    "r_controlled": {
+        "skill_name": "R-Controlled Vowels (ar, or, er, ir, ur)",
+        "grade_levels": ["2nd", "3rd"],
+        "micro_pd": {
+            "principle": "R-Controlled Vowels — the Vowel and r Spell One Sound",
+            "explanation": (
+                "When a vowel is followed by r in the same syllable, the vowel is neither "
+                "short nor long; the vowel and r together spell a new sound. Teach 'ar' and "
+                "'or' first. 'er', 'ir' and 'ur' all spell the same sound, so students learn "
+                "which spelling to use through word practice and spelling."
+            ),
+            "research_basis": (
+                "WWC Foundational Skills guide (strong evidence for teaching decoding and word "
+                "parts); systematic phonics (Ehri et al., 2001, d = 0.41)"
+            ),
+        },
+        "teacher_script": {
+            "i_do": (
+                "Watch me. In 'car', the a and r work as one team: 'ar' says /ar/. I touch "
+                "under c, then under the whole 'ar' team: /k/.../ar/... car! Now 'corn': c, "
+                "the 'or' team, n. /k/.../or/.../n/... corn!"
+            ),
+            "we_do": (
+                "Let's do one together. Point to 'park'. Touch p, then the 'ar' team, then k. "
+                "/p/ /ar/ /k/... park! You lead with 'fork' and I'll follow."
+            ),
+            "you_do": (
+                "Read these on your own. Box the vowel and r first: farm, cart, born, storm."
+            ),
+            "time_per_stage": "~1-2 min each",
+        },
+        "multisensory_cue": {
+            "name": "R-Team Box",
+            "materials": "Whiteboard and marker, or word cards",
+            "procedure": (
+                "1. Student draws a box around the vowel and r. "
+                "2. Student traces the box and says the one sound. "
+                "3. Student taps the remaining sounds, then sweeps a finger under the whole "
+                "word to blend."
+            ),
+            "verbal_anchor": "Box the team. Say one sound. Blend it.",
+        },
+        "word_chain": {
+            "chain": ["car", "card", "cart", "part", "park", "bark"],
+            "target_pattern": "r-controlled ar — change one sound at a time",
+            "non_example": "work (or says /er/ after w — teach later as its own pattern)",
+        },
+        "corrective_feedback": {
+            "error_response": (
+                "Find the vowel and the r. They are one team. What sound does the team make? "
+                "Say it, then blend the whole word."
+            ),
+            "praise_response": (
+                "You kept the vowel and r together as one sound and blended the whole word!"
+            ),
+        },
+        "connected_text": "Mark parked the car at the farm.",
     },
 }
 
@@ -485,6 +614,7 @@ def get_instructional_remediation(
         word_chain=WordChain(**entry["word_chain"]),
         corrective_feedback=CorrectiveFeedback(**entry["corrective_feedback"]),
         connected_text=entry["connected_text"],
+        evidence_note=EVIDENCE_NOTE,
     )
 
 

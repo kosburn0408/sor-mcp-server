@@ -224,10 +224,11 @@ def build_multisyllabic_routine(
         "example_sentence": word_data.get("sentence", f"Can you use the word '{word}' in a sentence?"),
         "connected_words": word_data.get("connected", []),
         "framework_notes": (
-            "Orton-Gillingham: syllable types provide a structured framework for "
-            "decoding multisyllabic words. Kilpatrick (2015): orthographic mapping "
-            "requires phoneme-level analysis of each syllable. NRP: systematic "
-            "phonics instruction through the syllable level yields d=0.41-0.60."
+            "Syllable types give students a structured way to decode multisyllabic words; the "
+            "WWC Foundational Skills guide rates teaching students to decode words and "
+            "analyze word parts as strong evidence. Kilpatrick (2015) discusses orthographic "
+            "mapping. Syllable division rules are heuristics with exceptions, so have students "
+            "flex between pronunciations and check against a real word."
         ),
     }
 

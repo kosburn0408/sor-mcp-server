@@ -2,7 +2,7 @@
 
 [![Live Web App](https://img.shields.io/badge/Live%20Web%20App-sor.edtechlabs.dev-purple)](https://sor.edtechlabs.dev)
 [![Standards Satchel](https://img.shields.io/badge/Standards-50%20States%20(CASE®)-orange)](https://rosetta.commongoodlt.com)
-[![FERPA Shield](https://img.shields.io/badge/FERPA-Compliant%20%26%20ZDR-green)](#-data-privacy--ferpa-shield)
+[![FERPA Shield](https://img.shields.io/badge/FERPA-Shield%20%26%20ZDR-green)](#-data-privacy--ferpa-shield)
 
 Welcome to the **Science of Reading (SoR) Teacher-First Workspace**. This platform is designed specifically for **K–3 classroom teachers, reading specialists, interventionists, and literacy coaches**. It translates over 50 years of interdisciplinary reading research (Simple View of Reading, Scarborough's Reading Rope, Five Pillars, IES/WWC Practice Guides) into low-friction, print-ready classroom assets with zero prompt engineering required.
 
@@ -67,7 +67,7 @@ When you open **[https://sor.edtechlabs.dev](https://sor.edtechlabs.dev)**, the 
 └──────────────────────────────────────────┴──────────────────────────────────────────┘
 ```
 
-Top navigation tabs also allow rapid switching between tools, while the **🔒 FERPA Compliant: PII Auto-Scrubbed** shield badge in the header ensures student data privacy is active.
+Top navigation tabs also allow rapid switching between tools, while the **🔒 FERPA Shield: PII Auto-Scrubbed** badge in the header ensures student data privacy is active.
 
 ---
 
@@ -172,17 +172,37 @@ Clicking **`Print Student Sheet`** activates specialized print CSS:
 
 ### Publishing Directly to Google Classroom
 
-You can publish decodable passages and phonics routines directly to your Google Classroom stream as an assignment:
+You can publish decodable passages and phonics routines to your Google Classroom as an assignment:
 
 1. Click **`🎓 Export to Google Classroom`** on any generated passage or routine.
-2. An interactive Google Classroom modal opens:
-   - **Google OAuth Access Token:** Paste your Google OAuth bearer token (or leave blank to test in instant Demo Mode).
-   - **Select Course:** Choose your target active class (e.g., *1st Grade Reading — Unit 3*).
-   - **Assignment Title & Instructions:** Pre-filled with your decodable story or 5-day routine script.
-   - **Points:** Set maximum points (default: 100).
-3. Click **`🎓 Publish Assignment`**:
-   - Sends a `POST` request to `https://classroom.googleapis.com/v1/courses/{courseId}/courseWork`.
-   - Displays a success state with a direct outbound link (`🔗 Open in Google Classroom`) to view the live assignment.
+2. In the window that opens, click **Connect Google Classroom** and sign in with your Google account. Google will ask you to allow two things only: seeing your own courses and creating assignments. The app cannot see students, rosters, grades or student work.
+3. Choose your course, check the title and instructions, set the points, and click **`🎓 Publish Assignment`**. You get a link to open the assignment in Classroom.
+
+Good to know:
+- **Demo mode.** If Google sign-in has not been set up on the server (see the administrator steps below), or you have not connected, the export is a simulation. The window says "Demo mode" and nothing is sent to Google.
+- **Connections are short.** The connection lasts about an hour and is kept only in the server's memory. Nothing is stored afterward, and **Disconnect** ends it right away and revokes the permission at Google.
+- **Your school's Google settings.** Some school Google Workspace accounts block apps until an administrator approves them. If Google shows "app blocked", ask your Workspace administrator to allow this app.
+
+#### Administrator setup (once per deployment)
+
+These steps use the Google Cloud Console; menu names change from time to time.
+
+1. Create a project at [console.cloud.google.com](https://console.cloud.google.com) (for example "SoR Helper").
+2. **APIs & Services → Library:** search for **Google Classroom API** and click **Enable**.
+3. **OAuth consent screen** (shown as "Google Auth Platform" in newer consoles):
+   - **User type:** choose *Internal* if every teacher signs in with accounts from your own Google Workspace domain. Choose *External* otherwise. External apps start in *Testing* (named test users only); open sign-in for everyone requires Google's app verification because the Classroom permissions are "sensitive".
+   - Fill in the app name, support email, your domain, and a link to your privacy policy.
+   - **Scopes:** add exactly `https://www.googleapis.com/auth/classroom.courses.readonly` and `https://www.googleapis.com/auth/classroom.coursework.students`.
+4. **Credentials → Create credentials → OAuth client ID → Web application.** Under **Authorized redirect URIs** add `https://YOUR-DOMAIN/api/v1/google-classroom/oauth/callback` (and `http://localhost:8093/api/v1/google-classroom/oauth/callback` for local testing). The address must match exactly.
+5. Copy the client ID and secret into the server's environment (never commit them; `.env` is git-ignored). See `.env.example`:
+
+```bash
+GOOGLE_OAUTH_CLIENT_ID=...apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_SECRET=...
+GOOGLE_OAUTH_REDIRECT_URI=https://YOUR-DOMAIN/api/v1/google-classroom/oauth/callback
+```
+
+6. Restart the web app. The export window should now show **Connect Google Classroom**. Serve the app over HTTPS in production, and treat the client secret like a password.
 
 ---
 
@@ -192,7 +212,7 @@ In the top app bar, click the **`Topic & Research Guide`** button to open the pu
 
 - **Dynamic Content:** The drawer automatically updates its theoretical background, research papers, DOIs, and key vocabulary based on whichever tab you are currently viewing!
 - **Tab Context Summary:**
-  - *Decodable Generator:* Displays Linnea Ehri's Orthographic Mapping research, NRP phonics meta-analyses ($d=0.44$), and definitions for Decodable Text, Off-Scope Words, and Heart Words.
+  - *Decodable Generator:* Displays Linnea Ehri's Orthographic Mapping research, the NRP phonics meta-analysis ($d=0.41$, Ehri et al., 2001), and definitions for Decodable Text, Off-Scope Words, and Heart Words.
   - *Phonics Routine Builder:* Displays IES/WWC Practice Guide evidence on explicit modeling (I Do / We Do / You Do).
   - *MTSS Screener:* Displays Gough & Tunmer's Simple View of Reading ($R = D \times LC$) and Georgia HB 538 literacy requirements.
   - *Visual Auditor:* Displays David Kilpatrick's research on eliminating 3-Cueing (MSV) guessing habits.
@@ -206,7 +226,8 @@ Student data privacy is enforced at both the client and server levels:
 - 🔒 **Client-Side Pre-Flight Sanitizer (`sanitizeClientPII`):** Before any data leaves your browser, student names (e.g. *Alex Smith*) and student IDs (e.g. *GA-12345*) are automatically replaced with synthetic tokens like `[STUDENT_1]`.
 - 🔔 **Toast Notifications:** A green toast popup alerts you whenever student identifiers are detected and anonymized.
 - 🛡️ **Zero Data Retention (ZDR):** No student identity mappings are saved to disk or database logs.
-- 📜 **Compliance:** Fully compliant with **FERPA**, **COPPA**, and **GDPR** right-to-erasure guidelines.
+- 📜 **Compliance:** Designed to support **FERPA**, **COPPA** and **GDPR** right-to-erasure expectations. Software cannot certify legal compliance on its own; review it with your district privacy team and data-privacy agreement.
+- ⚠️ **Limits:** The scrubber removes known name, ID, contact and address fields. It does not search free-text notes for names, so do not paste student names into free-text fields.
 
 ---
 
@@ -302,7 +323,7 @@ Add the following to your workspace or Hermes `mcp.json`:
 - `list_frameworks`: Enumerate 5 Pillars and Reading Rope.
 - `list_assessments`: Categorized assessment instruments catalog.
 - `lookup_competency`: CASE competency lookup.
-- `sanitize_pii`: FERPA-compliant student PII anonymizer.
+- `sanitize_pii`: student PII anonymizer designed to support FERPA obligations (known fields only).
 
 ### Available FastMCP Prompts (4)
 - `generate_aligned_decodable`: Generate decodable passage matching scope.

@@ -97,7 +97,7 @@ def test_story4_georgia_hb538_remediation_and_case_deep_links() -> None:
     assert response.status_code == 200
     data = response.json()
     assert "diagnostic" in data
-    assert data["diagnostic"]["reading_profile"] == "dyslexia"
+    assert data["diagnostic"]["reading_profile"] == "decoding_weak"
     assert len(data["remediations"]) > 0
 
     std_response = client.post("/api/standards", json={"description": "decode words with silent e", "state": "GA"})
@@ -159,3 +159,13 @@ def test_story6_google_classroom_publish_endpoint() -> None:
     assert data["status"] == "published"
     assert "alternateLink" in data
     assert "classroom.google.com" in data["alternateLink"]
+
+
+def test_main_page_shows_sources_and_careful_privacy_wording() -> None:
+    html = client.get("/").text
+    assert "Research behind this tool" in html
+    assert "Checked against source" in html
+    for banned in ("Fully compliant", "Student Privacy Guaranteed", "FERPA Compliant"):
+        assert banned not in html
+    assert "Not a compliance certification" in html
+    assert "demo mode unless connected" in html

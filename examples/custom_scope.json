@@ -1,0 +1,16 @@
+{
+  "name": "Example school phonics sequence (replace with your own)",
+  "units_per_grade": 6,
+  "grades": {
+    "K": {
+      "groups": [["m", "a", "s", "t"], ["i", "n", "p", "d"], ["o", "c", "k", "g"], ["e", "u", "r", "h", "b", "f", "l"], ["j", "v", "w", "x", "y", "z"]],
+      "heart_words": ["the", "a", "is", "to", "and", "i", "you", "of"]
+    },
+    "1": {
+      "groups": [["ff", "ll", "ss", "zz", "ck"], ["sh", "ch", "th", "wh"], ["ng", "nk", "qu"], ["@VCe"], ["@inflect"], ["ai", "ay", "ee", "ea"]],
+      "heart_words": ["said", "was", "they", "have", "are", "were", "there", "where"]
+    },
+    "2": { "groups": [["oa", "ow", "oe"], ["ar", "or"], ["er", "ir", "ur"], ["@multisyl"]], "heart_words": ["because", "through", "enough"] },
+    "3": { "groups": [["tion", "sion"], ["@affix"]], "heart_words": ["together", "answer"] }
+  }
+}

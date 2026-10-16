@@ -1,13 +1,17 @@
 """Privacy/PII sanitizer for Science of Reading MCP server.
 
-FERPA-compliant PII anonymization. All student PII is stripped at the
-MCP boundary before any LLM sees it. Re-identification happens only at
-output rendering time — the LLM operates exclusively on synthetic tokens.
+PII anonymization designed to support FERPA obligations. Known student PII fields are
+stripped at the MCP boundary before any LLM sees them. Re-identification happens only at
+output rendering time, so the LLM operates on synthetic tokens.
+
+Limits: this works on known field names only. It does not scan free-text values for names,
+and no software can certify legal compliance on its own.
 """
 
 from __future__ import annotations
 
 import hashlib
+import hmac
 import secrets
 import threading
 import time
@@ -21,9 +25,14 @@ PII_FIELDS: set[str] = {
     "name",
     "state_student_id",
     "ssid",
+    "student_id",
+    "student_number",
+    "local_student_id",
     "student_id_raw",
     "email",
     "email_address",
+    "parent_email",
+    "guardian_email",
     "dob",
     "date_of_birth",
     "address",
@@ -56,6 +65,10 @@ ACADEMIC_FIELDS: set[str] = {
     "attendance_pct",
     "student_token",
 }
+
+
+# Per-process secret so tokens cannot be reversed by hashing a list of likely names.
+_TOKEN_KEY = secrets.token_bytes(32)
 
 
 class PrivacyAuditLogger:
@@ -125,14 +138,20 @@ class PIIManager:
                 log_privacy_event("session_destroyed", "success", f"Session {session_id[:12]}... destroyed ({count} records purged)")
 
     def anonymize_student_record(self, data: dict[str, Any]) -> dict[str, Any]:
-        raw_name = data.get("first_name", "") + data.get("last_name", "")
-        raw_id = data.get("state_student_id", data.get("ssid", ""))
+        raw_id = str(
+            data.get("state_student_id")
+            or data.get("ssid")
+            or data.get("student_id")
+            or ""
+        )
+        raw_name = str(data.get("first_name", "")) + str(data.get("last_name", ""))
         token_seed = raw_name + raw_id
 
         if not token_seed.strip():
             student_token = f"std_{secrets.token_hex(4)}"
         else:
-            student_token = f"std_{hashlib.sha256(token_seed.encode()).hexdigest()[:8]}"
+            digest = hmac.new(_TOKEN_KEY, token_seed.encode(), hashlib.sha256).hexdigest()
+            student_token = f"std_{digest[:8]}"
 
         pii_store: dict[str, str] = {}
         for field in PII_FIELDS:
@@ -191,9 +210,13 @@ class PIIManager:
             "audit": _audit.get_summary(),
             "status": "operational",
             "compliance": {
-                "ferpa": "compliant",
-                "coppa": "compliant",
-                "gdpr_right_to_erasure": "zdr_by_default",
+                "ferpa": "designed_to_support",
+                "coppa": "designed_to_support",
+                "gdpr_right_to_erasure": "in_memory_sessions_only",
+                "note": (
+                    "Software cannot certify legal compliance. Review with your district "
+                    "privacy team. Only known PII field names are scrubbed; free text is not scanned."
+                ),
             },
         }
 

@@ -156,8 +156,9 @@ def test_verify_privacy_status() -> None:
     assert status["pii_on_disk"] is False
     assert status["pii_in_logs"] is False
     assert status["status"] == "operational"
-    assert status["compliance"]["ferpa"] == "compliant"
-    assert status["compliance"]["coppa"] == "compliant"
+    assert status["compliance"]["ferpa"] == "designed_to_support"
+    assert status["compliance"]["coppa"] == "designed_to_support"
+    assert "cannot certify" in status["compliance"]["note"]
 
 
 def run_all() -> bool:
