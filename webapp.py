@@ -37,6 +37,10 @@ import time, uvicorn
 
 from src.routes.google_classroom import router as gc_router
 
+from src.tools.scope_engine import apply_scope_from_env
+
+apply_scope_from_env()  # fail fast if SOR_SCOPE_FILE is set but invalid
+
 app = FastAPI(title="SoR Dashboard", version="4.0")
 app.include_router(gc_router)
 

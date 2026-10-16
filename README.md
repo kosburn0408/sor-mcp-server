@@ -187,9 +187,22 @@ Access locally at `http://localhost:8093` or live at `https://sor.edtechlabs.dev
 ### Running Unit Tests
 
 ```bash
-# Run complete test suite (131 tests)
+# Run complete test suite (147 tests)
 python3 -m pytest
 ```
+
+---
+
+## Use Your Own Scope and Sequence
+
+The built-in K–3 sequence is a generic example. To check texts against what your school actually teaches, supply a JSON file:
+
+```bash
+python3 server.py --scope-file examples/custom_scope.json      # MCP server
+SOR_SCOPE_FILE=examples/custom_scope.json uvicorn webapp:app   # web app
+```
+
+The file lists, for each grade (K, 1, 2, 3), ordered groups of graphemes (lowercase letters, 1–5 per grapheme) and the heart words you teach. Tokens that start with `@` switch on a rule once its group is reached: `@inflect`, `@VCe`, `@open`, `@compound`, `@y_vowel`, `@soft_c`, `@soft_g`, `@doublets`, `@affix`, `@contractions`, `@multisyl`, `@vv_split`, `@cle`. Set `units_per_grade` to match your pacing; unit N unlocks the first N/`units_per_grade` share of that grade's groups. The server refuses to start, and lists every problem, if the file is invalid. Results report the scope's `scope_name` so you can see which sequence was used.
 
 ---
 
@@ -206,7 +219,7 @@ This project aims to stay faithful to the Science of Reading research base. The 
 - **Verified numbers only.** An effect size is stored only if it was checked against its source (`verification` column in `research_papers`). Currently these are Ehri et al. (2001) systematic phonics, d = 0.41; NRP phonemic awareness on reading, d = 0.53; and Marulis & Neuman (2010) vocabulary, d = 0.88. Averages use only verified values. WWC Practice Guides report evidence levels (strong, moderate, minimal), not effect sizes, and are recorded that way.
 - **Frameworks.** Simple View of Reading (Gough & Tunmer, 1986), Active View of Reading (Duke & Cartwright, 2021), Scarborough's Reading Rope, and the NRP five pillars. The Simple View tool returns a screening profile, not a diagnosis, and recommends building language comprehension in parallel with decoding work.
 - **Multisensory and Orton-Gillingham.** Treated as optional support, not a requirement. The meta-analysis by Stevens et al. (2021) found no statistically reliable advantage on most outcomes, and multisensory components were not tested separately.
-- **Decodability.** Judged from spelling patterns against a cumulative scope. Default scope sequences (K–3) are a generic example; replace them with your program's sequence for real use. Because it reads spelling, it cannot tell that irregularly pronounced words (for example "yacht") are irregular. Grades 4–5 are not modeled and return a warning.
+- **Decodability.** Judged from spelling patterns against a cumulative scope. Default scope sequences (K–3) are a generic example; load your program's sequence with `--scope-file` for real use. Because it reads spelling, it cannot tell that irregularly pronounced words (for example "yacht") are irregular. Grades 4–5 are not modeled and return a warning.
 - **Privacy.** The tools are designed to support FERPA/COPPA-aligned workflows: known name, ID and contact fields are replaced with tokens, session mappings live in memory only, and nothing is written to disk. Free text is not scanned. This is not a compliance certification; check your district's requirements.
 
 Known gaps: the Chard, Vaughn & Tyler (2002) DOI was not confirmed, and the Slavin et al. entry was checked against the technical report, not the journal version. Each record's `notes` field says exactly what was checked.

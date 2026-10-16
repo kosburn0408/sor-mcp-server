@@ -329,6 +329,11 @@ def parse_args() -> argparse.Namespace:
         help="Bind address for --http (default 127.0.0.1; use 0.0.0.0 inside a container)",
     )
     parser.add_argument("--seed-only", action="store_true", help="Seed DuckDB database and exit")
+    parser.add_argument(
+        "--scope-file",
+        metavar="PATH",
+        help="JSON file with your school's own phonics scope and sequence (see examples/custom_scope.json)",
+    )
     parser.add_argument("--offline", action="store_true", help="Force local DuckDB mode")
     return parser.parse_args()
 
@@ -336,13 +341,25 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
+    if args.offline:
+        os.environ["SOR_OFFLINE_MODE"] = "true"
+
+    if args.scope_file:
+        os.environ["SOR_SCOPE_FILE"] = args.scope_file
+    try:
+        from src.tools.scope_engine import apply_scope_from_env
+
+        scope_name = apply_scope_from_env()
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        sys.exit(2)
+    if scope_name:
+        print(f"Using scope and sequence: {scope_name}", file=sys.stderr)
+
     if args.seed_only:
         db_path, is_new = ensure_database()
         print(f"DuckDB database successfully verified/seeded at: {db_path}")
         sys.exit(0)
-
-    if args.offline:
-        os.environ["SOR_OFFLINE_MODE"] = "true"
 
     if args.http:
         # Reuse the fully configured server (tool descriptions, prompts, resources)

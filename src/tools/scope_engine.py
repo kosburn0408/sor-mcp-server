@@ -67,6 +67,11 @@ SCOPE_GROUPS: dict[str, list[list[str]]] = {
 
 GRADE_ORDER = ["K", "1", "2", "3", "4", "5"]
 
+# How many units make up a grade. The default sequence is spread over 10 units; a
+# custom scope file can set its own number.
+UNITS_PER_GRADE = 10
+SCOPE_NAME = "Default generic K-3 sequence"
+
 # Every multi-letter grapheme the engine knows about. A letter sequence found in
 # a word that matches one of these must be read as that grapheme, and fails if it
 # has not been taught yet (so "kn" in "knight" cannot be read as k + n).
@@ -153,13 +158,13 @@ def normalize_grade(grade: str) -> str | None:
 
 
 def parse_unit(unit: str | int | None) -> int | None:
-    """Return a unit from 1 to 10, or None for the whole grade."""
+    """Return a unit from 1 to UNITS_PER_GRADE, or None for the whole grade."""
     if unit is None or str(unit).strip() == "":
         return None
     digits = "".join(ch for ch in str(unit) if ch.isdigit())
     if not digits:
         return None
-    return max(1, min(10, int(digits)))
+    return max(1, min(UNITS_PER_GRADE, int(digits)))
 
 
 def taught_scope(grade: str, unit: int | None) -> dict[str, Any]:
@@ -174,7 +179,7 @@ def taught_scope(grade: str, unit: int | None) -> dict[str, Any]:
         groups = SCOPE_GROUPS.get(g, [])
         hearts |= HEART_WORDS_BY_GRADE.get(g, set())
         if g == grade and unit is not None and groups:
-            n = max(1, math.ceil(unit / 10 * len(groups)))
+            n = max(1, math.ceil(unit / UNITS_PER_GRADE * len(groups)))
             groups = groups[:n]
         for group in groups:
             for token in group:
@@ -400,3 +405,149 @@ def all_heart_words() -> set[str]:
 
 def tokenize(text: str) -> list[str]:
     return re.findall(r"[a-zA-Z]+(?:'[a-zA-Z]+)?", text.lower())
+
+
+# ── Custom scope and sequence ───────────────────────────────────────────────
+
+KNOWN_RULES = {
+    "inflect", "VCe", "open", "compound", "y_vowel", "soft_c", "soft_g", "doublets",
+    "affix", "contractions", "multisyl", "vv_split", "cle",
+}
+_GRAPHEME_RE = re.compile(r"^[a-z]{1,5}$")
+_HEART_RE = re.compile(r"^[a-z]+(?:'[a-z]+)?$")
+_DEFAULTS: dict[str, Any] = {}
+
+
+def _atomic_from(groups_by_grade: dict[str, list[list[str]]]) -> list[str]:
+    return sorted(
+        {
+            g
+            for groups in groups_by_grade.values()
+            for group in groups
+            for g in group
+            if len(g) > 1 and not g.startswith("@")
+        }
+        | _NEVER_TAUGHT_ATOMIC,
+        key=len,
+        reverse=True,
+    )
+
+
+def validate_scope_config(config: Any) -> list[str]:
+    """Return a list of problems with a custom scope config (empty means valid)."""
+    problems: list[str] = []
+    if not isinstance(config, dict):
+        return ["The scope file must contain a JSON object."]
+    grades = config.get("grades")
+    if not isinstance(grades, dict) or not grades:
+        return ['Add a "grades" object with at least one of K, 1, 2, 3.']
+    upn = config.get("units_per_grade", 10)
+    if not isinstance(upn, int) or isinstance(upn, bool) or not 1 <= upn <= 40:
+        problems.append('"units_per_grade" must be a whole number from 1 to 40.')
+    for grade, body in grades.items():
+        if grade not in {"K", "1", "2", "3"}:
+            problems.append(f'Grade "{grade}" is not supported; use K, 1, 2 or 3.')
+            continue
+        if not isinstance(body, dict):
+            problems.append(f"Grade {grade} must be an object with groups and heart_words.")
+            continue
+        groups = body.get("groups", [])
+        if not isinstance(groups, list):
+            problems.append(f"Grade {grade}: groups must be a list of lists.")
+            groups = []
+        for i, group in enumerate(groups, start=1):
+            if not isinstance(group, list) or not group:
+                problems.append(f"Grade {grade}, group {i}: must be a non-empty list.")
+                continue
+            for token in group:
+                if not isinstance(token, str):
+                    problems.append(f"Grade {grade}, group {i}: {token!r} is not text.")
+                elif token.startswith("@"):
+                    if token[1:] not in KNOWN_RULES:
+                        problems.append(
+                            f"Grade {grade}, group {i}: unknown rule {token}. Known rules: "
+                            + ", ".join("@" + r for r in sorted(KNOWN_RULES)) + "."
+                        )
+                elif not _GRAPHEME_RE.match(token):
+                    problems.append(
+                        f'Grade {grade}, group {i}: "{token}" must be 1-5 lowercase letters.'
+                    )
+        hearts = body.get("heart_words", [])
+        if not isinstance(hearts, list) or not all(
+            isinstance(w, str) and _HEART_RE.match(w) for w in hearts
+        ):
+            problems.append(f"Grade {grade}: heart_words must be a list of lowercase words.")
+    return problems
+
+
+def configure_scope(config: dict[str, Any]) -> None:
+    """Replace the default sequence with a school's own scope and sequence.
+
+    Raises ValueError listing every problem if the config is invalid. Grades not
+    mentioned in the config teach nothing, so list every grade you use.
+    """
+    problems = validate_scope_config(config)
+    if problems:
+        raise ValueError("Invalid scope file:\n- " + "\n- ".join(problems))
+    if not _DEFAULTS:
+        _DEFAULTS.update(
+            groups={k: [list(g) for g in v] for k, v in SCOPE_GROUPS.items()},
+            hearts={k: set(v) for k, v in HEART_WORDS_BY_GRADE.items()},
+            units=UNITS_PER_GRADE,
+            name=SCOPE_NAME,
+        )
+    groups = {g: [list(x) for x in config["grades"].get(g, {}).get("groups", [])] for g in ("K", "1", "2", "3")}
+    hearts = {g: set(config["grades"].get(g, {}).get("heart_words", [])) for g in ("K", "1", "2", "3")}
+    _apply(groups, hearts, config.get("units_per_grade", 10), str(config.get("name") or "Custom scope and sequence"))
+
+
+def _apply(groups: dict, hearts: dict, units: int, name: str) -> None:
+    global UNITS_PER_GRADE, SCOPE_NAME
+    SCOPE_GROUPS.clear()
+    SCOPE_GROUPS.update(groups)
+    HEART_WORDS_BY_GRADE.clear()
+    HEART_WORDS_BY_GRADE.update(hearts)
+    ATOMIC_GRAPHEMES[:] = _atomic_from(SCOPE_GROUPS)
+    UNITS_PER_GRADE = units
+    SCOPE_NAME = name
+    try:  # keep the checker's module-level heart word set in step
+        from src.tools import decodability
+
+        decodability.MANDATORY_HEART_WORDS.clear()
+        decodability.MANDATORY_HEART_WORDS.update(all_heart_words())
+    except ImportError:
+        pass
+
+
+def reset_scope() -> None:
+    """Restore the built-in default sequence."""
+    if _DEFAULTS:
+        _apply(
+            {k: [list(g) for g in v] for k, v in _DEFAULTS["groups"].items()},
+            {k: set(v) for k, v in _DEFAULTS["hearts"].items()},
+            _DEFAULTS["units"],
+            _DEFAULTS["name"],
+        )
+
+
+def load_scope_file(path: str) -> str:
+    """Load a JSON scope file and return the scope's name."""
+    import json
+    from pathlib import Path
+
+    try:
+        config = json.loads(Path(path).read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise ValueError(f"Scope file not found: {path}") from None
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Scope file is not valid JSON: {exc}") from None
+    configure_scope(config)
+    return SCOPE_NAME
+
+
+def apply_scope_from_env() -> str | None:
+    """Load the scope file named by SOR_SCOPE_FILE, if set. Returns its name."""
+    import os
+
+    path = os.environ.get("SOR_SCOPE_FILE", "").strip()
+    return load_scope_file(path) if path else None

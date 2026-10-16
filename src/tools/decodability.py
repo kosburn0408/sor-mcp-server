@@ -13,6 +13,7 @@ from typing import Any
 from src.client.sor_client import SoRClient
 from src.config import Settings
 from src.errors import SoRAPIErrorCode, format_api_error
+from src.tools import scope_engine
 from src.tools.scope_engine import (
     all_heart_words,
     analyze_word,
@@ -191,6 +192,7 @@ def check_decodability(
         "unit": unit_n,
         "target_skill": target_skill,
         "scope_model": "cumulative_grapheme_scope_v2",
+        "scope_name": scope_engine.SCOPE_NAME,
         "scope_groups_taught": scope["groups"],
         "warnings": warnings,
         "limitations": LIMITATIONS,
