@@ -1,13 +1,13 @@
 # Science of Reading MCP Server & Teacher Workspace
 
-[![MCP](https://img.shields.io/badge/MCP-1.26+-blue)](https://modelcontextprotocol.io)
+[![MCP](https://img.shields.io/badge/MCP-1.26%2B%20(%3C2)-blue)](https://modelcontextprotocol.io)
 [![Python](https://img.shields.io/badge/Python-3.11+-green)](https://python.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-blue)](https://docker.com)
 [![Web App](https://img.shields.io/badge/Web%20App-sor.edtechlabs.dev-purple)](https://sor.edtechlabs.dev)
 [![Standards](https://img.shields.io/badge/Standards-50%20States%20(CASE®)-orange)](https://rosetta.commongoodlt.com)
 [![Google Classroom](https://img.shields.io/badge/Google%20Classroom-OAuth2%20v1-yellow)](https://classroom.google.com)
 
-Production-grade **Science of Reading** Model Context Protocol (MCP) server & Material Design 3 Web Dashboard. Bridges LLMs, K-3 teachers, and literacy specialists to evidence-based reading research (Simple View of Reading, Scarborough's Reading Rope, Five Pillars, IES/WWC Practice Guides) under Georgia HB 538 guidelines with direct **Google Classroom** coursework publishing.
+Production-grade **Science of Reading** Model Context Protocol (MCP) server & Material Design 3 Web Dashboard. Bridges LLMs, K-3 teachers, and literacy specialists to evidence-based reading research (Simple View of Reading, Active View of Reading, Scarborough's Reading Rope, Five Pillars, IES/WWC Practice Guides) under Georgia HB 538 guidelines with direct **Google Classroom** coursework publishing.
 
 🌐 **Live Web Application:** [https://sor.edtechlabs.dev](https://sor.edtechlabs.dev)  
 📖 **Comprehensive Teacher Manual:** [USER_GUIDE.md](USER_GUIDE.md)
@@ -18,7 +18,7 @@ Production-grade **Science of Reading** Model Context Protocol (MCP) server & Ma
 
 - 📖 **Task-Based 4-Quadrant Workspace:** Goal-oriented task cards for Decodable Text Generation, Explicit Phonics Routines, MTSS Remediation, and Anti-Cueing Auditing.
 - ⚡ **Dynamic Scope Fetching (< 200ms):** Grade (K–3) & Unit (1–10) scope controls query `/api/phonics_scope` to pre-fill target phonemes, taught graphemes, and irregular Heart Words.
-- 🔬 **DecodableInspector Visual Auditor:** Color-coded word badges (🟢 Green Decodable, 🟡 Yellow Heart Word, 🔴 Red Untaught/Off-Scope) with interactive phonetic breakdown hover tooltips (e.g. `ch - a - t → /tʃ/ /æ/ /t/`).
+- 🔬 **DecodableInspector Visual Auditor:** Cumulative grapheme-scope checking (a word is decodable only if every pattern in it has been taught by the selected grade/unit), anti-cueing flags and decodable substitutions. Color-coded word badges (🟢 Green Decodable, 🟡 Yellow Heart Word, 🔴 Red Untaught/Off-Scope) with interactive phonetic breakdown hover tooltips (e.g. `ch - a - t → /tʃ/ /æ/ /t/`).
 - 🎯 **Georgia HB 538 MTSS Remediation:** Screener deficit selector (Nonsense Word Fluency, Phoneme Segmentation, Vowel Teams, Consonant Blends) outputs 5-day I Do / We Do / You Do intervention cards with direct 1EdTech CASE® Rosetta deep links (`https://rosetta.commongoodlt.com/#/search?q={code}`).
 - 🖨️ **Print-First CSS (@media print):** Automatic printable student worksheet formatting using `Atkinson Hyperlegible` font (18pt–24pt, 1.6 line-spacing) with student headers (`Name: ____________ Date: ________`).
 - 🎓 **Google Classroom OAuth & Coursework Export:** Export decodable reading assignments directly to active Google Classroom streams via `GET /v1/courses` and `POST /v1/courses/{courseId}/courseWork`.
@@ -119,17 +119,17 @@ python3 server.py
 | Tool | Description |
 |---|---|
 | `get_phonics_scope` | Fetch target phonemes, taught graphemes, and heart words for grade/unit |
-| `verify_decodable_text` | Verify text decodability against phonics scope with anti-cueing guardrails |
+| `verify_decodable_text` | Check text against the graphemes taught through a grade (K–3) and optional unit; reports off-scope words, heart words, cueing flags and decodable substitutions |
 | `map_orthography` | Map words to phoneme/grapheme sequences and Orton-Gillingham syllable types |
 | `lookup_competency` | Look up CASE framework and state academic standards for a phonics skill |
 | `analyze_lexile` | Estimate Lexile score, word count, sentence complexity, and grade level |
 | `classify_vocabulary` | Classify text into Beck Tier 1/2/3 with instructional recommendations |
 | `match_word` | Single-word lookup in vocabulary corpus (tier, decodability, frequency) |
-| `search_evidence` | Query WWC/BEE/NRP research database by topic with effect sizes and DOIs |
+| `search_evidence` | Query the research database by topic; effect sizes appear only when checked against the source, with a verification status on every record |
 | `list_frameworks` | Enumerate theoretical frameworks and the 5 Pillars of Reading |
 | `list_assessments` | Browse evidence-based assessment tools (screener, diagnostic, PM, outcome) |
 | `align_standards` | Map skill descriptions to 50 U.S. state frameworks with CASE® deep links |
-| `evaluate_simple_view` | Evaluate student profile using the Simple View of Reading diagnostic formula |
+| `evaluate_simple_view` | Screening profile from decoding and language-comprehension scores (`typical`, `decoding_weak`, `language_comprehension_weak`, `dual_weak`); not a diagnosis |
 | `get_instructional_remediation` | Get structured I Do / We Do / You Do explicit remediation cards |
 | `sanitize_pii` | PII anonymization of known name/ID/contact fields before LLM processing (designed to support FERPA; does not scan free text) |
 
@@ -174,6 +174,20 @@ python3 -m pytest
 
 ---
 
+## Research Alignment & Limitations
+
+This project aims to stay faithful to the Science of Reading research base. The rules it follows:
+
+- **Verified numbers only.** An effect size is stored only if it was checked against its source (`verification` column in `research_papers`). Currently these are Ehri et al. (2001) systematic phonics, d = 0.41; NRP phonemic awareness on reading, d = 0.53; and Marulis & Neuman (2010) vocabulary, d = 0.88. Averages use only verified values. WWC Practice Guides report evidence levels (strong, moderate, minimal), not effect sizes, and are recorded that way.
+- **Frameworks.** Simple View of Reading (Gough & Tunmer, 1986), Active View of Reading (Duke & Cartwright, 2021), Scarborough's Reading Rope, and the NRP five pillars. The Simple View tool returns a screening profile, not a diagnosis, and recommends building language comprehension in parallel with decoding work.
+- **Multisensory and Orton-Gillingham.** Treated as optional support, not a requirement. The meta-analysis by Stevens et al. (2021) found no statistically reliable advantage on most outcomes, and multisensory components were not tested separately.
+- **Decodability.** Judged from spelling patterns against a cumulative scope. Default scope sequences (K–3) are a generic example; replace them with your program's sequence for real use. Because it reads spelling, it cannot tell that irregularly pronounced words (for example "yacht") are irregular. Grades 4–5 are not modeled and return a warning.
+- **Privacy.** The tools are designed to support FERPA/COPPA-aligned workflows: known name, ID and contact fields are replaced with tokens, session mappings live in memory only, and nothing is written to disk. Free text is not scanned. This is not a compliance certification; check your district's requirements.
+
+Known gaps: the Chard, Vaughn & Tyler (2002) DOI was not confirmed, and the Slavin et al. entry was checked against the technical report, not the journal version. Each record's `notes` field says exactly what was checked.
+
+---
+
 ## License & Data Privacy
 
-© 2026 EdTech Labs. All rights reserved. Student data is auto-anonymized client-side before transmission and never retained on disk.
+© 2026 EdTech Labs. All rights reserved. The web app anonymizes known name and ID patterns client-side before transmission, and the server keeps session mappings in memory only. See Research Alignment & Limitations above for what this does and does not cover.
