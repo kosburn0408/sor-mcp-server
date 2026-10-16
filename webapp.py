@@ -936,7 +936,7 @@ input:focus, select:focus, textarea:focus {{
       <strong>🗑️ Zero Data Retention (ZDR):</strong> Identity mappings and diagnostic outputs are processed statelessly in-memory. No student PII or diagnostic scores are written to disk or database logs.
     </p>
     <p style="margin-bottom:1rem">
-      <strong>📜 Legal Alignment:</strong> Fully compliant with <strong>FERPA 34 CFR § 99.31</strong>, <strong>COPPA</strong>, and <strong>GDPR Right-to-Erasure</strong> mandates.
+      <strong>📜 Legal Alignment:</strong> Designed to support <strong>FERPA (34 CFR § 99.31)</strong>, <strong>COPPA</strong> and <strong>GDPR right-to-erasure</strong> expectations. This tool cannot certify legal compliance; districts should review it against their own data-privacy agreements. The scrubber works on known name and ID fields and does not scan free-text notes.
     </p>
     <div style="background:#E8F5E9;padding:0.9rem;border-radius:var(--md-shape-corner-medium);border-left:4px solid #2E7D32;font-size:0.84rem">
       <strong>💡 District Privacy Reviewers:</strong> For full compliance documentation, inspect Section 6 of our <a href="https://github.com/kosburn0408/sor-mcp-server/blob/main/USER_GUIDE.md#6-data-privacy--ferpa-shield" target="_blank" style="color:#1B5E20;font-weight:700">USER_GUIDE.md on GitHub</a> or audit source code at <code>src/tools/privacy.py</code>.
@@ -1018,7 +1018,7 @@ input:focus, select:focus, textarea:focus {{
   </div>
   <div class="ferpa-shield-badge" onclick="openFerpaModal()" title="Click to view Zero Data Retention (ZDR) & FERPA Architecture">
     <i class="fa-solid fa-shield-halved"></i>
-    <span>🔒 FERPA Compliant: PII Auto-Scrubbed</span>
+    <span>🔒 FERPA Shield: PII Auto-Scrubbed</span>
   </div>
 </header>
 
@@ -1354,7 +1354,7 @@ input:focus, select:focus, textarea:focus {{
 
 <footer>
   <p>© 2026 EdTech Labs • Science of Reading Teacher-First Workspace</p>
-  <p style="font-size:0.8rem;color:var(--md-sys-color-secondary);margin-top:0.4rem">🔒 FERPA Compliant • Zero Data Retention • Student Privacy Guaranteed</p>
+  <p style="font-size:0.8rem;color:var(--md-sys-color-secondary);margin-top:0.4rem">🔒 FERPA Shield • No Student Data Stored on Disk • Review with Your District Privacy Team</p>
 </footer>
 
 <script>
@@ -1376,9 +1376,9 @@ var CONTEXT_GUIDES = {{
   "tab-diagnose": {{
     title: "🎯 Step 1: MTSS Screener & Georgia HB 538 Guide",
     research: {{
-      title: "Gough & Tunmer (1986); Georgia HB 538 Literacy Act",
-      summary: "Georgia HB 538 mandates universal screening and evidence-based structured literacy interventions for decoding and comprehension deficits.",
-      doi: "https://doi.org/10.1007/BF02648824"
+      title: "Gough & Tunmer (1986); Georgia Early Literacy Act (HB 538)",
+      summary: "The Simple View frames reading comprehension as decoding times language comprehension. Georgia's Early Literacy Act (HB 538) requires K-3 screening for reading deficiencies and teacher training in structured literacy. Scores here are a screening profile, not a diagnosis.",
+      doi: "https://doi.org/10.1177/074193258600700104"
     }},
     concepts: [
       {{ term: "Simple View of Reading", def: "Reading Comprehension (R) = Decoding (D) x Language Comprehension (LC)." }},
@@ -1389,8 +1389,8 @@ var CONTEXT_GUIDES = {{
   "tab-decodable": {{
     title: "📖 Step 2: Decodability & Scope Guide",
     research: {{
-      title: "Linnea Ehri (2005) & National Reading Panel (2000)",
-      summary: "Systematic explicit phonics instruction significantly improves reading proficiency (d = 0.44-0.74). Decodable text supports orthographic mapping during the full alphabetic phase.",
+      title: "Ehri, Nunes, Stahl & Willows (2001), National Reading Panel meta-analysis",
+      summary: "Systematic phonics instruction had a moderate overall effect on reading (d = 0.41), larger when it began early (d = 0.55) than after first grade (d = 0.27). The WWC Foundational Skills guide recommends having students read decodable words in isolation and in text.",
       doi: "https://doi.org/10.3102/00346543071003393"
     }},
     concepts: [
@@ -1402,9 +1402,9 @@ var CONTEXT_GUIDES = {{
   "tab-phonics": {{
     title: "🧩 Step 3: Explicit Phonics Routine Guide",
     research: {{
-      title: "National Reading Panel (2000) & WWC Practice Guide",
-      summary: "Direct explicit instruction using I Do / We Do / You Do modeling produces superior phonics acquisition compared to implicit discovery.",
-      doi: "https://ies.ed.gov/ncee/wwc/"
+      title: "WWC Foundational Skills Practice Guide (Foorman et al., 2016)",
+      summary: "The guide rates explicit teaching of sound-letter links and of decoding as strong evidence. I Do / We Do / You Do is a common way to deliver explicit instruction. Multisensory cues are optional supports, not a proven active ingredient.",
+      doi: "https://www.galiteracycenter.org/s/wwc_foundationalreading_040717.pdf"
     }},
     concepts: [
       {{ term: "I DO (Teacher Model)", def: "Clear explicit demonstration with think-aloud modeling of sound-spelling correspondences." }},
@@ -1415,9 +1415,9 @@ var CONTEXT_GUIDES = {{
   "tab-auditor": {{
     title: "🔍 Step 4: Anti-Cueing Audit Guide",
     research: {{
-      title: "Kilpatrick (2015) & WWC Anti-Cueing Meta-Analysis",
-      summary: "3-Cueing (MSV) strategies teach students to guess words from pictures or context, suppressing orthographic mapping.",
-      doi: "https://doi.org/10.1007/s11881-015-0110-3"
+      title: "WWC Foundational Skills Practice Guide (Foorman et al., 2016)",
+      summary: "The guide's strong-evidence recommendations center on teaching students to decode words from letters and word parts. Three-cueing prompts that invite guessing from pictures or context work against that goal, so this audit flags guessing prompts and off-scope words.",
+      doi: "https://www.galiteracycenter.org/s/wwc_foundationalreading_040717.pdf"
     }},
     concepts: [
       {{ term: "Anti-Cueing Guardrail", def: "Flagging and eliminating prompts that encourage guessing from pictures or initial letters." }},
@@ -1427,9 +1427,9 @@ var CONTEXT_GUIDES = {{
   "tab-vocab": {{
     title: "📚 Three-Tier Vocabulary Guide",
     research: {{
-      title: "Beck, McKeown & Kucan (2013)",
-      summary: "Explicit instruction targeting Tier 2 academic vocabulary produces very large effect sizes (d = 0.88) for word learning.",
-      doi: "https://doi.org/10.3102/0034654310377077"
+      title: "Beck, McKeown & Kucan (2013); Marulis & Neuman (2010)",
+      summary: "Beck, McKeown & Kucan describe the three-tier framework. Marulis & Neuman's meta-analysis found d = 0.88 on vocabulary measures for interventions with young children; it is not specific to Tier 2 words. Tiers marked heuristic need teacher review.",
+      doi: "https://doi.org/10.3102/0034654310377087"
     }},
     concepts: [
       {{ term: "Tier 1", def: "Basic conversational words." }},
@@ -1882,12 +1882,13 @@ function renderResult(r) {{
   var profile = r.diagnostic;
   var badges = {{
     'typical': '<span class="profile-badge profile-typical">✅ On Track</span>',
-    'dyslexia': '<span class="profile-badge profile-dyslexia">⚠️ Decoding Deficit (Georgia HB 538 Priority)</span>',
-    'hyperlexic': '<span class="profile-badge profile-hyperlexic">📚 Comprehension Focus</span>',
-    'garden_variety': '<span class="profile-badge profile-garden">🔶 Dual Support Needed</span>'
+    'decoding_weak': '<span class="profile-badge profile-dyslexia">⚠️ Decoding Below Screening Threshold</span>',
+    'language_comprehension_weak': '<span class="profile-badge profile-hyperlexic">📚 Language Comprehension Focus</span>',
+    'dual_weak': '<span class="profile-badge profile-garden">🔶 Support Needed in Both Areas</span>'
   }};
 
   var html = '<h3>' + badges[profile.reading_profile] + '</h3>';
+  html += '<p style="font-size:0.85rem;color:#555;margin:0.3rem 0 0.8rem">' + profile.caveat + '</p>';
   html += '<div class="stats-grid">';
   html += '<div class="stat"><div class="stat-num">' + (profile.decoding_score*100).toFixed(0) + '%</div><div class="stat-label">Decoding</div></div>';
   html += '<div class="stat"><div class="stat-num">' + (profile.language_comprehension_score*100).toFixed(0) + '%</div><div class="stat-label">Comprehension</div></div>';
@@ -2093,7 +2094,7 @@ async def standards(data: dict):
 @app.post("/api/sanitize_pii")
 @app.post("/tools/sanitize_pii")
 async def sanitize_pii_route(data: dict):
-    """Story 5: FERPA-compliant PII anonymizer."""
+    """Story 5: PII anonymizer designed to support FERPA obligations."""
     sanitized = sanitize_pii(data)
     return {"status": "ok", "sanitized_data": sanitized}
 

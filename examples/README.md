@@ -33,14 +33,13 @@ result = evaluate_simple_view(
 
 print(f"Profile: {result['diagnostic']['reading_profile']}")
 print(f"Deficit codes: {result['diagnostic']['deficit_codes']}")
-# → Profile: dyslexia
+# → Profile: decoding_weak  (a screening profile, not a diagnosis)
 # → Deficit codes: ['cvc_mixed', 'consonant_blends', 'consonant_digraphs']
 
 # Step 2: Get remediation cards for each deficit
 for code in result['diagnostic']['deficit_codes']:
     card = get_instructional_remediation(code, "2")
-    if "remediation_card" in card:
-        print(card["remediation_card"].to_markdown())
+    print(card.to_markdown())
 ```
 
 ---

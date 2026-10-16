@@ -45,7 +45,7 @@ services:
       - PYTHONUNBUFFERED=1
     volumes:
       - sor_data:/data
-    command: ["--http", "8080"]
+    command: ["--http", "8080", "--host", "0.0.0.0"]
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/sse')"]

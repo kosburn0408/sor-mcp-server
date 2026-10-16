@@ -79,10 +79,13 @@ def build_explicit_phonics_routine(
         "multisensory_cue": multisensory_cue or "None specified",
         "examples": phoneme_examples,
         "framework_notes": (
-            "Explicit Instruction (Archer & Hughes, 2011): I Do (modeling), "
-            "We Do (guided practice), You Do (independent practice) yields "
-            "effect sizes of d=0.57-0.69. NRP Phonics: systematic, explicit "
-            "instruction is significantly more effective than incidental teaching."
+            "Explicit instruction (Archer & Hughes, 2011): model (I Do), guided practice "
+            "(We Do), independent practice (You Do). The WWC Foundational Skills guide rates "
+            "explicit teaching of sound-letter links and decoding as strong evidence, and "
+            "systematic phonics showed d = 0.41 in the NRP meta-analysis (Ehri et al., 2001). "
+            "Multisensory cues are optional engagement supports; reviews of Orton-Gillingham "
+            "programs found no reliable advantage for the multisensory package "
+            "(Stevens et al., 2021)."
         ),
         "corrective_feedback": _get_corrective_feedback(skill_lower),
     }

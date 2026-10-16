@@ -131,7 +131,7 @@ python3 server.py
 | `align_standards` | Map skill descriptions to 50 U.S. state frameworks with CASE® deep links |
 | `evaluate_simple_view` | Evaluate student profile using the Simple View of Reading diagnostic formula |
 | `get_instructional_remediation` | Get structured I Do / We Do / You Do explicit remediation cards |
-| `sanitize_pii` | FERPA-compliant PII anonymization before LLM processing |
+| `sanitize_pii` | PII anonymization of known name/ID/contact fields before LLM processing (designed to support FERPA; does not scan free text) |
 
 ### MCP Prompts (4)
 
@@ -168,7 +168,7 @@ Access locally at `http://localhost:8093` or live at `https://sor.edtechlabs.dev
 ### Running Unit Tests
 
 ```bash
-# Run complete test suite (77 tests)
+# Run complete test suite (127 tests)
 python3 -m pytest
 ```
 

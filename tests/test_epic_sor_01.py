@@ -97,7 +97,7 @@ def test_story4_georgia_hb538_remediation_and_case_deep_links() -> None:
     assert response.status_code == 200
     data = response.json()
     assert "diagnostic" in data
-    assert data["diagnostic"]["reading_profile"] == "dyslexia"
+    assert data["diagnostic"]["reading_profile"] == "decoding_weak"
     assert len(data["remediations"]) > 0
 
     std_response = client.post("/api/standards", json={"description": "decode words with silent e", "state": "GA"})

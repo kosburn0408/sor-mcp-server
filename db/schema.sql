@@ -6,11 +6,13 @@ CREATE TABLE IF NOT EXISTS research_papers (
     title TEXT NOT NULL,
     authors TEXT,
     year INTEGER NOT NULL,
-    framework TEXT NOT NULL,  -- 'phonemic_awareness', 'phonics', 'fluency', 'vocabulary', 'comprehension', 'simple_view', 'rope'
+    framework TEXT NOT NULL,  -- 'phonemic_awareness', 'phonics', 'fluency', 'vocabulary', 'comprehension', 'simple_view', 'rope', 'foundational_skills'
     finding TEXT NOT NULL,
-    effect_size FLOAT,
+    effect_size DOUBLE,    -- NULL unless the number was checked against the source
     source TEXT NOT NULL,  -- 'WWC', 'BEE', 'NRP', 'Other'
-    url TEXT
+    url TEXT,
+    verification TEXT NOT NULL DEFAULT 'unverified',  -- 'verified' or 'unverified'
+    notes TEXT
 );
 
 CREATE TABLE IF NOT EXISTS vocabulary_corpus (

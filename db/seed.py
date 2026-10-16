@@ -1,8 +1,8 @@
 """Database seed script for Science of Reading evidence & standards repository.
 
 Populates DuckDB database with:
-- Theoretical frameworks (Simple View, Scarborough's Rope, 5 Pillars)
-- Empirical research papers with effect sizes (WWC, BEE, NRP)
+- Theoretical frameworks (Simple View, Scarborough's Rope, NRP, Active View)
+- Research sources; effect sizes only where checked against the source
 - Academic standards aligned via Common Good Learning Tools Satchel Rosetta (CASE® format)
 - Tiered vocabulary corpus (Tier 1/2/3)
 - Evidence-based reading assessments (DIBELS, Acadience, MAP)
@@ -19,19 +19,39 @@ repo_root = Path(__file__).resolve().parent.parent
 if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
-from db.database import get_connection, get_db_path
+import duckdb
+
+import db.database as _database
+from db.database import SCHEMA_PATH, get_db_path
+
+_TABLES = (
+    "theoretical_frameworks",
+    "research_papers",
+    "vocabulary_corpus",
+    "standards",
+    "assessments",
+)
 
 
-def seed_database(db_path: Path | None = None) -> Any:
-    """Seed DuckDB with theoretical frameworks, research papers, vocabulary, and standards."""
-    conn = get_connection(db_path)
+def seed_database(db_path: Path | str | None = None) -> Any:
+    """Create the schema and seed DuckDB with frameworks, research, vocabulary and standards.
 
-    # Clear existing data for fresh seed
-    conn.execute("DELETE FROM theoretical_frameworks")
-    conn.execute("DELETE FROM research_papers")
-    conn.execute("DELETE FROM vocabulary_corpus")
-    conn.execute("DELETE FROM standards")
-    conn.execute("DELETE FROM assessments")
+    Always opens its own read-write connection (the shared connection used by the tools is
+    read-only), rebuilds the tables from schema.sql so schema upgrades apply, and then resets
+    the shared connection so tools see the new data.
+    """
+    path = str(db_path or get_db_path())
+    if _database._connection is not None:
+        try:
+            _database._connection.close()
+        except Exception:
+            pass
+        _database._connection = None
+
+    conn = duckdb.connect(path)
+    for table in _TABLES:
+        conn.execute(f"DROP TABLE IF EXISTS {table}")
+    conn.execute(SCHEMA_PATH.read_text(encoding="utf-8"))
 
     # Seed theoretical frameworks
     frameworks = [
@@ -42,7 +62,7 @@ def seed_database(db_path: Path | None = None) -> Any:
             1986,
             "Reading Comprehension = Decoding (D) x Language Comprehension (LC). Both components are necessary; neither is sufficient alone.",
             "decoding, language_comprehension, reading_comprehension",
-            "https://doi.org/10.1007/BF00888399",
+            "https://doi.org/10.1177/074193258600700104",
         ),
         (
             2,
@@ -51,105 +71,169 @@ def seed_database(db_path: Path | None = None) -> Any:
             2001,
             "Visualizes reading as interconnected strands: Word Recognition strands become automatic; Language Comprehension strands become increasingly strategic.",
             "phonological_awareness, decoding, sight_recognition, background_knowledge, vocabulary, language_structures, verbal_reasoning, literacy_knowledge",
-            "https://gretchencourter.files.wordpress.com/2018/02/scarboroughs-reading-rope-2001.pdf",
+            "https://www.readingrockets.org/topics/about-reading/articles/scarboroughs-reading-rope",
         ),
         (
             3,
             "National Reading Panel 5 Pillars",
             "NRP",
             2000,
-            "Identifies 5 essential components of effective reading instruction based on rigorous scientific meta-analysis.",
+            "Identifies 5 components of effective reading instruction. The Panel ran meta-analyses for phonemic awareness, phonics and guided oral reading; it ran none for vocabulary or text comprehension, so no single pooled effect size exists per pillar.",
             "phonemic_awareness, phonics, fluency, vocabulary, comprehension",
-            "https://www.nickhd.org/publications/nrp-reports",
-        ),
-    ]
-    conn.executemany(
-        "INSERT OR IGNORE INTO theoretical_frameworks VALUES (?, ?, ?, ?, ?, ?, ?)",
-        frameworks,
-    )
-
-    # Seed research papers (id, title, authors, year, framework, finding, effect_size, source, url)
-    papers = [
-        (
-            1,
-            "National Reading Panel Meta-Analysis on Phonics Instruction",
-            "Ehri, L. C., Nunes, S. R., Stahl, S. A., & Willows, D. M.",
-            2001,
-            "phonics",
-            "Systematic phonics instruction produces significant benefits for K-1 students and struggling readers (d = 0.44 overall, d = 0.74 for K-1).",
-            0.44,
-            "National Reading Panel / Review of Educational Research",
-            "https://doi.org/10.3102/00346543071003393",
-        ),
-        (
-            2,
-            "Phonemic Awareness Instruction Helps Children Learn to Read",
-            "Ehri, L. C., Nunes, S. R., Willows, D. M., et al.",
-            2001,
-            "phonemic_awareness",
-            "Explicit phonemic awareness instruction significantly boosts decoding (d = 0.53) and spelling (d = 0.59) across all SES levels.",
-            0.53,
-            "Reading Research Quarterly",
-            "https://doi.org/10.1598/RRQ.36.3.2",
-        ),
-        (
-            3,
-            "Repeated Reading and Fluency Interventions for Struggling Readers",
-            "Chard, D. J., Vaughn, S., & Tyler, B. J.",
-            2002,
-            "fluency",
-            "Guided oral repeated reading with feedback produces substantial gains in reading rate, accuracy, and comprehension (d = 0.68).",
-            0.68,
-            "Journal of Learning Disabilities",
-            "https://doi.org/10.1177/00222194020350050101",
+            "https://www.nichd.nih.gov/publications/pubs/nrp/findings",
         ),
         (
             4,
-            "Explicit Vocabulary Instruction Meta-Analysis",
-            "Marulis, L. M., & Neuman, S. B.",
-            2010,
-            "vocabulary",
-            "Explicit vocabulary instruction targeting Tier 2 words produces very large effect sizes (d = 0.88) for word learning in young children.",
-            0.88,
-            "Review of Educational Research",
-            "https://doi.org/10.3102/0034654310377077",
-        ),
-        (
-            5,
-            "Comprehension Strategy Instruction Meta-Analysis",
-            "Shanahan, T., et al. (WWC)",
-            2010,
-            "comprehension",
-            "Teaching multiple comprehension strategies (graphic organizers, question generation, summarizing) improves text comprehension (d = 0.55).",
-            0.55,
-            "What Works Clearinghouse Practice Guide",
-            "https://ies.ed.gov/ncee/wwc/PracticeGuide/14",
-        ),
-        (
-            6,
-            "Multisyllabic Word Reading Interventions for Upper Elementary",
-            "Archer, A. L., Gleason, M. M., & Vachon, V. L.",
-            2003,
-            "phonics",
-            "Explicit instruction in syllable types and morphemic analysis significantly improves multisyllabic word reading for grades 3-5 (d = 0.62).",
-            0.62,
-            "Learning Disability Quarterly",
-            "https://doi.org/10.2307/1593644",
-        ),
-        (
-            7,
-            "Best Evidence Encyclopedia: Elementary Reading Programs",
-            "Slavin, R. E., Lake, C., Chambers, B., et al.",
-            2009,
-            "simple_view",
-            "Programs combining systematic phonics with structured cooperative learning yield strongest overall reading gains (d = 0.47).",
-            0.47,
-            "Best Evidence Encyclopedia / Review of Educational Research",
-            "https://www.bestevidence.org/reading/elem_read.htm",
+            "Active View of Reading",
+            "Duke & Cartwright",
+            2021,
+            "Extends the Simple View by adding active self-regulation and bridging processes (for example reading fluency and vocabulary knowledge used in reading) that connect word recognition and language comprehension.",
+            "word_recognition, language_comprehension, active_self_regulation, bridging_processes",
+            "https://readingrockets.org/resources/resource-library/science-reading-progresses-communicating-advances-beyond-simple-view",
         ),
     ]
     conn.executemany(
-        "INSERT OR IGNORE INTO research_papers VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO theoretical_frameworks VALUES (?, ?, ?, ?, ?, ?, ?)",
+        frameworks,
+    )
+
+    # Seed research papers
+    # (id, title, authors, year, framework, finding, effect_size, source, url, verification, notes)
+    # Effect sizes are stored only when checked against the source. Everything else is NULL.
+    papers = [
+        (
+            1,
+            "Systematic Phonics Instruction Helps Students Learn to Read: Evidence from the National Reading Panel's Meta-Analysis",
+            "Ehri, L. C., Nunes, S. R., Stahl, S. A., & Willows, D. M.",
+            2001,
+            "phonics",
+            "Systematic phonics instruction had a moderate overall effect on reading outcomes (d = 0.41). Effects were larger when instruction began early (d = 0.55) than after first grade (d = 0.27).",
+            0.41,
+            "National Reading Panel / Review of Educational Research",
+            "https://doi.org/10.3102/00346543071003393",
+            "verified",
+            "Checked against the journal abstract.",
+        ),
+        (
+            2,
+            "Phonemic Awareness Instruction Helps Children Learn to Read: Evidence from the National Reading Panel's Meta-Analysis",
+            "Ehri, L. C., Nunes, S. R., Willows, D. M., Schuster, B. V., Yaghoub-Zadeh, Z., & Shanahan, T.",
+            2001,
+            "phonemic_awareness",
+            "Immediately after training, phonemic awareness instruction showed effects of d = 0.86 on phonemic awareness, d = 0.53 on reading and d = 0.59 on spelling.",
+            0.53,
+            "National Reading Panel / Reading Research Quarterly",
+            "https://doi.org/10.1598/RRQ.36.3.2",
+            "verified",
+            "d = 0.53 is the reading outcome. Checked against the NRP report chapter.",
+        ),
+        (
+            3,
+            "A Synthesis of Research on Effective Interventions for Building Reading Fluency with Elementary Students with Learning Disabilities",
+            "Chard, D. J., Vaughn, S., & Tyler, B. J.",
+            2002,
+            "fluency",
+            "Synthesis of 24 studies. Effective interventions included an explicit model of fluent reading, repeated reading of familiar text with corrective feedback, and performance criteria for moving to harder text. No pooled effect size is reported.",
+            None,
+            "Journal of Learning Disabilities",
+            "https://doi.org/10.1177/00222194020350050101",
+            "verified",
+            "Study count and features checked against a summary of the article. The DOI was not re-checked.",
+        ),
+        (
+            4,
+            "The Effects of Vocabulary Intervention on Young Children's Word Learning: A Meta-Analysis",
+            "Marulis, L. M., & Neuman, S. B.",
+            2010,
+            "vocabulary",
+            "Overall effect of d = 0.88 on vocabulary measures for interventions with young children (pre-K and kindergarten focus). The meta-analysis does not isolate Tier 2 words.",
+            0.88,
+            "Review of Educational Research",
+            "https://doi.org/10.3102/0034654310377087",
+            "verified",
+            "Checked against the abstract. An earlier version of this entry described the result as being about Tier 2 words and carried a wrong DOI.",
+        ),
+        (
+            5,
+            "Improving Reading Comprehension in Kindergarten Through 3rd Grade (WWC Practice Guide)",
+            "Shanahan, T., et al.",
+            2010,
+            "comprehension",
+            "WWC practice guide recommending explicit teaching of comprehension strategies. Practice guides report levels of evidence rather than pooled effect sizes.",
+            None,
+            "What Works Clearinghouse Practice Guide",
+            "https://ies.ed.gov/ncee/wwc/PracticeGuide/14",
+            "unverified",
+            "Recommendation levels not re-checked. An earlier version listed d = 0.55, which practice guides do not report.",
+        ),
+        (
+            6,
+            "Decoding and Fluency: Foundation Skills for Struggling Older Readers",
+            "Archer, A. L., Gleason, M. M., & Vachon, V. L.",
+            2003,
+            "phonics",
+            "Practice-oriented article recommending instruction in decoding long words plus fluency practice such as repeated reading. It is not a meta-analysis and reports no pooled effect size.",
+            None,
+            "Learning Disability Quarterly",
+            "https://doi.org/10.2307/1593592",
+            "verified",
+            "Title, authors and citation checked. An earlier version used a different title, a DOI that did not match, and d = 0.62.",
+        ),
+        (
+            7,
+            "Effective Beginning Reading Programs: A Best-Evidence Synthesis",
+            "Slavin, R. E., Lake, C., Chambers, B., Cheung, A., & Davis, S.",
+            2009,
+            "foundational_skills",
+            "Best-evidence synthesis of beginning reading programs. Specific effect sizes were not re-checked.",
+            None,
+            "Best Evidence Encyclopedia / Review of Educational Research",
+            "https://www.bestevidence.org/reading/elem_read.htm",
+            "unverified",
+            "An earlier version listed d = 0.47 and a finding about cooperative learning that could not be traced to this source.",
+        ),
+        (
+            8,
+            "Foundational Skills to Support Reading for Understanding in Kindergarten Through 3rd Grade (WWC Practice Guide)",
+            "Foorman, B., et al.",
+            2016,
+            "foundational_skills",
+            "Evidence levels: teach students academic language skills (minimal evidence); develop awareness of the segments of sounds in speech and how they link to letters (strong); teach students to decode words, analyze word parts, and write and recognize words (strong); ensure that each student reads connected text every day (moderate). The guide recommends decodable words and texts and notes that non-decodable words essential to a text can be taught.",
+            None,
+            "What Works Clearinghouse Practice Guide",
+            "https://www.galiteracycenter.org/s/wwc_foundationalreading_040717.pdf",
+            "verified",
+            "Recommendation levels checked against the guide text. The guide reports evidence levels, not pooled effect sizes.",
+        ),
+        (
+            9,
+            "The Science of Reading Progresses: Communicating Advances Beyond the Simple View of Reading",
+            "Duke, N. K., & Cartwright, K. B.",
+            2021,
+            "simple_view",
+            "Proposes the Active View of Reading, which adds active self-regulation and bridging processes to the Simple View. Argues that language comprehension work should not wait for decoding to be secure.",
+            None,
+            "Reading Research Quarterly",
+            "https://readingrockets.org/resources/resource-library/science-reading-progresses-communicating-advances-beyond-simple-view",
+            "unverified",
+            "Title and authors confirmed from a Reading Rockets listing; the final claim paraphrases the article's argument and was not checked against the full text.",
+        ),
+        (
+            10,
+            "The Current State of the Evidence Examining the Effects of Orton-Gillingham Reading Interventions for Students With or at Risk for Word-Level Reading Disabilities",
+            "Stevens, E. A., Austin, C., Moore, C., Scammacca, N., Boucher, A. N., & Vaughn, S.",
+            2021,
+            "phonics",
+            "Meta-analysis found a positive average effect favoring Orton-Gillingham-based approaches, but not a statistically reliable one for phonological awareness, phonics, fluency or spelling, and no significant differences for vocabulary or comprehension. Multisensory components were not tested separately.",
+            None,
+            "Exceptional Children",
+            "https://readingrockets.org/resources/resource-library/current-state-evidence-examining-effects-orton-gillingham-reading",
+            "verified",
+            "Checked against a summary of the abstract; the effect size was not reported there.",
+        ),
+    ]
+    conn.executemany(
+        "INSERT INTO research_papers VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         papers,
     )
 
@@ -184,7 +268,7 @@ def seed_database(db_path: Path | None = None) -> Any:
         ("prosody", 3, 3, 4, False, "complex"),
     ]
     conn.executemany(
-        "INSERT OR IGNORE INTO vocabulary_corpus VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO vocabulary_corpus VALUES (?, ?, ?, ?, ?, ?)",
         vocab,
     )
 
@@ -262,7 +346,7 @@ def seed_database(db_path: Path | None = None) -> Any:
         ("IL", "2", "ELA", "IL.CCSS.RF.2.4", "Read with sufficient accuracy and fluency to support comprehension", "fluency"),
     ]
     conn.executemany(
-        "INSERT OR IGNORE INTO standards VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO standards VALUES (?, ?, ?, ?, ?, ?)",
         standards,
     )
 
@@ -281,13 +365,12 @@ def seed_database(db_path: Path | None = None) -> Any:
         (11, "Star Reading", "screener", "K-12", "comprehension, vocabulary", "Computer-adaptive, 15-20 min", "Scaled scores, percentile ranks, Lexile", "https://www.renaissance.com/products/star-reading/"),
     ]
     conn.executemany(
-        "INSERT OR IGNORE INTO assessments VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO assessments VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         assessments,
     )
 
     conn.commit()
-    db_path_str = db_path or get_db_path()
-    print(f"Database seeded successfully at {db_path_str}")
+    print(f"Database seeded successfully at {path}")
     print(f"  Frameworks: {conn.execute('SELECT count(*) FROM theoretical_frameworks').fetchone()[0]}")
     print(f"  Research papers: {conn.execute('SELECT count(*) FROM research_papers').fetchone()[0]}")
     print(f"  Vocabulary entries: {conn.execute('SELECT count(*) FROM vocabulary_corpus').fetchone()[0]}")

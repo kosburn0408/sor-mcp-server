@@ -36,6 +36,57 @@ TIER_2_PATTERNS: dict[str, list[str]] = {
 }
 
 
+def _grade_label(grade: int | None) -> str:
+    """Render the corpus grade integer (K=0) as a label."""
+    if grade is None:
+        return "unknown"
+    return "K" if int(grade) == 0 else str(int(grade))
+
+
+def _grade_to_int(grade: str | None) -> int | None:
+    """Parse 'K', '2', '2nd' into the corpus grade integer (K=0)."""
+    if grade is None:
+        return None
+    g = str(grade).strip().upper()
+    if g in ("K", "KINDERGARTEN"):
+        return 0
+    digits = "".join(ch for ch in g if ch.isdigit())
+    return int(digits) if digits else None
+
+
+def _load_corpus() -> dict[str, list[dict[str, Any]]]:
+    """Load the vocabulary corpus keyed by word (one entry per grade)."""
+    corpus: dict[str, list[dict[str, Any]]] = {}
+    try:
+        from db.database import get_connection
+        conn = get_connection()
+        rows = conn.execute(
+            "SELECT word, tier, frequency, decodable, grade "
+            "FROM vocabulary_corpus ORDER BY grade"
+        ).fetchall()
+    except Exception:
+        # Corpus unavailable: callers fall back to labelled heuristics.
+        return corpus
+    for word, tier, frequency, decodable, grade in rows:
+        corpus.setdefault(word.lower(), []).append({
+            "word": word,
+            "tier": int(tier),
+            "frequency_index": frequency,
+            "decodable": bool(decodable),
+            "grade": grade,
+        })
+    return corpus
+
+
+def _pick_entry(entries: list[dict[str, Any]], grade: int | None) -> dict[str, Any]:
+    """Prefer the entry for the requested grade, else the earliest grade."""
+    if grade is not None:
+        for e in entries:
+            if e["grade"] == grade:
+                return e
+    return entries[0]
+
+
 def classify_text(text: str, domain: str | None = None) -> dict[str, Any]:
     """Classify all words in a text passage into Tier 1, Tier 2, and Tier 3.
 
@@ -56,50 +107,38 @@ def classify_text(text: str, domain: str | None = None) -> dict[str, Any]:
     total_words = len(raw_words)
     word_counts = Counter(raw_words)
 
-    db_words: dict[str, dict[str, Any]] = {}
-    try:
-        from db.database import get_connection
-        conn = get_connection()
-        rows = conn.execute(
-            "SELECT word, tier, frequency_per_million, decodable, grade_level FROM vocabulary_corpus"
-        ).fetchall()
-        for r in rows:
-            db_words[r[0].lower()] = {
-                "word": r[0],
-                "tier": r[1],
-                "frequency": r[2],
-                "decodable": bool(r[3]),
-                "grade_level": r[4],
-            }
-    except Exception:
-        pass
+    corpus = _load_corpus()
 
     tier1: list[dict[str, Any]] = []
     tier2: list[dict[str, Any]] = []
     tier3: list[dict[str, Any]] = []
 
     for word, count in word_counts.most_common():
-        if word in db_words:
-            entry = db_words[word]
-            item = {"word": word, "count": count, "grade_level": entry["grade_level"]}
-            if entry["tier"] == 1:
-                tier1.append(item)
-            elif entry["tier"] == 2:
-                tier2.append(item)
-            else:
-                tier3.append(item)
+        if word in corpus:
+            entry = _pick_entry(corpus[word], None)
+            item = {
+                "word": word,
+                "count": count,
+                "grade_level": _grade_label(entry["grade"]),
+                "basis": "corpus",
+            }
+            target = {1: tier1, 2: tier2}.get(entry["tier"], tier3)
+            target.append(item)
+            continue
+
+        # Not in the curated corpus: label the result as a heuristic so teachers
+        # know it needs professional review (Beck's tiers are about utility, not length).
+        is_t2 = any(word == base or word in variants for base, variants in TIER_2_PATTERNS.items())
+        if is_t2:
+            tier2.append({"word": word, "count": count, "grade_level": "3-5", "basis": "heuristic"})
+        elif len(word) <= 4 or count > 2:
+            tier1.append({"word": word, "count": count, "grade_level": "K-2", "basis": "heuristic"})
         else:
-            is_t2 = False
-            for base, variants in TIER_2_PATTERNS.items():
-                if word in variants or word == base:
-                    tier2.append({"word": word, "count": count, "grade_level": "3-5"})
-                    is_t2 = True
-                    break
-            if not is_t2:
-                if len(word) <= 4 or count > 2:
-                    tier1.append({"word": word, "count": count, "grade_level": "K-2"})
-                else:
-                    tier3.append({"word": word, "count": count, "grade_level": "3-5"})
+            tier3.append({"word": word, "count": count, "grade_level": "3-5", "basis": "heuristic"})
+
+    heuristic_n = sum(
+        1 for group in (tier1, tier2, tier3) for w in group if w["basis"] == "heuristic"
+    )
 
     t1_count = sum(w["count"] for w in tier1)
     t2_count = sum(w["count"] for w in tier2)
@@ -129,6 +168,11 @@ def classify_text(text: str, domain: str | None = None) -> dict[str, Any]:
         "tier_3_words": tier3,
         "recommendation": rec,
         "instructional_recommendation": rec,
+        "heuristic_word_count": heuristic_n,
+        "classification_note": (
+            "Words marked basis='heuristic' are not in the curated corpus; their tier is a "
+            "rough guess and should be reviewed by a teacher before instruction."
+        ),
     }
 
 
@@ -140,41 +184,40 @@ def classify_vocabulary(text: str, domain: str | None = None) -> dict[str, Any]:
 def match_word(word: str, grade: str | None = None) -> dict[str, Any]:
     """Look up a single word in the vocabulary corpus."""
     word_clean = word.strip().lower()
-    try:
-        from db.database import get_connection
-        conn = get_connection()
-        query = "SELECT word, tier, frequency_per_million, decodable, grade_level FROM vocabulary_corpus WHERE LOWER(word) = ?"
-        row = conn.execute(query, [word_clean]).fetchone()
-        if row:
-            return {
-                "word": row[0],
-                "tier": row[1],
-                "frequency_per_million": row[2],
-                "decodable": bool(row[3]),
-                "grade_level": row[4],
-                "found": True,
-            }
-    except Exception:
-        pass
+    corpus = _load_corpus()
+    entries = corpus.get(word_clean)
+    if entries:
+        entry = _pick_entry(entries, _grade_to_int(grade))
+        return {
+            "word": entry["word"],
+            "tier": entry["tier"],
+            "frequency_index": entry["frequency_index"],
+            "decodable": entry["decodable"],
+            "grade_level": _grade_label(entry["grade"]),
+            "found": True,
+            "basis": "corpus",
+        }
 
     for base, variants in TIER_2_PATTERNS.items():
         if word_clean in variants or word_clean == base:
             return {
                 "word": word_clean,
                 "tier": 2,
-                "frequency_per_million": 100.0,
-                "decodable": True,
+                "frequency_index": None,
+                "decodable": None,
                 "grade_level": grade or "3-5",
-                "found": True,
-                "note": "Derived from academic word list",
+                "found": False,
+                "basis": "heuristic",
+                "note": "Derived from the academic word list; not in the curated corpus.",
             }
 
     return {
         "word": word_clean,
-        "tier": 1 if len(word_clean) <= 4 else 3,
-        "frequency_per_million": 10.0,
-        "decodable": True,
-        "grade_level": grade or "K-3",
+        "tier": None,
+        "frequency_index": None,
+        "decodable": None,
+        "grade_level": grade or "unknown",
         "found": False,
-        "note": "Heuristic tier classification",
+        "basis": "none",
+        "note": "Not in the curated corpus. No tier assigned; review before instruction.",
     }

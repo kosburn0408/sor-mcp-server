@@ -2,7 +2,7 @@
 
 [![Live Web App](https://img.shields.io/badge/Live%20Web%20App-sor.edtechlabs.dev-purple)](https://sor.edtechlabs.dev)
 [![Standards Satchel](https://img.shields.io/badge/Standards-50%20States%20(CASE®)-orange)](https://rosetta.commongoodlt.com)
-[![FERPA Shield](https://img.shields.io/badge/FERPA-Compliant%20%26%20ZDR-green)](#-data-privacy--ferpa-shield)
+[![FERPA Shield](https://img.shields.io/badge/FERPA-Shield%20%26%20ZDR-green)](#-data-privacy--ferpa-shield)
 
 Welcome to the **Science of Reading (SoR) Teacher-First Workspace**. This platform is designed specifically for **K–3 classroom teachers, reading specialists, interventionists, and literacy coaches**. It translates over 50 years of interdisciplinary reading research (Simple View of Reading, Scarborough's Reading Rope, Five Pillars, IES/WWC Practice Guides) into low-friction, print-ready classroom assets with zero prompt engineering required.
 
@@ -67,7 +67,7 @@ When you open **[https://sor.edtechlabs.dev](https://sor.edtechlabs.dev)**, the 
 └──────────────────────────────────────────┴──────────────────────────────────────────┘
 ```
 
-Top navigation tabs also allow rapid switching between tools, while the **🔒 FERPA Compliant: PII Auto-Scrubbed** shield badge in the header ensures student data privacy is active.
+Top navigation tabs also allow rapid switching between tools, while the **🔒 FERPA Shield: PII Auto-Scrubbed** badge in the header ensures student data privacy is active.
 
 ---
 
@@ -192,7 +192,7 @@ In the top app bar, click the **`Topic & Research Guide`** button to open the pu
 
 - **Dynamic Content:** The drawer automatically updates its theoretical background, research papers, DOIs, and key vocabulary based on whichever tab you are currently viewing!
 - **Tab Context Summary:**
-  - *Decodable Generator:* Displays Linnea Ehri's Orthographic Mapping research, NRP phonics meta-analyses ($d=0.44$), and definitions for Decodable Text, Off-Scope Words, and Heart Words.
+  - *Decodable Generator:* Displays Linnea Ehri's Orthographic Mapping research, the NRP phonics meta-analysis ($d=0.41$, Ehri et al., 2001), and definitions for Decodable Text, Off-Scope Words, and Heart Words.
   - *Phonics Routine Builder:* Displays IES/WWC Practice Guide evidence on explicit modeling (I Do / We Do / You Do).
   - *MTSS Screener:* Displays Gough & Tunmer's Simple View of Reading ($R = D \times LC$) and Georgia HB 538 literacy requirements.
   - *Visual Auditor:* Displays David Kilpatrick's research on eliminating 3-Cueing (MSV) guessing habits.
@@ -206,7 +206,8 @@ Student data privacy is enforced at both the client and server levels:
 - 🔒 **Client-Side Pre-Flight Sanitizer (`sanitizeClientPII`):** Before any data leaves your browser, student names (e.g. *Alex Smith*) and student IDs (e.g. *GA-12345*) are automatically replaced with synthetic tokens like `[STUDENT_1]`.
 - 🔔 **Toast Notifications:** A green toast popup alerts you whenever student identifiers are detected and anonymized.
 - 🛡️ **Zero Data Retention (ZDR):** No student identity mappings are saved to disk or database logs.
-- 📜 **Compliance:** Fully compliant with **FERPA**, **COPPA**, and **GDPR** right-to-erasure guidelines.
+- 📜 **Compliance:** Designed to support **FERPA**, **COPPA** and **GDPR** right-to-erasure expectations. Software cannot certify legal compliance on its own; review it with your district privacy team and data-privacy agreement.
+- ⚠️ **Limits:** The scrubber removes known name, ID, contact and address fields. It does not search free-text notes for names, so do not paste student names into free-text fields.
 
 ---
 
@@ -302,7 +303,7 @@ Add the following to your workspace or Hermes `mcp.json`:
 - `list_frameworks`: Enumerate 5 Pillars and Reading Rope.
 - `list_assessments`: Categorized assessment instruments catalog.
 - `lookup_competency`: CASE competency lookup.
-- `sanitize_pii`: FERPA-compliant student PII anonymizer.
+- `sanitize_pii`: student PII anonymizer designed to support FERPA obligations (known fields only).
 
 ### Available FastMCP Prompts (4)
 - `generate_aligned_decodable`: Generate decodable passage matching scope.

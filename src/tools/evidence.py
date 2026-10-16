@@ -23,7 +23,10 @@ FRAMEWORK_MAP: dict[str, list[str]] = {
     "scarborough": ["rope"],
     "rope": ["rope"],
     "reading rope": ["rope"],
-    "foundational skills": ["phonemic_awareness", "phonics", "fluency"],
+    "foundational skills": ["phonemic_awareness", "phonics", "fluency", "foundational_skills"],
+    "active view": ["simple_view"],
+    "orton": ["phonics"],
+    "multisensory": ["phonics"],
     "five pillars": ["phonemic_awareness", "phonics", "fluency", "vocabulary", "comprehension"],
 }
 
@@ -61,18 +64,20 @@ def search_evidence(topic: str) -> dict[str, Any]:
     if frameworks:
         placeholders = ",".join(["?"] * len(frameworks))
         query = f"""
-            SELECT id, title, authors, year, framework, finding, effect_size, source, url
+            SELECT id, title, authors, year, framework, finding, effect_size, source, url,
+                   verification, notes
             FROM research_papers
             WHERE framework IN ({placeholders})
-            ORDER BY effect_size DESC
+            ORDER BY effect_size DESC NULLS LAST, year DESC
         """
         rows = conn.execute(query, frameworks).fetchall()
     else:
         query = """
-            SELECT id, title, authors, year, framework, finding, effect_size, source, url
+            SELECT id, title, authors, year, framework, finding, effect_size, source, url,
+                   verification, notes
             FROM research_papers
             WHERE LOWER(title) LIKE ? OR LOWER(finding) LIKE ?
-            ORDER BY effect_size DESC
+            ORDER BY effect_size DESC NULLS LAST, year DESC
         """
         search_term = f"%{topic_lower}%"
         rows = conn.execute(query, [search_term, search_term]).fetchall()
@@ -89,13 +94,16 @@ def search_evidence(topic: str) -> dict[str, Any]:
             "effect_size": row[6],
             "source": row[7],
             "url": row[8],
+            "verification": row[9],
+            "notes": row[10],
         })
 
-    if papers:
-        effect_sizes = [p["effect_size"] for p in papers if p["effect_size"] is not None]
-        avg_effect = round(sum(effect_sizes) / len(effect_sizes), 2) if effect_sizes else None
-    else:
-        avg_effect = None
+    # Only average effect sizes that were checked against their source.
+    effect_sizes = [
+        p["effect_size"] for p in papers
+        if p["effect_size"] is not None and p["verification"] == "verified"
+    ]
+    avg_effect = round(sum(effect_sizes) / len(effect_sizes), 2) if effect_sizes else None
 
     framework_contexts = _get_framework_context(frameworks)
 
@@ -104,6 +112,12 @@ def search_evidence(topic: str) -> dict[str, Any]:
         "matched_pillars": frameworks if frameworks else ["full_text_search"],
         "total_papers": len(papers),
         "average_effect_size": avg_effect,
+        "effect_sizes_averaged": len(effect_sizes),
+        "evidence_policy": (
+            "Effect sizes are stored only when checked against the source. Entries with no "
+            "effect size (for example WWC practice guides, which report evidence levels) are "
+            "still listed. Effect sizes from different designs are not directly comparable."
+        ),
         "papers": papers,
         "framework_context": framework_contexts,
         "interpretation": _interpret_effect_size(avg_effect) if avg_effect is not None else None,
@@ -132,17 +146,16 @@ def _get_framework_context(frameworks: list[str]) -> list[dict[str, str]]:
 
 
 def _interpret_effect_size(d: float) -> str:
-    """Interpret Cohen's d effect size for educational research."""
+    """Describe a standardized mean difference using Cohen's conventional benchmarks."""
     if d < 0:
-        return "Negative effect — intervention was harmful or counterproductive."
-    elif d < 0.20:
-        return f"Small effect (d={d}) — statistically significant but may have limited practical impact."
-    elif d < 0.50:
-        return f"Moderate effect (d={d}) — likely to produce meaningful improvement."
-    elif d < 0.80:
-        return f"Large effect (d={d}) — strong evidence of effectiveness."
-    else:
-        return f"Very large effect (d={d}) — exceptional impact."
+        return "Negative effect: the comparison condition did better."
+    if d < 0.20:
+        return f"Negligible effect (d = {d})."
+    if d < 0.50:
+        return f"Small effect (d = {d}). Small effects can still matter at scale in education."
+    if d < 0.80:
+        return f"Moderate effect (d = {d})."
+    return f"Large effect (d = {d}). Treat very large effects with caution; they often come from narrow, researcher-made measures."
 
 
 def list_frameworks() -> dict[str, Any]:

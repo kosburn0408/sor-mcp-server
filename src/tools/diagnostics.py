@@ -158,27 +158,49 @@ def _framework_guidance(lexile: int, grade: str) -> str:
 # ── Simple View of Reading ──────────────────────────────────────────────────
 
 
+SVR_QUADRANTS: dict[str, str] = {
+    "typical": "Good decoding, good language comprehension",
+    "decoding_weak": "Weak decoding, adequate language comprehension (the quadrant Gough & Tunmer associated with dyslexia)",
+    "language_comprehension_weak": "Adequate decoding, weak language comprehension (hyperlexia-like pattern)",
+    "dual_weak": "Weak decoding and weak language comprehension (garden-variety poor reader)",
+}
+
+PROFILE_CAVEAT = (
+    "Screening profile only, not a diagnosis. Dyslexia and other reading disabilities require "
+    "a comprehensive evaluation. Scores should be proportions of a grade-level benchmark; the "
+    "threshold is a screening heuristic, not a norm."
+)
+
+
 def evaluate_simple_view(
     decoding: float,
     language_comprehension: float,
     grade: str = "1st",
+    threshold: float = 0.60,
 ) -> dict[str, Any]:
-    """Evaluate a student using the Simple View of Reading.
+    """Screen a student with the Simple View of Reading (Gough & Tunmer, 1986).
 
-    Returns reading profile (typical/dyslexia/hyperlexic/garden_variety),
-    deficit codes, and auto-attached remediation cards when decoding < 0.60.
+    Returns a quadrant profile (typical, decoding_weak, language_comprehension_weak or
+    dual_weak), a starting-point set of deficit codes, and attached remediation cards when
+    decoding is below the threshold.
 
     Args:
-        decoding: Decoding score (0.0-1.0).
-        language_comprehension: Language comprehension score (0.0-1.0).
+        decoding: Decoding score as a proportion (0.0-1.0) of a grade-level benchmark.
+        language_comprehension: Language comprehension score, same scale.
         grade: Grade level string (e.g., '1st').
+        threshold: Screening cut point for each component (default 0.60). Set it from your
+            own screener's benchmark; the default is a heuristic, not a norm.
 
     Returns:
         Dictionary with diagnostic, remediations, and next_steps.
     """
     from src.tools.remediation import get_bulk_remediations
 
-    # Validate score ranges
+    if not 0.0 < threshold <= 1.0:
+        return {
+            "error_code": "ERR_INVALID_THRESHOLD",
+            "error": f"Threshold {threshold} is outside valid range (0.0, 1.0]",
+        }
     if not 0.0 <= decoding <= 1.0:
         return {
             "error_code": "ERR_INVALID_SCORE_RANGE",
@@ -190,46 +212,55 @@ def evaluate_simple_view(
             "error": f"Language comprehension score {language_comprehension} outside valid range [0.0, 1.0]",
         }
 
-    # Determine profile
-    if decoding >= 0.60 and language_comprehension >= 0.60:
+    d_ok = decoding >= threshold
+    lc_ok = language_comprehension >= threshold
+    if d_ok and lc_ok:
         profile = "typical"
-    elif decoding < 0.60 and language_comprehension >= 0.60:
-        profile = "dyslexia"
-    elif decoding >= 0.60 and language_comprehension < 0.60:
-        profile = "hyperlexic"
+    elif not d_ok and lc_ok:
+        profile = "decoding_weak"
+    elif d_ok and not lc_ok:
+        profile = "language_comprehension_weak"
     else:
-        profile = "garden_variety"
+        profile = "dual_weak"
 
+    # Starting-point codes scaled to the threshold (0.30 / 0.45 / 0.60 at the default).
     deficit_codes: list[str] = []
-    if decoding < 0.60:
-        if decoding < 0.30:
+    if not d_ok:
+        ratio = decoding / threshold
+        if ratio < 0.5:
             deficit_codes = ["phoneme_segmentation", "cvc_mixed", "cvc_short_a"]
-        elif decoding < 0.45:
+        elif ratio < 0.75:
             deficit_codes = ["cvc_mixed", "consonant_blends", "consonant_digraphs"]
         else:
             deficit_codes = ["cvce_silent_e", "vowel_teams", "r_controlled"]
 
-    remediations = []
-    if decoding < 0.60:
-        remediations = get_bulk_remediations(deficit_codes, grade)
+    remediations = get_bulk_remediations(deficit_codes, grade) if deficit_codes else []
+    covered = {r.deficit_code for r in remediations}
+    unavailable = [c for c in deficit_codes if c not in covered]
 
     if profile == "typical":
-        next_steps = "Student is on track. Continue grade-level instruction."
-    elif profile == "dyslexia":
+        next_steps = "Scores are at or above the screening threshold. Continue grade-level instruction and keep monitoring."
+    elif profile == "decoding_weak":
         next_steps = (
-            f"Decoding deficit (score={decoding:.2f}). Use attached "
-            f"{len(remediations)} remediation cards 4-5x/week. "
-            "Administer CORE Phonics Survey. Consider Tier 2."
+            f"Decoding score ({decoding:.2f}) is below the {threshold:.2f} screening threshold. "
+            f"Use the {len(remediations)} attached remediation cards as a starting point, 4-5x/week, "
+            "and confirm placement with a diagnostic phonics survey (for example the CORE Phonics "
+            "Survey). Keep language-comprehension work (read-alouds, vocabulary, background "
+            "knowledge) going alongside decoding. Consider Tier 2 support through your MTSS process."
         )
-    elif profile == "hyperlexic":
+    elif profile == "language_comprehension_weak":
         next_steps = (
-            "Strong decoder, weak comprehender. Focus on vocabulary, "
-            "background knowledge, and read-alouds with discussion."
+            "Decoding is adequate but language comprehension is below the threshold. Focus on "
+            "vocabulary, background knowledge, and read-alouds with discussion, and monitor "
+            "motivation and strategy use (Active View of Reading, Duke & Cartwright, 2021)."
         )
     else:
         next_steps = (
-            "Dual deficit. Prioritize decoding, layer comprehension. "
-            "Tier 2 or Tier 3 intervention recommended."
+            "Both components are below the threshold. Address both at the same time: explicit "
+            "decoding instruction plus language-comprehension work (vocabulary, knowledge-building "
+            "read-alouds, discussion). Do not wait for decoding to be secure before building "
+            "language (Duke & Cartwright, 2021). Consider Tier 2 or Tier 3 support through your "
+            "MTSS process."
         )
 
     return {
@@ -237,7 +268,16 @@ def evaluate_simple_view(
             "decoding_score": decoding,
             "language_comprehension_score": language_comprehension,
             "reading_profile": profile,
+            "svr_quadrant": SVR_QUADRANTS[profile],
+            "simple_view_product": round(decoding * language_comprehension, 3),
+            "threshold": threshold,
             "deficit_codes": deficit_codes,
+            "deficit_code_note": (
+                "Suggested from the decoding score band only. Confirm with a diagnostic phonics "
+                "survey before choosing instruction."
+            ),
+            "unavailable_codes": unavailable,
+            "caveat": PROFILE_CAVEAT,
         },
         "remediations": [r.to_markdown() for r in remediations],
         "next_steps": next_steps,

@@ -4,6 +4,7 @@ Static reference content for Science of Reading frameworks:
 - Scarborough's Reading Rope
 - Simple View of Reading
 - Five Pillars of Reading (NRP)
+- Active View of Reading
 - Four-Part Processing Model
 - Syllable Division Rules (all six types)
 """
@@ -71,18 +72,40 @@ FRAMEWORKS: list[dict[str, Any]] = [
             "reading instruction through meta-analysis of empirical studies."
         ),
         "pillars": [
-            {"name": "Phonemic Awareness", "effect_size": 0.53,
+            {"name": "Phonemic Awareness",
              "description": "Ability to hear, identify, and manipulate individual sounds in spoken words."},
-            {"name": "Phonics", "effect_size": 0.41,
+            {"name": "Phonics",
              "description": "Relationship between letters (graphemes) and sounds (phonemes) in written language."},
-            {"name": "Fluency", "effect_size": 0.44,
+            {"name": "Fluency",
              "description": "Ability to read text accurately, quickly, and with proper expression."},
-            {"name": "Vocabulary", "effect_size": 0.47,
+            {"name": "Vocabulary",
              "description": "Knowledge of word meanings needed for comprehension."},
-            {"name": "Comprehension", "effect_size": 0.49,
+            {"name": "Comprehension",
              "description": "Ability to understand, remember, and communicate meaning from text."},
         ],
-        "url": "https://www.nichd.nih.gov/publications/pubs/nrp/smallbook",
+        "evidence_note": (
+            "The Panel ran meta-analyses for phonemic awareness, phonics and guided oral "
+            "reading only. It ran none for vocabulary or text comprehension, so there is no "
+            "single pooled effect size per pillar. Verified figures: phonics d = 0.41 "
+            "(Ehri et al., 2001); phonemic awareness d = 0.53 on reading and 0.59 on spelling."
+        ),
+        "url": "https://www.nichd.nih.gov/publications/pubs/nrp/findings",
+    },
+    {
+        "name": "Active View of Reading",
+        "authors": "Duke & Cartwright",
+        "year": 2021,
+        "description": (
+            "Extends the Simple View by adding active self-regulation and bridging processes "
+            "(for example reading fluency and vocabulary knowledge used in reading) that "
+            "connect word recognition and language comprehension."
+        ),
+        "strands": ["word_recognition", "language_comprehension", "active_self_regulation", "bridging_processes"],
+        "implications": [
+            "Language comprehension work (vocabulary, knowledge, read-alouds) should run alongside decoding instruction, not wait for it",
+            "Motivation, attention and strategy use shape comprehension and are worth teaching and monitoring",
+        ],
+        "url": "https://readingrockets.org/resources/resource-library/science-reading-progresses-communicating-advances-beyond-simple-view",
     },
     {
         "name": "Four-Part Processing Model",

@@ -65,9 +65,13 @@ async def get_phonics_scope_tool(grade_level: str, unit: str = "1") -> dict[str,
 
 @mcp.tool(
     name="verify_decodable_text",
-    description="Verify text decodability against a phonics scope with anti-cueing guardrails and decodable substitutions.",
+    description=(
+        "Verify text decodability against a cumulative grapheme-phoneme scope. Pass unit (1-10) to "
+        "restrict to patterns taught so far; omit it to use the whole grade. Returns per-word "
+        "analysis, taught heart words, off-scope words, cueing risk flags and decodable substitutions."
+    ),
 )
-async def verify_decodable_text_tool(text: str, grade_level: str, unit: str = "1") -> dict[str, Any]:
+async def verify_decodable_text_tool(text: str, grade_level: str, unit: str | None = None) -> dict[str, Any]:
     from src.tools.decodability import verify_decodable_text
     return await verify_decodable_text(text=text, grade_level=grade_level, unit=unit, client=get_client(), settings=settings)
 
@@ -155,18 +159,24 @@ def align_standards_tool(description: str, state: str = "GA", grade: str | None 
 
 @mcp.tool(
     name="evaluate_simple_view",
-    description="Diagnostic evaluation based on the Simple View of Reading (Decoding x Language Comprehension = Reading Comprehension).",
+    description=(
+        "Screening-level profile based on the Simple View of Reading (Decoding x Language "
+        "Comprehension = Reading Comprehension). Scores are proportions (0-1) of a grade-level "
+        "benchmark, not norms. Not a diagnosis; confirm with a diagnostic phonics survey."
+    ),
 )
 def evaluate_simple_view_tool(
     decoding_score: float,
     language_comp_score: float,
     student_grade: str = "1",
+    threshold: float = 0.60,
 ) -> dict[str, Any]:
     from src.tools.diagnostics import evaluate_simple_view
     return evaluate_simple_view(
-        decoding_score=decoding_score,
-        language_comp_score=language_comp_score,
-        student_grade=student_grade,
+        decoding=decoding_score,
+        language_comprehension=language_comp_score,
+        grade=student_grade,
+        threshold=threshold,
     )
 
 
@@ -175,13 +185,24 @@ def evaluate_simple_view_tool(
     description="Get evidence-based instructional remediation routine based on student deficit profile.",
 )
 def get_instructional_remediation_tool(deficit_code: str, grade_level: str = "1") -> dict[str, Any]:
-    from src.tools.remediation import get_instructional_remediation
-    return get_instructional_remediation(deficit_code=deficit_code, grade_level=grade_level)
+    from src.tools.remediation import (
+        get_instructional_remediation,
+        list_available_remediations,
+    )
+    try:
+        card = get_instructional_remediation(deficit_code=deficit_code, grade_level=grade_level)
+    except ValueError as exc:
+        return {
+            "error_code": "ERR_UNKNOWN_DEFICIT_CODE",
+            "error": str(exc),
+            "available": list_available_remediations()["remediations"],
+        }
+    return {"status": "ok", "card": card.model_dump(), "markdown": card.to_markdown()}
 
 
 @mcp.tool(
     name="sanitize_pii",
-    description="FERPA-compliant student PII anonymizer. Strips names, student IDs, and emails before LLM processing.",
+    description="Student PII anonymizer designed to support FERPA obligations. Strips known name, ID, email, phone and address fields before LLM processing. It does not scan free-text values for names."
 )
 def sanitize_pii_tool(data: dict[str, Any]) -> dict[str, Any]:
     from src.tools.privacy import sanitize_pii
@@ -302,6 +323,11 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--http", type=int, metavar="PORT", help="Run with HTTP/SSE transport")
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Bind address for --http (default 127.0.0.1; use 0.0.0.0 inside a container)",
+    )
     parser.add_argument("--seed-only", action="store_true", help="Seed DuckDB database and exit")
     parser.add_argument("--offline", action="store_true", help="Force local DuckDB mode")
     return parser.parse_args()
@@ -319,46 +345,13 @@ def main() -> None:
         os.environ["SOR_OFFLINE_MODE"] = "true"
 
     if args.http:
-        global mcp
-        mcp = FastMCP(
-            name="Science of Reading",
-            host="0.0.0.0",
-            port=args.http,
-            instructions="Evidence-based literacy analysis tools for LLMs.",
-        )
-        _register_all(mcp)
+        # Reuse the fully configured server (tool descriptions, prompts, resources)
+        # rather than rebuilding a second instance with fewer details.
+        mcp.settings.host = args.host
+        mcp.settings.port = args.http
         mcp.run(transport="sse")
     else:
         mcp.run(transport="stdio")
-
-
-def _register_all(server: FastMCP) -> None:
-    server.tool(name="get_phonics_scope")(get_phonics_scope_tool)
-    server.tool(name="verify_decodable_text")(verify_decodable_text_tool)
-    server.tool(name="map_orthography")(map_orthography_tool)
-    server.tool(name="lookup_competency")(lookup_competency_tool)
-    server.tool(name="analyze_lexile")(analyze_lexile_tool)
-    server.tool(name="classify_vocabulary")(classify_vocabulary_tool)
-    server.tool(name="match_word")(match_word_tool)
-    server.tool(name="search_evidence")(search_evidence_tool)
-    server.tool(name="list_frameworks")(list_frameworks_tool)
-    server.tool(name="list_assessments")(list_assessments_tool)
-    server.tool(name="align_standards")(align_standards_tool)
-    server.tool(name="evaluate_simple_view")(evaluate_simple_view_tool)
-    server.tool(name="get_instructional_remediation")(get_instructional_remediation_tool)
-    server.tool(name="sanitize_pii")(sanitize_pii_tool)
-
-    server.prompt(name="generate_aligned_decodable")(generate_aligned_decodable_prompt)
-    server.prompt(name="explicit_phonics_routine")(explicit_phonics_routine_prompt)
-    server.prompt(name="vocabulary_tier_routine")(vocabulary_tier_routine_prompt)
-    server.prompt(name="standards_alignment_routine")(standards_alignment_routine_prompt)
-
-    server.resource("sor://frameworks")(get_frameworks_resource)
-    server.resource("sor://frameworks/syllable-rules")(get_syllable_rules_resource)
-    server.resource("sor://word-lists")(get_word_lists_resource)
-    server.resource("sor://assessments")(get_assessments_resource)
-    server.resource("sor://standards-satchel")(get_standards_satchel_resource)
-    server.resource("sor://evidence/meta-analyses")(get_meta_analyses_resource)
 
 
 if __name__ == "__main__":
