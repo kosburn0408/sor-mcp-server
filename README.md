@@ -14,6 +14,25 @@ Production-grade **Science of Reading** Model Context Protocol (MCP) server & Ma
 
 ---
 
+## Who It's For and How Teachers Use It
+
+**The problem:** teachers are told to use decodable text and evidence-based routines, but have no quick way to check a passage against the phonics their class has actually been taught, or to see the research behind a practice.
+
+**What it does:** paste a passage, choose a grade (K–3) and unit, and see which words are in scope, which are heart words to pre-teach, which are not taught yet, and what decodable words could replace them. Then pull a 5-day I Do / We Do / You Do routine for the gap, print a student sheet or publish to Google Classroom, and bring cited research to team meetings.
+
+| Who | What they use it for |
+|---|---|
+| Classroom K–3 teachers | Check texts (including AI-written ones) before class; get ready-made routines |
+| Interventionists and literacy coaches | Consistent scope check and routines across a team; MTSS screening profile and next steps |
+| School and district leaders | Audit materials and vendor claims against the same cited sources |
+| EdTech builders | Call the tools from any MCP-capable AI client so checks live where teachers already work |
+
+**A week in practice:** Monday check the passage; Tuesday run the routine; Wednesday print or publish; Friday screen and plan for the team meeting.
+
+**Honest positioning:** the screening profile is a starting point, not a diagnosis; decodability is judged from spelling patterns against a generic K–3 sequence (swap in your program's); privacy tools are designed to support FERPA-aligned workflows and are not a compliance certification. See Research Alignment & Limitations below.
+
+---
+
 ## Key Features & Capabilities
 
 - 📖 **Task-Based 4-Quadrant Workspace:** Goal-oriented task cards for Decodable Text Generation, Explicit Phonics Routines, MTSS Remediation, and Anti-Cueing Auditing.
@@ -171,6 +190,12 @@ Access locally at `http://localhost:8093` or live at `https://sor.edtechlabs.dev
 # Run complete test suite (127 tests)
 python3 -m pytest
 ```
+
+---
+
+## Standards Alignment (current status)
+
+The `lookup_competency` / `align_standards` tools use a small seeded table of Georgia ELA codes in the older `ELAGSE…` format, with links that open a search on the CASE Network's Rosetta site. The server does **not** yet read live CASE data from Georgia's CASE server (`case.georgiastandards.org`), and the `identifier` values it generates are local placeholders, not official CASE GUIDs. Georgia's current K–12 ELA standards (full implementation 2025–26) use different codes (for example `1.F.P.2`, "Decoding with Phonics") published as CASE packages. Treat the standards output as a convenience pointer until it is connected to the official source.
 
 ---
 
