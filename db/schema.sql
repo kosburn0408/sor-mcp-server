@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS research_papers (
     effect_size DOUBLE,    -- NULL unless the number was checked against the source
     source TEXT NOT NULL,  -- 'WWC', 'BEE', 'NRP', 'Other'
     url TEXT,
-    verification TEXT NOT NULL DEFAULT 'unverified',  -- 'verified' or 'unverified'
+    verification TEXT NOT NULL DEFAULT 'unverified',  -- 'verified', 'partial' or 'unverified'
     notes TEXT
 );
 

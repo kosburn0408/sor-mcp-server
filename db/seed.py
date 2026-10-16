@@ -137,7 +137,7 @@ def seed_database(db_path: Path | str | None = None) -> Any:
             None,
             "Journal of Learning Disabilities",
             "https://doi.org/10.1177/00222194020350050101",
-            "verified",
+            "partial",
             "Study count and features checked against a summary of the article. The DOI could not be confirmed in this review; the journal citation is Journal of Learning Disabilities, 35(5).",
         ),
         (
@@ -189,7 +189,7 @@ def seed_database(db_path: Path | str | None = None) -> Any:
             None,
             "Best Evidence Encyclopedia / Johns Hopkins University technical report (ERIC ED527637)",
             "https://files.eric.ed.gov/fulltext/ED527637.pdf",
-            "verified",
+            "partial",
             "Title, authors, date and the phonics conclusion checked against the report text; the journal version was not checked, and no effect sizes are stored. An earlier version listed d = 0.47 and a finding about cooperative learning that could not be traced to this source.",
         ),
         (

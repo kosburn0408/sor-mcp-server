@@ -122,7 +122,7 @@ def _query_research(base: Path):
 
         papers = []
         for row in conn.execute(
-            "SELECT id, title, authors, year, framework, finding, effect_size, source, url "
+            "SELECT id, title, authors, year, framework, finding, effect_size, source, url, verification, notes "
             "FROM research_papers ORDER BY id"
         ).fetchall():
             papers.append({
@@ -135,6 +135,8 @@ def _query_research(base: Path):
                 "effect_size": round(row[6], 2) if row[6] else None,
                 "source": row[7],
                 "url": row[8] or "",
+                "verification": row[9] or "unverified",
+                "notes": row[10] or "",
             })
 
         conn.close()
@@ -1018,7 +1020,7 @@ input:focus, select:focus, textarea:focus {{
   </div>
   <div class="ferpa-shield-badge" onclick="openFerpaModal()" title="Click to view Zero Data Retention (ZDR) & FERPA Architecture">
     <i class="fa-solid fa-shield-halved"></i>
-    <span>🔒 FERPA Shield: PII Auto-Scrubbed</span>
+    <span>🔒 Privacy Shield: Known Name/ID Fields Scrubbed</span>
   </div>
 </header>
 
@@ -1180,7 +1182,7 @@ input:focus, select:focus, textarea:focus {{
       <div style="background:#F3EDF7;border:1px solid #E8DEF8;border-radius:var(--md-shape-corner-medium);padding:0.9rem 1.1rem;margin-top:1.2rem;font-size:0.84rem;color:#49454F;display:flex;align-items:flex-start;gap:0.7rem">
         <i class="fa-solid fa-shield-halved" style="color:var(--md-sys-color-primary);font-size:1.2rem;margin-top:0.1rem"></i>
         <div>
-          <strong>🔒 FERPA Zero Data Retention (ZDR) Active:</strong> Diagnostic profiles are generated statelessly in memory to protect student privacy. To track 6-week MTSS progress (Rate of Improvement / ROI), click <strong>"Export to Google Classroom"</strong> or <strong>"Print Student Sheet"</strong> to log in your district SIS/LMS.
+          <strong>🔒 FERPA Zero Data Retention (ZDR) Active:</strong> Diagnostic profiles are generated statelessly in memory to protect student privacy. To track 6-week MTSS progress (Rate of Improvement / ROI), click <strong>"Export to Google Classroom"</strong> (demo mode unless connected) or <strong>"Print Student Sheet"</strong> and record results in your district SIS/LMS. This tool does not keep them, so whatever you print, export or copy is then covered by your district's own data policies.
         </div>
       </div>
 
@@ -1352,14 +1354,44 @@ input:focus, select:focus, textarea:focus {{
 
 </div><!-- /container -->
 
+<section id="sourcesSection" style="max-width:1100px;margin:2.5rem auto 0;padding:0 1rem">
+  <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.4rem">Research behind this tool</h2>
+  <p style="font-size:0.88rem;color:var(--md-sys-color-secondary);margin-bottom:1rem">Each source shows whether its details were checked against the original. Effect sizes appear only when they match the study. The default grade/unit sequence is a generic example, not any particular program's.</p>
+  <div id="sourcesList" style="display:grid;gap:0.7rem"></div>
+</section>
+
 <footer>
   <p>© 2026 EdTech Labs • Science of Reading Teacher-First Workspace</p>
-  <p style="font-size:0.8rem;color:var(--md-sys-color-secondary);margin-top:0.4rem">🔒 FERPA Shield • No Student Data Stored on Disk • Review with Your District Privacy Team</p>
+  <p style="font-size:0.8rem;color:var(--md-sys-color-secondary);margin-top:0.4rem">🔒 Designed to support FERPA-aligned use • The server does not store student data • Not a compliance certification: review with your district privacy team</p>
 </footer>
 
 <script>
 var FRAMEWORKS = {FRAMEWORKS_JSON};
 var PAPERS = {PAPERS_JSON};
+(function renderSources() {{
+  var host = document.getElementById('sourcesList');
+  if (!host) return;
+  PAPERS.forEach(function(p) {{
+    var card = document.createElement('div');
+    card.style.cssText = 'border:1px solid var(--md-sys-color-surface-variant);border-radius:12px;padding:0.8rem 1rem;background:#fff';
+    var head = document.createElement('div');
+    head.style.cssText = 'display:flex;justify-content:space-between;gap:0.8rem;flex-wrap:wrap;align-items:baseline';
+    var title = document.createElement(p.url && /^https?:/.test(p.url) ? 'a' : 'span');
+    if (title.tagName === 'A') {{ title.href = p.url; title.target = '_blank'; title.rel = 'noopener'; }}
+    title.style.cssText = 'font-weight:700;font-size:0.92rem';
+    title.textContent = (p.authors ? p.authors + ' ' : '') + '(' + p.year + '). ' + p.title;
+    var badge = document.createElement('span');
+    var ok = p.verification === 'verified';
+    badge.style.cssText = 'font-size:0.74rem;font-weight:700;padding:0.15rem 0.55rem;border-radius:999px;background:' + (ok ? '#CDE8D8' : '#F6E3A6');
+    badge.textContent = ok ? 'Checked against source' : (p.verification === 'partial' ? 'Partly checked' : 'Not fully checked');
+    head.appendChild(title); head.appendChild(badge);
+    var body = document.createElement('div');
+    body.style.cssText = 'font-size:0.85rem;color:#49454F;margin-top:0.35rem';
+    body.textContent = p.finding + (p.effect_size !== null && p.effect_size !== undefined ? ' (Effect size d = ' + p.effect_size + ')' : '');
+    card.appendChild(head); card.appendChild(body);
+    host.appendChild(card);
+  }});
+}})();
 var PILLAR_FINDINGS = {PILLAR_FINDINGS_JSON};
 
 var TAB_NAMES = {{

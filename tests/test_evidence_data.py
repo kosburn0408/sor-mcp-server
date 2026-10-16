@@ -59,3 +59,20 @@ def test_seed_works_on_a_fresh_database(tmp_path, monkeypatch: pytest.MonkeyPatc
     finally:
         conn.close()
     monkeypatch.setattr(database, "_connection", None)
+
+
+def test_shipped_database_matches_the_seed(tmp_path) -> None:
+    """The committed .duckdb file must be regenerated whenever db/seed.py changes."""
+    from pathlib import Path
+
+    fresh = tmp_path / "fresh.duckdb"
+    seed_database(fresh)
+    shipped = Path(__file__).resolve().parent.parent / "db" / "sor_evidence.duckdb"
+    query = "SELECT id, verification, url, effect_size FROM research_papers ORDER BY id"
+    a = duckdb.connect(str(fresh), read_only=True)
+    b = duckdb.connect(str(shipped), read_only=True)
+    try:
+        assert a.execute(query).fetchall() == b.execute(query).fetchall()
+    finally:
+        a.close()
+        b.close()

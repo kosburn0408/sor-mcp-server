@@ -187,7 +187,7 @@ Access locally at `http://localhost:8093` or live at `https://sor.edtechlabs.dev
 ### Running Unit Tests
 
 ```bash
-# Run complete test suite (127 tests)
+# Run complete test suite (131 tests)
 python3 -m pytest
 ```
 

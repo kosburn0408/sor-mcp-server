@@ -97,3 +97,27 @@ def test_grade_4_and_5_are_marked_as_not_modeled() -> None:
 def test_word_analysis_is_returned_per_unique_word() -> None:
     result = check_decodability("cat cat dog", "K")
     assert [w["word"] for w in result["word_analysis"]] == ["cat", "dog"]
+
+
+def test_displayed_scope_matches_the_checker_scope() -> None:
+    """The scope shown to teachers must be the one the checker uses."""
+    import asyncio
+
+    from src.tools.phonics import get_phonics_scope
+
+    shown = asyncio.run(get_phonics_scope("1", "3"))
+    used = scope_for("1", 3)
+    assert set(shown["taught_graphemes"]) == used["graphemes"]
+    assert {w["word"] for w in shown["heart_words"]} == used["heart_words"]
+    # Words the display lists as taught are never reported off-scope by the checker.
+    assert analyze_word("shop", used)["status"] == "decodable"
+    assert "sh" in shown["taught_graphemes"] and "m" in shown["taught_graphemes"]
+
+
+def test_scope_display_flags_ungraded_levels() -> None:
+    import asyncio
+
+    from src.tools.phonics import get_phonics_scope
+
+    shown = asyncio.run(get_phonics_scope("4", "1"))
+    assert "not modeled" in shown["note"]
