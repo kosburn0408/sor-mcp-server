@@ -2,7 +2,7 @@
 
 [![Live Web App](https://img.shields.io/badge/Live%20Web%20App-sor.edtechlabs.dev-purple)](https://sor.edtechlabs.dev)
 [![Standards Satchel](https://img.shields.io/badge/Standards-50%20States%20(CASE®)-orange)](https://rosetta.commongoodlt.com)
-[![FERPA Shield](https://img.shields.io/badge/FERPA-Compliant%20%26%20ZDR-green)](#-data-privacy--ferpa-shield)
+[![Data Minimization](https://img.shields.io/badge/Student%20data-minimized%2C%20not%20stored-green)](#data-privacy)
 
 Welcome to the **Science of Reading (SoR) Teacher-First Workspace**. This platform is designed specifically for **K–3 classroom teachers, reading specialists, interventionists, and literacy coaches**. It translates over 50 years of interdisciplinary reading research (Simple View of Reading, Scarborough's Reading Rope, Five Pillars, IES/WWC Practice Guides) into low-friction, print-ready classroom assets with zero prompt engineering required.
 
@@ -14,9 +14,9 @@ Welcome to the **Science of Reading (SoR) Teacher-First Workspace**. This platfo
 1. [Science of Reading Core Foundations](#science-of-reading-core-foundations)
 2. [Teacher Workspace Architecture & Navigation](#teacher-workspace-architecture--navigation)
 3. [Step-by-Step Teacher Workflows](#step-by-step-teacher-workflows)
-   - [Quadrant 1: Decodable Text Generator & Scope Verifier](#quadrant-1-decodable-text-generator--scope-verifier)
+   - [Quadrant 1: Decodable Text Checker](#quadrant-1-decodable-text-checker)
    - [Quadrant 2: Explicit Phonics Routine Builder](#quadrant-2-explicit-phonics-routine-builder)
-   - [Quadrant 3: MTSS Screener & Georgia HB 538 Remediation](#quadrant-3-mtss-screener--georgia-hb-538-remediation)
+   - [Quadrant 3: MTSS Screener & Intervention Planning](#quadrant-3-mtss-screener--intervention-planning)
    - [Quadrant 4: Decodability & Anti-Cueing Auditor](#quadrant-4-decodability--anti-cueing-auditor)
    - [Workspace 5: Three-Tier Vocabulary Classifier](#workspace-5-three-tier-vocabulary-classifier)
    - [Workspace 6: State Standards Alignment (CASE® Network)](#workspace-6-state-standards-alignment-case-network)
@@ -24,7 +24,7 @@ Welcome to the **Science of Reading (SoR) Teacher-First Workspace**. This platfo
    - [Printable Student Worksheets (@media print)](#printable-student-worksheets-media-print)
    - [Publishing Directly to Google Classroom](#publishing-directly-to-google-classroom)
 5. [Context-Aware Dynamic Left Research Drawer](#context-aware-dynamic-left-research-drawer)
-6. [Data Privacy & FERPA Shield](#data-privacy--ferpa-shield)
+6. [Data Privacy](#data-privacy)
 7. [MCP Server Integration for AI Agents](#mcp-server-integration-for-ai-agents)
 
 ---
@@ -57,36 +57,39 @@ When you open **[https://sor.edtechlabs.dev](https://sor.edtechlabs.dev)**, the 
 
 ```
 ┌──────────────────────────────────────────┬──────────────────────────────────────────┐
-│ 📖 Decodable Text Generator              │ 🧩 Explicit Phonics Routine Builder       │
+│ 📖 Decodable Text Checker                │ 🧩 Explicit Phonics Routine Builder       │
 │ Create & audit stories using taught GPCs │ Generate 5-day I Do / We Do / You Do     │
-│ with auto-fetched grade scope (< 200ms)  │ scripts with multisensory cues.          │
+│ against the taught scope & sequence.     │ scripts with multisensory cues.          │
 ├──────────────────────────────────────────┼──────────────────────────────────────────┤
 │ 🎯 MTSS / Screener & Remediation         │ 🔍 Decodability & Anti-Cueing Auditor    │
 │ Translate DIBELS scores into Georgia     │ Visual proof inspector with color        │
-│ HB 538 cards & CASE® Rosetta links.      │ badges & phonetic breakdown tooltips.    │
+│ screening profiles & intervention cards. │ badges & phonetic breakdown tooltips.    │
 └──────────────────────────────────────────┴──────────────────────────────────────────┘
 ```
 
-Top navigation tabs also allow rapid switching between tools, while the **🔒 FERPA Compliant: PII Auto-Scrubbed** shield badge in the header ensures student data privacy is active.
+Top navigation tabs also allow rapid switching between tools, while the **🔒 Student names removed before processing** badge in the header opens a plain-language explanation of how student data is handled.
 
 ---
 
 ## Step-by-Step Teacher Workflows
 
-### Quadrant 1: Decodable Text Generator & Scope Verifier
-**Goal:** Create or audit reading passages to ensure 100% alignment with taught phonics patterns.
+### Quadrant 1: Decodable Text Checker
+**Goal:** Check whether a passage is decodable for students who have been taught the patterns through a given grade and unit.
 
-1. **Select Scope Scope:** Choose your **Grade Level** (K, 1st, 2nd, 3rd) and **Unit/Module** (Unit 1–10).
-2. **Instant Scope Fetching (< 200ms):** The active scope box instantly updates to show:
-   - *Taught Graphemes:* e.g. `a, e, i, o, u, sh, ch, th, wh, ck`
-   - *Heart Words to Pre-Teach:* e.g. `the, said, was, you`
-3. **Input Passage:** Paste your reading text into the box (or use the pre-filled sample text).
-4. **Click "Audit Decodability & Render Visual Badges":** The **DecodableInspector** renders:
-   - **Audit Metrics Bar:** `% Decodable Ratio`, `Total Word Count`, `Heart Words Used`, and `Anti-Cueing Compliance: PASSED`.
-   - 🟢 **Green Badges:** Words fully decodable using taught GPCs.
-   - 🟡 **Yellow/Heart Badges:** High-frequency irregular Heart Words.
-   - 🔴 **Red Badges:** Off-scope or untaught words.
-5. **Interactive Tooltips:** Hover or tap any word badge to view its exact **phonetic breakdown** (e.g. `ch - a - t → /tʃ/ /æ/ /t/`).
+1. **Choose Grade and Unit.** The unit list shows each unit's focus (e.g. *Unit 2: silent-e: a_e, i_e*). The scope box shows what is new this unit, all graphemes taught so far, and the heart words taught so far. Scope is cumulative.
+2. **Paste the passage** and click **Audit Decodability**.
+3. **Read the report:**
+   - **Decodable with taught patterns** and **Decodable + taught heart words** percentages, compared with the target (default 90%; districts should use their own criterion).
+   - 🟢 **Decodable** words: every letter or letter team maps to its sound with a taught pattern.
+   - 🟡 **Taught heart words.**
+   - 🔴 **Not yet decodable** words, with the untaught pattern named (e.g. *night* needs `igh → /ī/`), and **irregular** words that haven't been taught as heart words.
+   - ⚪ **Not in dictionary** (usually names): check these by hand.
+   - **What blocks this passage:** a list of untaught patterns and the words that need them, so you can swap words or teach the pattern first.
+4. **Hover or tap any word** for its sound-by-sound breakdown (e.g. `ch - a - t → /ch/ /ă/ /t/`).
+
+**About the default sequence:** it is an illustrative K–3 progression, not any specific published program. Ask your administrator to load your adopted program's scope & sequence (`SOR_SCOPE_PATH`) for accurate results.
+
+**Generating new text:** the web app checks text; it does not write it. To generate a decodable passage, use the MCP server with an AI assistant and the `generate_aligned_decodable` prompt, which checks each draft with this same engine and revises until it passes.
 
 ---
 
@@ -103,30 +106,30 @@ Top navigation tabs also allow rapid switching between tools, while the **🔒 F
 
 ---
 
-### Quadrant 3: MTSS Screener & Georgia HB 538 Remediation
-**Goal:** Translate assessment scores (DIBELS NWF, Acadience, MAP) into Georgia HB 538-compliant 5-day intervention plans with state standards deep links.
+### Quadrant 3: MTSS Screener & Intervention Planning
+**Goal:** See a student's Simple View of Reading screening profile and get explicit intervention scripts for skills a diagnostic has identified.
 
-1. **Select HB 538 Screener Deficit Profile:**
-   - *Nonsense Word Fluency Low* (Decoding Score: 0.35)
-   - *Phoneme Segmentation Deficit* (Decoding Score: 0.28)
-   - *Vowel Team Confusion* (Decoding Score: 0.42)
-   - *Consonant Blend Breakdown* (Decoding Score: 0.38)
-   - Or enter custom assessment scores (Decoding 0.0–1.0 & Language Comprehension 0.0–1.0).
-2. **Student Identity (Optional):** Enter a student name. The FERPA Shield automatically anonymizes it to `[STUDENT_1]` before processing.
-3. **Click "Generate HB 538 Remediation Plan & CASE Links":**
-   - Renders Simple View profile (e.g. `⚠️ Decoding Deficit (Georgia HB 538 Priority)`).
-   - Generates 5-day explicit intervention cards.
-   - Attaches official **1EdTech CASE® Standards Satchel** deep links (`https://rosetta.commongoodlt.com/#/search?q={code}`) for direct curriculum alignment.
+1. **Enter scores** for decoding/word reading and for language or listening comprehension on a 0–1 scale (for example, percentile rank ÷ 100), or pick an example profile.
+2. **Set the cutoff** to your screener's at-risk benchmark on the same scale. The default 0.60 is only a placeholder.
+3. **Choose diagnosed skills (optional).** A screening score tells you *whether* a student is at risk, not *which* phonics skill to teach. After a phonics or phonological awareness diagnostic, select the skills it identified to attach intervention cards.
+4. **Student name (optional):** replaced with `[STUDENT]` in your browser before anything is sent.
+5. **Click "Show Screening Profile & Intervention Cards":**
+   - Profile: *On track*, *Word-recognition difficulty*, *Language-comprehension difficulty*, or *Mixed difficulty*, with a flag when scores are near the cutoff.
+   - A reminder that this is a screening profile, not a diagnosis. It cannot identify dyslexia.
+   - 5-step explicit intervention cards (I Do / We Do / You Do, word chain, corrective feedback, connected text) for each diagnosed skill.
+
+Georgia's Early Literacy Act (HB 538) requires universal screening in K–3; follow your district's approved screener and intervention guidance.
 
 ---
 
 ### Quadrant 4: Decodability & Anti-Cueing Auditor
-**Goal:** Audit commercial reading passages for untaught graphemes and eliminate 3-Cueing (MSV) guessing prompts.
+**Goal:** Audit passages, lesson scripts or teacher prompts for three-cueing (MSV) language and untaught patterns.
 
-1. **Paste Text Selection:** Paste any reading passage into the text area.
+1. **Paste text** (a passage, a guided-reading script, or a list of prompts).
 2. **Click "Run Visual Audit & Anti-Cueing Inspection":**
-   - Scans text for untaught phonics patterns.
-   - Enforces anti-cueing guardrails (flags prompts that encourage students to guess words from pictures or context instead of decoding).
+   - Flags prompts that send students to pictures, context or first letters ("look at the picture", "what would make sense", "does it sound right", "skip it and come back", "get your mouth ready") and explains why each is a problem.
+   - Suggests a decoding-focused replacement for each (e.g. "Point to each letter or letter team, say the sounds, and blend them").
+   - Checks decodability using the grade and unit selected in Quadrant 1.
 
 ---
 
@@ -192,21 +195,21 @@ In the top app bar, click the **`Topic & Research Guide`** button to open the pu
 
 - **Dynamic Content:** The drawer automatically updates its theoretical background, research papers, DOIs, and key vocabulary based on whichever tab you are currently viewing!
 - **Tab Context Summary:**
-  - *Decodable Generator:* Displays Linnea Ehri's Orthographic Mapping research, NRP phonics meta-analyses ($d=0.44$), and definitions for Decodable Text, Off-Scope Words, and Heart Words.
+  - *Decodable Text Checker:* Ehri et al. (2001) phonics meta-analysis (d = 0.41 overall; 0.55 when begun in K–1), and definitions for Decodable Text, Off-Scope Words, and Heart Words.
   - *Phonics Routine Builder:* Displays IES/WWC Practice Guide evidence on explicit modeling (I Do / We Do / You Do).
-  - *MTSS Screener:* Displays Gough & Tunmer's Simple View of Reading ($R = D \times LC$) and Georgia HB 538 literacy requirements.
+  - *MTSS Screener:* Gough & Tunmer's Simple View of Reading ($R = D \times LC$).
   - *Visual Auditor:* Displays David Kilpatrick's research on eliminating 3-Cueing (MSV) guessing habits.
 
 ---
 
-## Data Privacy & FERPA Shield
+## Data Privacy
 
-Student data privacy is enforced at both the client and server levels:
+The app is designed to minimize student data:
 
-- 🔒 **Client-Side Pre-Flight Sanitizer (`sanitizeClientPII`):** Before any data leaves your browser, student names (e.g. *Alex Smith*) and student IDs (e.g. *GA-12345*) are automatically replaced with synthetic tokens like `[STUDENT_1]`.
-- 🔔 **Toast Notifications:** A green toast popup alerts you whenever student identifiers are detected and anonymized.
-- 🛡️ **Zero Data Retention (ZDR):** No student identity mappings are saved to disk or database logs.
-- 📜 **Compliance:** Fully compliant with **FERPA**, **COPPA**, and **GDPR** right-to-erasure guidelines.
+- 🔒 **Names removed in the browser:** the student name you enter is replaced with `[STUDENT]` before anything is sent, and pasted text is scrubbed of that name and of identifier-like patterns (long ID numbers such as GTIDs, emails, phone numbers, dates). A notice appears when something is removed.
+- 🔒 **Server-side scrubbing:** the `sanitize_pii` tool drops named PII fields, scrubs free-text fields the same way, and issues pseudonymous tokens using a per-process secret key.
+- 🗑️ **Nothing stored:** requests are processed in memory; names and scores are not written to disk or a database.
+- ⚠️ **Limits:** automatic scrubbing cannot catch every identifier (for example, a classmate's name in a passage). Don't paste student records into the app. This project has not been independently audited, and using it does not by itself make a deployment FERPA or COPPA compliant; districts should complete their own privacy review and data agreements.
 
 ---
 
@@ -289,20 +292,20 @@ Add the following to your workspace or Hermes `mcp.json`:
 ---
 
 ### Available MCP Tools (14)
-- `get_phonics_scope`: Fetch scope & sequence for grade/unit (< 200ms).
+- `get_phonics_scope`: Cumulative scope & sequence (taught patterns and heart words) through a grade/unit.
 - `verify_decodable_text`: Verify decodability ratio & flag untaught GPCs.
-- `evaluate_simple_view`: Compute Simple View diagnostic profile & remediations.
+- `evaluate_simple_view`: Simple View screening profile (not a diagnosis) and cards for diagnosed skills.
 - `get_instructional_remediation`: Retrieve explicit I Do / We Do / You Do intervention cards.
 - `align_standards`: Query 50-state framework standards with CASE® Rosetta links.
 - `classify_vocabulary`: Classify text into Beck Tier 1/2/3.
 - `search_evidence`: Search WWC/BEE research meta-analyses with effect sizes & DOIs.
 - `map_orthography`: Map phonemes, graphemes, and Orton-Gillingham syllable division.
-- `analyze_lexile`: Lexile readability estimation.
+- `estimate_readability`: Flesch-Kincaid Grade Level estimate (not a Lexile measure).
 - `match_word`: Single-word corpus lookup.
 - `list_frameworks`: Enumerate 5 Pillars and Reading Rope.
 - `list_assessments`: Categorized assessment instruments catalog.
 - `lookup_competency`: CASE competency lookup.
-- `sanitize_pii`: FERPA-compliant student PII anonymizer.
+- `sanitize_pii`: Removes student identifiers before LLM processing (pattern-based).
 
 ### Available FastMCP Prompts (4)
 - `generate_aligned_decodable`: Generate decodable passage matching scope.
@@ -323,4 +326,4 @@ Add the following to your workspace or Hermes `mcp.json`:
 ## License & Support
 
 © 2026 EdTech Labs. All rights reserved.
-For support or questions regarding Georgia HB 538 implementation or 1EdTech CASE® integration, visit **[https://sor.edtechlabs.dev](https://sor.edtechlabs.dev)**.
+For support or questions regarding the workspace or 1EdTech CASE® integration, visit **[https://sor.edtechlabs.dev](https://sor.edtechlabs.dev)**.

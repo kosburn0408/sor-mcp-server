@@ -1,4 +1,4 @@
-"""Diagnostics tools: Lexile analysis and Simple View evaluation.
+"""Diagnostics tools: readability estimate and Simple View screening profile.
 
 Moved from tools/lexile.py and server.py inline evaluation logic.
 Now uses Pydantic v2 models for routing.
@@ -14,234 +14,201 @@ from typing import Any
 from src.schemas.curriculum import CurriculumResult
 
 
-# ── Lexile Analysis ────────────────────────────────────────────────────────
+# ── Readability Estimate ─────────────────────────────────────────────────────
+#
+# Uses the public Flesch-Kincaid Grade Level formula. This is NOT a Lexile
+# measure (Lexile is a proprietary MetaMetrics framework). Readability formulas
+# are unreliable for very short or early-reader texts, where decodability
+# (verify_decodable_text) is the more meaningful measure.
 
-# Common word frequency list (top English words, simplified from COCA)
-COMMON_WORDS: set[str] = {
-    "the", "be", "to", "of", "and", "a", "in", "that", "have", "i",
-    "it", "for", "not", "on", "with", "he", "as", "you", "do", "at",
-    "this", "but", "his", "by", "from", "they", "we", "her", "she",
-    "or", "an", "will", "my", "one", "all", "would", "there", "their",
-    "what", "so", "up", "out", "if", "about", "who", "get", "which",
-    "go", "me", "when", "make", "can", "like", "time", "no", "just",
-    "him", "know", "take", "people", "into", "year", "your", "good",
-    "some", "could", "them", "see", "other", "than", "then", "now",
-    "look", "only", "come", "its", "over", "think", "also", "back",
-    "after", "use", "two", "how", "our", "work", "first", "well",
-    "way", "even", "new", "want", "because", "any", "these", "give",
-    "day", "most", "us", "great", "tell", "say", "ask", "man",
-    "woman", "child", "world", "life", "hand", "part", "place",
-    "case", "week", "company", "system", "program", "question",
-    "government", "number", "night", "point", "home", "water",
-    "room", "mother", "area", "money", "story", "fact", "month",
-    "lot", "right", "study", "book", "eye", "job", "word", "side",
-    "kind", "head", "house", "service", "friend", "father", "power",
-    "hour", "game", "line", "end", "member", "law", "car", "city",
-    "community", "name", "president", "team", "minute", "idea",
-    "body", "information", "parent", "face", "level",
-    "office", "door", "health", "person", "art", "war", "history",
-    "party", "result", "morning", "reason", "research", "girl",
-    "guy", "moment", "air", "teacher", "force", "education",
-}
+_VOWEL_PHONEMES = {"AA", "AE", "AH", "AO", "AW", "AY", "EH", "ER", "EY", "IH", "IY", "OW", "OY", "UH", "UW"}
 
 
-def analyze_lexile(text: str) -> dict[str, Any]:
-    """Compute Lexile-level metrics for a given text.
+def _syllables(word: str) -> int:
+    try:
+        from src.engine.decoder import _cmu
 
-    Args:
-        text: The text to analyze.
+        prons = _cmu().get(word.lower())
+        if prons:
+            return max(1, sum(1 for p in prons[0] if re.sub(r"\d", "", p) in _VOWEL_PHONEMES))
+    except Exception:
+        pass
+    groups = re.findall(r"[aeiouy]+", word.lower())
+    count = len(groups)
+    if word.lower().endswith("e") and count > 1 and not word.lower().endswith(("le", "ee")):
+        count -= 1
+    return max(1, count)
 
-    Returns:
-        Dictionary with Lexile score, word count, sentence stats, and
-        grade-level equivalency.
+
+def estimate_readability(text: str) -> dict[str, Any]:
+    """Estimate text difficulty with the Flesch-Kincaid Grade Level formula.
+
+    FK grade = 0.39 x (words / sentences) + 11.8 x (syllables / words) - 15.59
     """
     if not text or not text.strip():
-        return {"error": "No text provided for analysis", "lexile_score": None}
+        return {"error": "No text provided for analysis", "flesch_kincaid_grade": None}
 
-    words = re.findall(r"[a-zA-Z]+(?:'[a-zA-Z]+)?", text.lower())
+    words = re.findall(r"[a-zA-Z]+(?:'[a-zA-Z]+)?", text)
     if not words:
-        return {"lexile_score": None, "error": "No recognizable words found in text"}
+        return {"error": "No recognizable words found in text", "flesch_kincaid_grade": None}
 
-    sentences = re.split(r'[.!?]+\s+', text)
-    sentences = [s.strip() for s in sentences if s.strip() and len(s.split()) > 1]
-    if not sentences:
-        sentences = [text.strip()]
-
+    sentences = [s for s in re.split(r"[.!?]+", text) if re.search(r"[A-Za-z]", s)]
+    sentence_count = max(1, len(sentences))
     word_count = len(words)
-    sentence_count = len(sentences)
-    unique_words = len(set(words))
-    unique_ratio = unique_words / word_count if word_count > 0 else 0
+    syllable_count = sum(_syllables(w) for w in words)
 
-    msl = word_count / sentence_count if sentence_count > 0 else word_count
-    rare_count = sum(1 for w in words if w not in COMMON_WORDS)
-    rare_ratio = rare_count / word_count if word_count > 0 else 0
+    words_per_sentence = word_count / sentence_count
+    syllables_per_word = syllable_count / word_count
+    fk_grade = 0.39 * words_per_sentence + 11.8 * syllables_per_word - 15.59
 
-    lexile_raw = 200 + (msl * 15) + (rare_ratio * 1200) - (unique_ratio * 100)
-    lexile_score = max(0, min(2000, round(lexile_raw / 10) * 10))
-
-    word_lengths = [len(w) for w in words]
-    avg_word_length = statistics.mean(word_lengths) if word_lengths else 0
-    word_length_std = statistics.stdev(word_lengths) if len(word_lengths) > 1 else 0
-
-    grade_level = _lexile_to_grade(lexile_score)
-    framework_note = _framework_guidance(lexile_score, grade_level)
+    warnings = []
+    if word_count < 100:
+        warnings.append("Fewer than 100 words: readability formulas are unreliable for short passages.")
+    if fk_grade < 2:
+        warnings.append(
+            "Early-reader range: formulas say little about whether a K-2 student can read this text. "
+            "Use verify_decodable_text to check it against taught phonics patterns."
+        )
 
     return {
-        "lexile_score": lexile_score,
-        "grade_level": grade_level,
+        "flesch_kincaid_grade": round(fk_grade, 1),
         "word_count": word_count,
         "sentence_count": sentence_count,
-        "unique_words": unique_words,
-        "unique_word_ratio": round(unique_ratio, 3),
-        "mean_sentence_length": round(msl, 1),
-        "mean_word_length": round(avg_word_length, 1),
-        "word_length_std": round(word_length_std, 2),
-        "rare_word_ratio": round(rare_ratio, 3),
-        "framework_alignment": framework_note,
+        "syllable_count": syllable_count,
+        "mean_sentence_length": round(words_per_sentence, 1),
+        "mean_syllables_per_word": round(syllables_per_word, 2),
+        "unique_words": len({w.lower() for w in words}),
+        "method": "Flesch-Kincaid Grade Level (public formula); syllables from the CMU Pronouncing Dictionary. Not a Lexile measure.",
+        "warnings": warnings,
     }
 
 
-def _lexile_to_grade(lexile: int) -> str:
-    """Map Lexile score to approximate grade level."""
-    if lexile <= 100:
-        return "BR (Beginning Reader)"
-    elif lexile <= 300:
-        return "K-1"
-    elif lexile <= 500:
-        return "2"
-    elif lexile <= 650:
-        return "3"
-    elif lexile <= 800:
-        return "4"
-    elif lexile <= 950:
-        return "5"
-    elif lexile <= 1050:
-        return "6-8"
-    elif lexile <= 1200:
-        return "9-10"
-    elif lexile <= 1400:
-        return "11-12"
-    else:
-        return "College/Advanced"
-
-
-def _framework_guidance(lexile: int, grade: str) -> str:
-    """Provide framework-aligned guidance based on Lexile."""
-    if lexile <= 300:
-        return (
-            "Simple View of Reading — At this level, decoding (word recognition) is the "
-            "primary constraint. Scarborough's Rope: word recognition strands "
-            "(phonological awareness, decoding) must be secure for comprehension. "
-            "NRP Pillars: Phonemic Awareness and Phonics are priority."
-        )
-    elif lexile <= 650:
-        return (
-            "Simple View of Reading — Both decoding and linguistic comprehension are "
-            "developing. Scarborough's Rope: word recognition becoming increasingly "
-            "automatic. NRP Pillars: Phonics fluency transition, vocabulary building."
-        )
-    elif lexile <= 950:
-        return (
-            "Simple View of Reading — Linguistic comprehension increasingly drives "
-            "reading outcomes as decoding becomes automatic. Scarborough's Rope: "
-            "language comprehension strands gain prominence. NRP Pillars: Fluency, Vocabulary, Comprehension."
-        )
-    else:
-        return (
-            "Simple View of Reading — Decoding is largely automated; comprehension "
-            "is driven by linguistic knowledge. Scarborough's Rope: all strands "
-            "woven together for skilled reading. NRP Pillars: Vocabulary and "
-            "Comprehension are primary with fluency maintenance."
-        )
-
-
 # ── Simple View of Reading ──────────────────────────────────────────────────
+
+
+DEFAULT_CUTOFF = 0.60
+
+PROFILE_LABELS = {
+    "on_track": "On track: word recognition and language comprehension both at or above the cutoff",
+    "word_recognition_difficulty": "Specific word-recognition difficulty: decoding below the cutoff, language comprehension at or above it",
+    "language_comprehension_difficulty": "Specific language-comprehension difficulty: language comprehension below the cutoff, decoding at or above it",
+    "mixed_difficulty": "Mixed difficulty: both decoding and language comprehension below the cutoff",
+}
+
+SCREENING_CAVEAT = (
+    "This is a screening profile based on the Simple View of Reading (Gough & Tunmer, 1986), "
+    "not a diagnosis. It cannot identify dyslexia or any other disability; that requires a "
+    "comprehensive evaluation by qualified professionals. Profiles near the cutoff are uncertain "
+    "and should be confirmed with additional assessment."
+)
 
 
 def evaluate_simple_view(
     decoding: float,
     language_comprehension: float,
     grade: str = "1st",
+    cutoff: float | None = None,
+    diagnosed_skills: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Evaluate a student using the Simple View of Reading.
-
-    Returns reading profile (typical/dyslexia/hyperlexic/garden_variety),
-    deficit codes, and auto-attached remediation cards when decoding < 0.60.
+    """Place a student in a Simple View of Reading screening quadrant.
 
     Args:
-        decoding: Decoding score (0.0-1.0).
-        language_comprehension: Language comprehension score (0.0-1.0).
+        decoding: Word-recognition/decoding score on a 0.0-1.0 scale.
+        language_comprehension: Language/listening comprehension score, 0.0-1.0.
         grade: Grade level string (e.g., '1st').
+        cutoff: At-risk threshold on the same 0-1 scale. Set this to your
+            screener's benchmark. Defaults to 0.60, which is a placeholder,
+            not a research-established value.
+        diagnosed_skills: Specific skills identified by a phonics or phonological
+            diagnostic (e.g. ['vowel_teams']). Intervention cards are only
+            attached for skills that have actually been diagnosed; a single
+            screening score cannot tell you which phonics skill to teach.
 
     Returns:
-        Dictionary with diagnostic, remediations, and next_steps.
+        Dictionary with diagnostic, caveat, remediations and next_steps.
     """
-    from src.tools.remediation import get_bulk_remediations
+    from src.tools.remediation import (
+        DEFICIT_TO_REMEDIATION,
+        REMEDIATION_TABLE,
+        get_bulk_remediations,
+        list_available_remediations,
+    )
 
-    # Validate score ranges
-    if not 0.0 <= decoding <= 1.0:
-        return {
-            "error_code": "ERR_INVALID_SCORE_RANGE",
-            "error": f"Decoding score {decoding} is outside valid range [0.0, 1.0]",
-        }
-    if not 0.0 <= language_comprehension <= 1.0:
-        return {
-            "error_code": "ERR_INVALID_SCORE_RANGE",
-            "error": f"Language comprehension score {language_comprehension} outside valid range [0.0, 1.0]",
-        }
+    for name, value in (("Decoding", decoding), ("Language comprehension", language_comprehension)):
+        if not 0.0 <= value <= 1.0:
+            return {
+                "error_code": "ERR_INVALID_SCORE_RANGE",
+                "error": f"{name} score {value} is outside valid range [0.0, 1.0]",
+            }
 
-    # Determine profile
-    if decoding >= 0.60 and language_comprehension >= 0.60:
-        profile = "typical"
-    elif decoding < 0.60 and language_comprehension >= 0.60:
-        profile = "dyslexia"
-    elif decoding >= 0.60 and language_comprehension < 0.60:
-        profile = "hyperlexic"
+    cutoff_is_default = cutoff is None
+    cut = DEFAULT_CUTOFF if cutoff is None else float(cutoff)
+    if not 0.0 < cut < 1.0:
+        return {"error_code": "ERR_INVALID_SCORE_RANGE", "error": f"cutoff {cut} must be between 0 and 1"}
+
+    low_d = decoding < cut
+    low_lc = language_comprehension < cut
+    if not low_d and not low_lc:
+        profile = "on_track"
+    elif low_d and not low_lc:
+        profile = "word_recognition_difficulty"
+    elif low_lc and not low_d:
+        profile = "language_comprehension_difficulty"
     else:
-        profile = "garden_variety"
+        profile = "mixed_difficulty"
 
-    deficit_codes: list[str] = []
-    if decoding < 0.60:
-        if decoding < 0.30:
-            deficit_codes = ["phoneme_segmentation", "cvc_mixed", "cvc_short_a"]
-        elif decoding < 0.45:
-            deficit_codes = ["cvc_mixed", "consonant_blends", "consonant_digraphs"]
-        else:
-            deficit_codes = ["cvce_silent_e", "vowel_teams", "r_controlled"]
+    near_cutoff = abs(decoding - cut) < 0.05 or abs(language_comprehension - cut) < 0.05
 
-    remediations = []
-    if decoding < 0.60:
-        remediations = get_bulk_remediations(deficit_codes, grade)
+    skills = [s for s in (diagnosed_skills or []) if DEFICIT_TO_REMEDIATION.get(s, s) in REMEDIATION_TABLE]
+    unknown_skills = [s for s in (diagnosed_skills or []) if s not in skills]
+    remediations = get_bulk_remediations(skills, grade) if skills else []
 
-    if profile == "typical":
-        next_steps = "Student is on track. Continue grade-level instruction."
-    elif profile == "dyslexia":
+    if profile == "on_track":
+        next_steps = "On track at this screening. Continue core instruction and keep screening on schedule."
+    elif profile == "word_recognition_difficulty":
         next_steps = (
-            f"Decoding deficit (score={decoding:.2f}). Use attached "
-            f"{len(remediations)} remediation cards 4-5x/week. "
-            "Administer CORE Phonics Survey. Consider Tier 2."
+            "Give a phonics and phonological awareness diagnostic to pinpoint which skills to teach, "
+            "then provide explicit, systematic small-group intervention on those skills and monitor progress. "
+            "If word-reading difficulty persists despite good intervention, refer for evaluation; "
+            "this tool cannot identify dyslexia."
         )
-    elif profile == "hyperlexic":
+    elif profile == "language_comprehension_difficulty":
         next_steps = (
-            "Strong decoder, weak comprehender. Focus on vocabulary, "
-            "background knowledge, and read-alouds with discussion."
+            "Assess oral language: vocabulary, listening comprehension and background knowledge. "
+            "Build these through explicit vocabulary instruction and interactive read-alouds with discussion."
         )
     else:
         next_steps = (
-            "Dual deficit. Prioritize decoding, layer comprehension. "
-            "Tier 2 or Tier 3 intervention recommended."
+            "Assess both word reading and oral language. Provide intensive intervention on diagnosed "
+            "decoding skills while also building vocabulary and listening comprehension, and monitor progress closely."
         )
+    if low_d and not skills:
+        next_steps += " Once a diagnostic identifies specific skills, pass them as diagnosed_skills to attach intervention cards."
 
-    return {
+    result: dict[str, Any] = {
         "diagnostic": {
             "decoding_score": decoding,
             "language_comprehension_score": language_comprehension,
             "reading_profile": profile,
-            "deficit_codes": deficit_codes,
+            "profile_label": PROFILE_LABELS[profile],
+            "cutoff": cut,
+            "cutoff_is_default": cutoff_is_default,
+            "near_cutoff": near_cutoff,
+            "deficit_codes": skills,
         },
+        "caveat": SCREENING_CAVEAT,
         "remediations": [r.to_markdown() for r in remediations],
         "next_steps": next_steps,
     }
+    if cutoff_is_default:
+        result["warnings"] = [
+            "Using placeholder cutoff 0.60. Set 'cutoff' to your screener's benchmark on the same 0-1 scale."
+        ]
+    if unknown_skills:
+        result.setdefault("warnings", []).append(f"Unrecognized skills ignored: {', '.join(unknown_skills)}")
+    if low_d and not skills:
+        result["available_skills"] = list_available_remediations()["remediations"]
+    return result
 
 
 # ── Scope Sequence Lookup (used by router) ──────────────────────────────────

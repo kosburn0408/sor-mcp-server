@@ -226,8 +226,8 @@ def build_multisyllabic_routine(
         "framework_notes": (
             "Orton-Gillingham: syllable types provide a structured framework for "
             "decoding multisyllabic words. Kilpatrick (2015): orthographic mapping "
-            "requires phoneme-level analysis of each syllable. NRP: systematic "
-            "phonics instruction through the syllable level yields d=0.41-0.60."
+            "requires phoneme-level analysis of each syllable. Foorman et al. (2016) "
+            "WWC guide, Rec. 3: teach students to decode words and analyze word parts."
         ),
     }
 

@@ -64,7 +64,7 @@ def search_evidence(topic: str) -> dict[str, Any]:
             SELECT id, title, authors, year, framework, finding, effect_size, source, url
             FROM research_papers
             WHERE framework IN ({placeholders})
-            ORDER BY effect_size DESC
+            ORDER BY effect_size DESC NULLS LAST
         """
         rows = conn.execute(query, frameworks).fetchall()
     else:
@@ -72,7 +72,7 @@ def search_evidence(topic: str) -> dict[str, Any]:
             SELECT id, title, authors, year, framework, finding, effect_size, source, url
             FROM research_papers
             WHERE LOWER(title) LIKE ? OR LOWER(finding) LIKE ?
-            ORDER BY effect_size DESC
+            ORDER BY effect_size DESC NULLS LAST
         """
         search_term = f"%{topic_lower}%"
         rows = conn.execute(query, [search_term, search_term]).fetchall()
@@ -86,16 +86,13 @@ def search_evidence(topic: str) -> dict[str, Any]:
             "year": row[3],
             "framework": row[4],
             "finding": row[5],
-            "effect_size": row[6],
+            "effect_size": round(row[6], 2) if row[6] is not None else None,
+            "effect_size_interpretation": _interpret_effect_size(row[6]) if row[6] is not None else (
+                "No single pooled effect size; see the finding and source."
+            ),
             "source": row[7],
             "url": row[8],
         })
-
-    if papers:
-        effect_sizes = [p["effect_size"] for p in papers if p["effect_size"] is not None]
-        avg_effect = round(sum(effect_sizes) / len(effect_sizes), 2) if effect_sizes else None
-    else:
-        avg_effect = None
 
     framework_contexts = _get_framework_context(frameworks)
 
@@ -103,10 +100,12 @@ def search_evidence(topic: str) -> dict[str, Any]:
         "topic": topic,
         "matched_pillars": frameworks if frameworks else ["full_text_search"],
         "total_papers": len(papers),
-        "average_effect_size": avg_effect,
         "papers": papers,
         "framework_context": framework_contexts,
-        "interpretation": _interpret_effect_size(avg_effect) if avg_effect is not None else None,
+        "note": (
+            "Effect sizes come from different studies, outcomes and populations, so they are "
+            "reported per source and not averaged. Check the original source before citing."
+        ),
     }
 
 
@@ -278,7 +277,7 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
         code = row[2]
         encoded_code = urllib.parse.quote(code)
         matches.append({
-            "state": state_code if is_crosswalk else row[0],
+            "state": row[0],
             "grade": row[1],
             "code": code,
             "description": row[3],
@@ -286,14 +285,27 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
             "provider": "Common Good Learning Tools",
             "portal": "Standards Satchel",
             "url": f"https://rosetta.commongoodlt.com/#/search?q={encoded_code}",
-            "case_api_uri": f"https://rosetta.commongoodlt.com/ims/case/v1p1/CFItems/{encoded_code}",
             "exchange": "Satchel Rosetta Exchange (CASE® Format)",
             "is_crosswalk": is_crosswalk,
         })
 
+    notices: list[str] = []
+    if is_crosswalk:
+        notices.append(
+            f"No {state_code} standards matched; showing Common Core (CCSS) standards as a crosswalk. "
+            "Confirm against your state's official standards."
+        )
+    if state_code == "GA":
+        notices.append(
+            "Georgia codes here are the legacy Georgia Standards of Excellence (ELAGSE). Georgia's new K-12 "
+            "ELA standards replaced them in the 2025-26 school year; look up current standards in Georgia's "
+            "CASE repository (case.georgiastandards.org)."
+        )
+
     return {
         "description": description,
         "state": state_code,
+        "notices": notices,
         "grade_filter": grade,
         "satchel_rosetta_integration": {
             "portal": "Standards Satchel",

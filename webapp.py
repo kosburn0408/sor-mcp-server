@@ -1,17 +1,17 @@
 """SoR Web Dashboard — Teacher-First Workspace for the Science of Reading MCP server.
 
 EPIC-SOR-01 Implementation & Usability Polish:
-  - Step 1: MTSS Screener & Georgia HB 538 Remediation (Diagnostic-First Default Landing)
-  - Step 2: Decodable Text Generator & Scope Verifier (Grade & Unit Scope fetching < 200ms)
+  - Step 1: MTSS Screener (Simple View screening profile + intervention cards for diagnosed skills)
+  - Step 2: Decodable Text Checker (scope & sequence + pronunciation-dictionary alignment)
   - Step 3: Explicit Phonics Routine Builder (5-Day I Do / We Do / You Do scripts with multisensory cues)
   - Step 4: Visual Audit Inspector & Anti-Cueing Shield (Color-coded badges & hover tooltips)
   - Classroom Exports: Print-First CSS (@media print, Atkinson Hyperlegible) & Google Classroom OAuth2 v1
 
 Usability Improvements Implemented:
   1. Inline (?) Score Conversion Tooltips for DIBELS NWF & Maze raw-to-decimal scores.
-  2. Dynamic Preset Summary Pill & Georgia HB 538 state scope callout.
-  3. FERPA ZDR & Progress Monitoring Information Callout Box.
-  4. Clickable FERPA Compliance & Zero Data Retention Architecture Modal.
+  2. Dynamic Preset Summary Pill.
+  3. Data-minimization & Progress Monitoring Information Callout Box.
+  4. Clickable student-data handling disclosure modal.
   5. Standalone Utility badges on Tabs 5 & 6.
   6. ✏️ Edit Text in Place toggle button on rendered Decodable Inspector containers.
   7. Visual Google Classroom API status indicator badge (⚡ Demo Mode vs 🔒 Connected).
@@ -923,23 +923,23 @@ input:focus, select:focus, textarea:focus {{
 <div id="ferpaModal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:var(--md-shape-corner-large);max-width:600px;width:92vw;padding:2rem;box-shadow:var(--md-elevation-3);z-index:2300;display:none">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;border-bottom:1px solid #E0E0E0;padding-bottom:0.8rem">
     <h3 style="color:#1B5E20;margin:0;display:flex;align-items:center;gap:0.6rem">
-      <i class="fa-solid fa-shield-halved"></i> FERPA Privacy & Zero Data Retention Architecture
+      <i class="fa-solid fa-shield-halved"></i> How Student Data Is Handled
     </h3>
     <button onclick="closeFerpaModal()" style="background:none;border:none;font-size:1.3rem;cursor:pointer">✕</button>
   </div>
 
   <div style="font-size:0.9rem;color:#333;line-height:1.6">
     <p style="margin-bottom:0.8rem">
-      <strong>🔒 Student Identity Protection:</strong> Student names and IDs entered into forms are automatically scrubbed browser-side using <code>sanitizeClientPII</code> before any API call, generating synthetic tokens (e.g. <code>[STUDENT_1]</code>).
+      <strong>🔒 Names removed before sending:</strong> The student name you type is replaced with a placeholder in your browser before anything is sent. Text you paste is also scrubbed of that name and of identifier-like patterns (long ID numbers such as GTIDs, emails, phone numbers, dates).
     </p>
     <p style="margin-bottom:0.8rem">
-      <strong>🗑️ Zero Data Retention (ZDR):</strong> Identity mappings and diagnostic outputs are processed statelessly in-memory. No student PII or diagnostic scores are written to disk or database logs.
+      <strong>🗑️ Nothing stored:</strong> Requests are processed in memory. The app does not write student names or scores to disk or to a database.
     </p>
     <p style="margin-bottom:1rem">
-      <strong>📜 Legal Alignment:</strong> Fully compliant with <strong>FERPA 34 CFR § 99.31</strong>, <strong>COPPA</strong>, and <strong>GDPR Right-to-Erasure</strong> mandates.
+      <strong>⚠️ Limits:</strong> Automatic scrubbing cannot catch every identifier (for example, a classmate's name typed into a passage). Don't paste student records into the app. This tool has not been independently audited, and using it does not by itself make a district FERPA or COPPA compliant; districts should complete their own privacy review.
     </p>
     <div style="background:#E8F5E9;padding:0.9rem;border-radius:var(--md-shape-corner-medium);border-left:4px solid #2E7D32;font-size:0.84rem">
-      <strong>💡 District Privacy Reviewers:</strong> For full compliance documentation, inspect Section 6 of our <a href="https://github.com/kosburn0408/sor-mcp-server/blob/main/USER_GUIDE.md#6-data-privacy--ferpa-shield" target="_blank" style="color:#1B5E20;font-weight:700">USER_GUIDE.md on GitHub</a> or audit source code at <code>src/tools/privacy.py</code>.
+      <strong>💡 District Privacy Reviewers:</strong> For details, see the data privacy section of the <a href="https://github.com/kosburn0408/sor-mcp-server/blob/main/USER_GUIDE.md#6-data-privacy--ferpa-shield" target="_blank" style="color:#1B5E20;font-weight:700">USER_GUIDE.md on GitHub</a> or audit source code at <code>src/tools/privacy.py</code>.
     </div>
   </div>
 
@@ -1016,9 +1016,9 @@ input:focus, select:focus, textarea:focus {{
       <div class="app-bar-subtitle">Science of Reading Teacher-First Workspace</div>
     </div>
   </div>
-  <div class="ferpa-shield-badge" onclick="openFerpaModal()" title="Click to view Zero Data Retention (ZDR) & FERPA Architecture">
+  <div class="ferpa-shield-badge" onclick="openFerpaModal()" title="How student data is handled">
     <i class="fa-solid fa-shield-halved"></i>
-    <span>🔒 FERPA Compliant: PII Auto-Scrubbed</span>
+    <span>🔒 Student names removed before processing</span>
   </div>
 </header>
 
@@ -1029,7 +1029,7 @@ input:focus, select:focus, textarea:focus {{
       <i class="fa-solid fa-bullseye"></i> Step 1: MTSS Screener
     </button>
     <button class="m3-tab-btn" data-tab="tab-decodable" onclick="switchTab('tab-decodable')">
-      <i class="fa-solid fa-book-open"></i> Step 2: Decodable Generator
+      <i class="fa-solid fa-book-open"></i> Step 2: Decodable Text Checker
     </button>
     <button class="m3-tab-btn" data-tab="tab-phonics" onclick="switchTab('tab-phonics')">
       <i class="fa-solid fa-puzzle-piece"></i> Step 3: Phonics Routine
@@ -1074,15 +1074,15 @@ input:focus, select:focus, textarea:focus {{
       <div class="quadrant-icon"><i class="fa-solid fa-bullseye"></i></div>
       <div>
         <div class="quadrant-title">🎯 MTSS Screener & Remediation</div>
-        <div class="quadrant-desc">Diagnose DIBELS scores into Simple View profiles & Georgia HB 538 plans.</div>
+        <div class="quadrant-desc">Turn screener scores into a Simple View screening profile and intervention cards for diagnosed skills.</div>
       </div>
     </div>
     <div class="quadrant-card" id="quadrant-decodable" onclick="switchTab('tab-decodable')">
       <div class="quadrant-step-badge">STEP 2</div>
       <div class="quadrant-icon"><i class="fa-solid fa-book-open"></i></div>
       <div>
-        <div class="quadrant-title">📖 Decodable Text Generator</div>
-        <div class="quadrant-desc">Select Grade & Unit scope to generate & audit decodable text (< 200ms).</div>
+        <div class="quadrant-title">📖 Decodable Text Checker</div>
+        <div class="quadrant-desc">Check a passage against the phonics patterns taught through a grade and unit.</div>
       </div>
     </div>
     <div class="quadrant-card" id="quadrant-phonics" onclick="switchTab('tab-phonics')">
@@ -1103,12 +1103,12 @@ input:focus, select:focus, textarea:focus {{
     </div>
   </div>
 
-  <!-- ── STEP 1: MTSS / SCREENER & GEORGIA HB 538 REMEDIATION (Default Landing) ── -->
+  <!-- ── STEP 1: MTSS SCREENER (Default Landing) ── -->
   <div class="tab-pane active" id="tab-diagnose">
     <div class="m3-card">
-      <div class="m3-card-title"><i class="fa-solid fa-bullseye"></i> Step 1: MTSS Screener & Georgia HB 538 Remediation</div>
+      <div class="m3-card-title"><i class="fa-solid fa-bullseye"></i> Step 1: MTSS Screener &amp; Intervention Planning</div>
       <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">
-        Translate assessment scores or select a standard deficit profile to diagnose the student's Simple View reading profile, generate 5-day intervention scripts, and map
+        Enter screener scores to see the student's Simple View of Reading screening profile, then choose the skills a diagnostic identified to get explicit intervention scripts. This is a screening aid, not a diagnosis. Find aligned standards with
         <a href="https://rosetta.commongoodlt.com/" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline">
           1EdTech CASE® Standards Satchel
         </a> deep links.
@@ -1118,20 +1118,20 @@ input:focus, select:focus, textarea:focus {{
         <div class="row">
           <div class="form-group">
             <label>
-              Screener Deficit Profile (Georgia HB 538)
+              Example Profile
               <span class="help-icon-tooltip">?
-                <span class="tooltip-text">Presets automatically populate DIBELS scores for specific Georgia HB 538 priority deficits. Select Custom to enter raw test scores.</span>
+                <span class="tooltip-text">Examples fill in illustrative scores and a diagnosed skill so you can see the workflow. Use Custom with your own screener and diagnostic results.</span>
               </span>
             </label>
             <select id="hb538Deficit" onchange="autofillDeficitScores()">
               <option value="custom" selected>Custom Assessment Input</option>
-              <option value="nwf_low">Nonsense Word Fluency Low (Decoding Score: 0.35)</option>
-              <option value="phoneme_segmentation">Phoneme Segmentation Deficit (Decoding Score: 0.28)</option>
-              <option value="vowel_teams">Vowel Team Confusion (Decoding Score: 0.42)</option>
-              <option value="consonant_blends">Consonant Blend Breakdown (Decoding Score: 0.38)</option>
+              <option value="nwf_low">Example: low nonsense-word fluency (CVC decoding)</option>
+              <option value="phoneme_segmentation">Example: phoneme segmentation difficulty</option>
+              <option value="vowel_teams">Example: vowel team errors</option>
+              <option value="consonant_blends">Example: consonant blend errors</option>
             </select>
             <div id="presetSummaryPill" style="font-size:0.8rem;color:var(--md-sys-color-primary);margin-top:0.4rem;font-weight:600">
-              <i class="fa-solid fa-circle-info"></i> Georgia HB 538 Literacy Act rules active. Select a preset or input custom DIBELS scores. (For other 50 state frameworks, use Tab 6: Standards Alignment).
+              <i class="fa-solid fa-circle-info"></i> Enter your own scores, or pick an example. Georgia's Early Literacy Act (HB 538) requires universal screening in K–3; follow your district's approved screener and intervention guidance.
             </div>
           </div>
           <div class="form-group">
@@ -1150,9 +1150,8 @@ input:focus, select:focus, textarea:focus {{
             <label>
               Decoding Score (0.0 – 1.0)
               <span class="help-icon-tooltip">?
-                <span class="tooltip-text">Enter decimal 0.0–1.0 (e.g. DIBELS NWF-CLS count of 38 = 0.38). Scores &lt; 0.60 indicate a decoding deficit requiring phonics intervention.</span>
+                <span class="tooltip-text">Your word-reading/decoding measure expressed on a 0–1 scale (for example, a percentile rank divided by 100). Use the same scale for the cutoff.</span>
               </span>
-              <span style="font-weight:normal;color:#777;margin-left:0.4rem">— DIBELS NWF-CLS</span>
             </label>
             <input type="number" id="decoding" step="0.01" min="0" max="1" value="0.38" required>
           </div>
@@ -1160,31 +1159,56 @@ input:focus, select:focus, textarea:focus {{
             <label>
               Language Comprehension (0.0 – 1.0)
               <span class="help-icon-tooltip">?
-                <span class="tooltip-text">Enter decimal 0.0–1.0 (e.g. DIBELS Maze / Oral Vocab score of 85 = 0.85). Scores &lt; 0.60 indicate a language comprehension deficit.</span>
+                <span class="tooltip-text">A language or listening comprehension measure on the same 0–1 scale.</span>
               </span>
-              <span style="font-weight:normal;color:#777;margin-left:0.4rem">— DIBELS Maze</span>
             </label>
             <input type="number" id="comprehension" step="0.01" min="0" max="1" value="0.85" required>
           </div>
         </div>
 
-        <div class="form-group">
-          <label>Student Identity (Optional - Auto-Anonymized by FERPA Shield)</label>
-          <input type="text" id="studentNameInput" placeholder="e.g. Alex Smith (Name will be anonymized to [STUDENT_1])">
+        <div class="row">
+          <div class="form-group">
+            <label>
+              At-Risk Cutoff (0.0 – 1.0)
+              <span class="help-icon-tooltip">?
+                <span class="tooltip-text">Set this to your screener's at-risk benchmark on the same 0–1 scale. 0.60 is only a placeholder.</span>
+              </span>
+            </label>
+            <input type="number" id="cutoff" step="0.01" min="0.01" max="0.99" value="0.60" required>
+          </div>
+          <div class="form-group">
+            <label>Skills Identified by a Diagnostic (optional)</label>
+            <select id="diagnosedSkills" multiple size="4">
+              <option value="phoneme_segmentation">Phoneme segmentation</option>
+              <option value="cvc_short_a">Short a (CVC)</option>
+              <option value="cvc_mixed">Mixed short vowels (CVC)</option>
+              <option value="consonant_blends">Consonant blends</option>
+              <option value="consonant_digraphs">Consonant digraphs</option>
+              <option value="cvce_silent_e">Silent-e (CVCe)</option>
+              <option value="r_controlled">R-controlled vowels</option>
+              <option value="vowel_teams">Vowel teams</option>
+              <option value="prefix_un">Prefix un-</option>
+            </select>
+          </div>
         </div>
 
-        <button type="submit" class="m3-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Step 1: Run Diagnostic & Generate HB 538 Plan</button>
+        <div class="form-group">
+          <label>Student Name (optional; replaced before anything is sent)</label>
+          <input type="text" id="studentNameInput" placeholder="Name is replaced with [STUDENT] in your browser">
+        </div>
+
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Step 1: Show Screening Profile &amp; Intervention Cards</button>
       </form>
 
       <!-- FERPA Zero Data Retention & Progress Monitoring Info Callout -->
       <div style="background:#F3EDF7;border:1px solid #E8DEF8;border-radius:var(--md-shape-corner-medium);padding:0.9rem 1.1rem;margin-top:1.2rem;font-size:0.84rem;color:#49454F;display:flex;align-items:flex-start;gap:0.7rem">
         <i class="fa-solid fa-shield-halved" style="color:var(--md-sys-color-primary);font-size:1.2rem;margin-top:0.1rem"></i>
         <div>
-          <strong>🔒 FERPA Zero Data Retention (ZDR) Active:</strong> Diagnostic profiles are generated statelessly in memory to protect student privacy. To track 6-week MTSS progress (Rate of Improvement / ROI), click <strong>"Export to Google Classroom"</strong> or <strong>"Print Student Sheet"</strong> to log in your district SIS/LMS.
+          <strong>🔒 Nothing is stored:</strong> Profiles are computed in memory and not saved. To track 6-week MTSS progress (Rate of Improvement / ROI), click <strong>"Export to Google Classroom"</strong> or <strong>"Print Student Sheet"</strong> to log in your district SIS/LMS.
         </div>
       </div>
 
-      <div class="spinner" id="spinner"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><br><br>Computing Simple View profile & CASE standards...</div>
+      <div class="spinner" id="spinner"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><br><br>Computing Simple View screening profile...</div>
 
       <div class="result" id="result">
         <div id="profileArea"></div>
@@ -1200,19 +1224,19 @@ input:focus, select:focus, textarea:focus {{
     </div>
   </div>
 
-  <!-- ── STEP 2: DECODABLE TEXT GENERATOR & SCOPE VERIFIER ── -->
+  <!-- ── STEP 2: DECODABLE TEXT CHECKER ── -->
   <div class="tab-pane" id="tab-decodable">
     <div class="m3-card">
-      <div class="m3-card-title"><i class="fa-solid fa-book-open"></i> Step 2: Decodable Text Generator & Scope Verifier</div>
+      <div class="m3-card-title"><i class="fa-solid fa-book-open"></i> Step 2: Decodable Text Checker</div>
       <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">
-        Select a Grade and Unit/Module. Scope graphemes and Heart Words are dynamically fetched in <strong>&lt; 200ms</strong> via <code>/api/phonics_scope</code>.
+        Choose the grade and unit your class has reached, then paste a passage. Each word is checked sound by sound against the patterns taught so far, using a pronunciation dictionary. The default sequence is illustrative; districts can load their adopted program's scope &amp; sequence (set <code>SOR_SCOPE_PATH</code>). To generate new decodable text, use the MCP server with an AI assistant, which checks each draft with this same engine.
       </p>
 
       <form id="decodableGeneratorForm">
         <div class="row">
           <div class="form-group">
             <label>Grade Level</label>
-            <select id="scopeGrade" onchange="fetchPhonicsScope()">
+            <select id="scopeGrade" onchange="populateUnits(); fetchPhonicsScope()">
               <option value="K">Kindergarten</option>
               <option value="1" selected>1st Grade</option>
               <option value="2">2nd Grade</option>
@@ -1222,19 +1246,16 @@ input:focus, select:focus, textarea:focus {{
           <div class="form-group">
             <label>Unit / Module Focus</label>
             <select id="scopeUnit" onchange="fetchPhonicsScope()">
-              <option value="1">Unit 1 (CVC / Single Consonants)</option>
-              <option value="2">Unit 2 (Short Vowels & Digraphs)</option>
-              <option value="3" selected>Unit 3 (Consonant Blends & Vowel Teams)</option>
-              <option value="4">Unit 4 (Silent-e CVCe)</option>
-              <option value="5">Unit 5 (R-Controlled Vowels)</option>
+              <option value="1">Unit 1</option>
             </select>
           </div>
         </div>
 
         <div class="scope-info-box" id="scopeInfoBox">
-          <div style="font-weight:700"><i class="fa-solid fa-bolt" style="color:#FFD700"></i> Active Scope State (&lt; 200ms response):</div>
-          <div>Taught Graphemes: <span id="taughtGraphemesSpan">a, e, i, o, u, sh, ch, th, wh, ck</span></div>
-          <div>Heart Words to Pre-Teach: <span id="heartWordsSpan">the, said, was, you</span></div>
+          <div style="font-weight:700"><i class="fa-solid fa-layer-group"></i> Taught through this unit (cumulative):</div>
+          <div>New this unit: <span id="newPatternsSpan">—</span></div>
+          <div>Taught graphemes: <span id="taughtGraphemesSpan">—</span></div>
+          <div>Heart words taught: <span id="heartWordsSpan">—</span></div>
         </div>
 
         <div class="form-group" style="margin-top:1.2rem">
@@ -1283,7 +1304,7 @@ input:focus, select:focus, textarea:focus {{
     <div class="m3-card">
       <div class="m3-card-title"><i class="fa-solid fa-magnifying-glass"></i> Step 4: Visual Audit Inspector & Anti-Cueing Shield</div>
       <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">
-        Audit any text passage for untaught grapheme-phoneme patterns and 3-cueing guessing traps before giving it to students.
+        Paste a passage, lesson script or set of teacher prompts. The audit flags three-cueing prompts (guess from the picture, "what would make sense") with decoding-focused replacements, and checks decodability using the grade and unit chosen in Step 2.
       </p>
 
       <form id="auditorForm">
@@ -1332,7 +1353,7 @@ input:focus, select:focus, textarea:focus {{
           <div class="form-group">
             <label>State Framework</label>
             <select id="standardsState">
-              <option value="GA" selected>Georgia (GSE)</option>
+              <option value="GA" selected>Georgia (legacy GSE codes)</option>
               <option value="CA">California (CCSS-CA)</option>
               <option value="TX">Texas (TEKS)</option>
               <option value="FL">Florida (B.E.S.T.)</option>
@@ -1354,7 +1375,7 @@ input:focus, select:focus, textarea:focus {{
 
 <footer>
   <p>© 2026 EdTech Labs • Science of Reading Teacher-First Workspace</p>
-  <p style="font-size:0.8rem;color:var(--md-sys-color-secondary);margin-top:0.4rem">🔒 FERPA Compliant • Zero Data Retention • Student Privacy Guaranteed</p>
+  <p style="font-size:0.8rem;color:var(--md-sys-color-secondary);margin-top:0.4rem">🔒 Student names are removed before processing • Nothing is stored • See "How Student Data Is Handled"</p>
 </footer>
 
 <script>
@@ -1364,7 +1385,7 @@ var PILLAR_FINDINGS = {PILLAR_FINDINGS_JSON};
 
 var TAB_NAMES = {{
   "tab-diagnose": "Step 1: MTSS Screener & Remediation",
-  "tab-decodable": "Step 2: Decodable Generator",
+  "tab-decodable": "Step 2: Decodable Text Checker",
   "tab-phonics": "Step 3: Phonics Routine Builder",
   "tab-auditor": "Step 4: Visual Audit Inspector",
   "tab-vocab": "Classify Vocabulary",
@@ -1374,23 +1395,23 @@ var TAB_NAMES = {{
 // Context-Aware Content Dictionary for Left Pull-Out Drawer
 var CONTEXT_GUIDES = {{
   "tab-diagnose": {{
-    title: "🎯 Step 1: MTSS Screener & Georgia HB 538 Guide",
+    title: "🎯 Step 1: MTSS Screener Guide",
     research: {{
-      title: "Gough & Tunmer (1986); Georgia HB 538 Literacy Act",
-      summary: "Georgia HB 538 mandates universal screening and evidence-based structured literacy interventions for decoding and comprehension deficits.",
-      doi: "https://doi.org/10.1007/BF02648824"
+      title: "Gough & Tunmer (1986), Decoding, Reading, and Reading Disability",
+      summary: "Reading comprehension depends on both word recognition (decoding) and language comprehension; a weakness in either limits reading. Screening profiles help target assessment and instruction but are not diagnoses.",
+      doi: "https://doi.org/10.1177/074193258600700104"
     }},
     concepts: [
       {{ term: "Simple View of Reading", def: "Reading Comprehension (R) = Decoding (D) x Language Comprehension (LC)." }},
-      {{ term: "Nonsense Word Fluency (NWF)", def: "Measures pure decoding ability without reliance on visual sight memory." }},
+      {{ term: "Nonsense Word Fluency (NWF)", def: "Measures decoding of unfamiliar letter strings, so students can't rely on memorized words." }},
       {{ term: "CASE Network GUIDs", def: "1EdTech open standard linking learning goals directly to state framework standard codes." }}
     ]
   }},
   "tab-decodable": {{
     title: "📖 Step 2: Decodability & Scope Guide",
     research: {{
-      title: "Linnea Ehri (2005) & National Reading Panel (2000)",
-      summary: "Systematic explicit phonics instruction significantly improves reading proficiency (d = 0.44-0.74). Decodable text supports orthographic mapping during the full alphabetic phase.",
+      title: "Ehri, Nunes, Stahl & Willows (2001), NRP phonics meta-analysis",
+      summary: "Systematic phonics instruction outperformed unsystematic or no phonics (d = 0.41 overall), with larger effects when begun in kindergarten or first grade (d = 0.55) than later (d = 0.27).",
       doi: "https://doi.org/10.3102/00346543071003393"
     }},
     concepts: [
@@ -1402,9 +1423,9 @@ var CONTEXT_GUIDES = {{
   "tab-phonics": {{
     title: "🧩 Step 3: Explicit Phonics Routine Guide",
     research: {{
-      title: "National Reading Panel (2000) & WWC Practice Guide",
-      summary: "Direct explicit instruction using I Do / We Do / You Do modeling produces superior phonics acquisition compared to implicit discovery.",
-      doi: "https://ies.ed.gov/ncee/wwc/"
+      title: "Foorman et al. (2016), WWC Foundational Skills Practice Guide",
+      summary: "Recommends teaching students to decode words, analyze word parts, and write and recognize words (strong evidence), with explicit modeling and practice.",
+      doi: "https://ies.ed.gov/ncee/wwc/PracticeGuide/21"
     }},
     concepts: [
       {{ term: "I DO (Teacher Model)", def: "Clear explicit demonstration with think-aloud modeling of sound-spelling correspondences." }},
@@ -1415,20 +1436,20 @@ var CONTEXT_GUIDES = {{
   "tab-auditor": {{
     title: "🔍 Step 4: Anti-Cueing Audit Guide",
     research: {{
-      title: "Kilpatrick (2015) & WWC Anti-Cueing Meta-Analysis",
-      summary: "3-Cueing (MSV) strategies teach students to guess words from pictures or context, suppressing orthographic mapping.",
-      doi: "https://doi.org/10.1007/s11881-015-0110-3"
+      title: "Ehri (2014), Orthographic Mapping; Kilpatrick (2015)",
+      summary: "Skilled word reading depends on connecting a word's letters to its sounds (orthographic mapping). Three-cueing (MSV) prompts steer students to guess from pictures or context instead of decoding.",
+      doi: "https://doi.org/10.1080/10888438.2013.819356"
     }},
     concepts: [
       {{ term: "Anti-Cueing Guardrail", def: "Flagging and eliminating prompts that encourage guessing from pictures or initial letters." }},
-      {{ term: "Phonetic Breakdown", def: "Segmenting words into exact phoneme-grapheme correspondences (e.g. /tʃ/ /æ/ /t/)." }}
+      {{ term: "Sound-by-Sound Breakdown", def: "Each word split into its letters or letter teams and the sound each one spells (e.g. ch - a - t → /ch/ /ă/ /t/)." }}
     ]
   }},
   "tab-vocab": {{
     title: "📚 Three-Tier Vocabulary Guide",
     research: {{
-      title: "Beck, McKeown & Kucan (2013)",
-      summary: "Explicit instruction targeting Tier 2 academic vocabulary produces very large effect sizes (d = 0.88) for word learning.",
+      title: "Beck, McKeown & Kucan (2013); Marulis & Neuman (2010)",
+      summary: "The three-tier model prioritizes high-utility Tier 2 words for instruction. A meta-analysis of vocabulary interventions for pre-K and kindergarten children found large gains in word learning (g = 0.88).",
       doi: "https://doi.org/10.3102/0034654310377077"
     }},
     concepts: [
@@ -1450,26 +1471,42 @@ var CONTEXT_GUIDES = {{
   }}
 }};
 
-function sanitizeClientPII(inputStr) {{
+function sanitizeClientPII(inputStr, extraNames) {{
   if (typeof inputStr !== 'string') return inputStr;
   var cleaned = inputStr;
   var detected = [];
 
-  var namePatterns = [/Alex\\s+Smith/gi, /Marcus\\s+Williams/gi, /Alex/gi, /Marcus/gi, /John\\s+Doe/gi];
-  namePatterns.forEach(function(p, idx) {{
-    if (p.test(cleaned)) {{
-      detected.push('Student Name');
-      cleaned = cleaned.replace(p, '[STUDENT_' + (idx + 1) + ']');
+  var idPatterns = [
+    [/[\\w.+-]+@[\\w-]+\\.[\\w.-]+/g, '[EMAIL_REDACTED]', 'Email'],
+    [/\\b(?:\\+?1[\\s.-]?)?\\(?\\d{{3}}\\)?[\\s.-]\\d{{3}}[\\s.-]\\d{{4}}\\b/g, '[PHONE_REDACTED]', 'Phone'],
+    [/\\b\\d{{1,2}}[\\/-]\\d{{1,2}}[\\/-]\\d{{2,4}}\\b/g, '[DATE_REDACTED]', 'Date'],
+    [/\\b[A-Z]{{2,3}}-?\\d{{4,}}\\b/g, '[ID_REDACTED]', 'Student ID'],
+    [/\\b\\d{{6,}}\\b/g, '[ID_REDACTED]', 'Student ID']
+  ];
+  idPatterns.forEach(function(p) {{
+    if (p[0].test(cleaned)) {{
+      detected.push(p[2]);
+      cleaned = cleaned.replace(p[0], p[1]);
     }}
   }});
 
-  if (/(GA-\\d{{5}}|ID#?\\s*\\d{{4,8}})/gi.test(cleaned)) {{
-    detected.push('Student ID');
-    cleaned = cleaned.replace(/(GA-\\d{{5}}|ID#?\\s*\\d{{4,8}})/gi, '[STUDENT_ID_REDACTED]');
-  }}
+  var nameField = document.getElementById('studentNameInput');
+  var names = (extraNames || []).concat(nameField && nameField.value ? [nameField.value] : []);
+  var parts = [];
+  names.forEach(function(n) {{
+    String(n).split(/[\\s,]+/).forEach(function(part) {{ if (part.length >= 2) parts.push(part); }});
+  }});
+  parts.sort(function(a, b) {{ return b.length - a.length; }});
+  parts.forEach(function(part) {{
+    var rx = new RegExp('\\\\b' + part.replace(/[.*+?^${{}}()|[\\]\\\\]/g, '\\\\$&') + '\\\\b', 'gi');
+    if (rx.test(cleaned)) {{
+      if (detected.indexOf('Student Name') === -1) detected.push('Student Name');
+      cleaned = cleaned.replace(rx, '[STUDENT]');
+    }}
+  }});
 
   if (detected.length > 0) {{
-    showToast('🔒 FERPA Shield: PII (' + detected.join(', ') + ') auto-sanitized prior to API transmission.');
+    showToast('🔒 Removed before sending: ' + detected.filter(function(v, i, a) {{ return a.indexOf(v) === i; }}).join(', ') + '.');
   }}
   return cleaned;
 }}
@@ -1567,23 +1604,40 @@ document.getElementById('gcPublishForm').addEventListener('submit', async functi
   }}
 }});
 
+var SCOPE_UNITS = {{}};
+
+async function populateUnits() {{
+  var grade = document.getElementById('scopeGrade').value;
+  var sel = document.getElementById('scopeUnit');
+  try {{
+    if (!SCOPE_UNITS[grade]) {{
+      var resp = await fetch('/api/scope_units?grade=' + encodeURIComponent(grade));
+      SCOPE_UNITS[grade] = (await resp.json()).units || [];
+    }}
+    var current = sel.value;
+    sel.innerHTML = SCOPE_UNITS[grade].map(function(u) {{
+      return '<option value="' + u.unit + '">Unit ' + u.unit + ': ' + u.title + '</option>';
+    }}).join('');
+    if (current && sel.querySelector('option[value="' + current + '"]')) sel.value = current;
+  }} catch(e) {{
+    console.error('Unit list error:', e);
+  }}
+}}
+
 async function fetchPhonicsScope() {{
   var grade = document.getElementById('scopeGrade').value;
-  var unit = document.getElementById('scopeUnit').value;
-  var start = performance.now();
+  var unit = document.getElementById('scopeUnit').value || '1';
 
   try {{
     var resp = await fetch('/api/phonics_scope?grade=' + encodeURIComponent(grade) + '&unit=' + encodeURIComponent(unit));
     var data = await resp.json();
-    var elapsed = (performance.now() - start).toFixed(0);
 
     var graphemes = (data.taught_graphemes || []).join(', ');
     var heart = (data.heart_words || []).map(function(w){{ return typeof w === 'object' ? w.word : w; }}).join(', ');
 
+    document.getElementById('newPatternsSpan').innerText = (data.new_patterns || []).join('; ') || '—';
     document.getElementById('taughtGraphemesSpan').innerText = graphemes || 'None';
     document.getElementById('heartWordsSpan').innerText = heart || 'None';
-    
-    showToast('⚡ Scope updated in ' + elapsed + 'ms for Grade ' + grade + ', Unit ' + unit);
   }} catch(e) {{
     console.error('Scope fetch error:', e);
   }}
@@ -1682,29 +1736,25 @@ toggle.addEventListener('click', function(e) {{
 
 backdrop.addEventListener('click', closeSidebar);
 
+var PRESETS = {{
+  nwf_low: {{ decoding: 0.35, comprehension: 0.80, skills: ['cvc_mixed'], label: 'low nonsense-word fluency; diagnostic showed short-vowel CVC errors' }},
+  phoneme_segmentation: {{ decoding: 0.28, comprehension: 0.75, skills: ['phoneme_segmentation'], label: 'phoneme segmentation difficulty' }},
+  vowel_teams: {{ decoding: 0.42, comprehension: 0.85, skills: ['vowel_teams'], label: 'vowel team errors' }},
+  consonant_blends: {{ decoding: 0.38, comprehension: 0.82, skills: ['consonant_blends'], label: 'consonant blend errors' }}
+}};
+
 function autofillDeficitScores() {{
   var val = document.getElementById('hb538Deficit').value;
-  var decInput = document.getElementById('decoding');
-  var compInput = document.getElementById('comprehension');
   var pill = document.getElementById('presetSummaryPill');
-  if (val === 'nwf_low') {{
-    decInput.value = '0.35'; compInput.value = '0.80';
-    if (pill) pill.innerHTML = '<i class="fa-solid fa-circle-check"></i> Preset Loaded: Decoding 0.35 / Comp 0.80 (Nonsense Word Fluency Deficit — Georgia HB 538 Priority)';
-  }}
-  else if (val === 'phoneme_segmentation') {{
-    decInput.value = '0.28'; compInput.value = '0.75';
-    if (pill) pill.innerHTML = '<i class="fa-solid fa-circle-check"></i> Preset Loaded: Decoding 0.28 / Comp 0.75 (Phoneme Segmentation Deficit — Georgia HB 538 Priority)';
-  }}
-  else if (val === 'vowel_teams') {{
-    decInput.value = '0.42'; compInput.value = '0.85';
-    if (pill) pill.innerHTML = '<i class="fa-solid fa-circle-check"></i> Preset Loaded: Decoding 0.42 / Comp 0.85 (Vowel Team Confusion — Georgia HB 538 Priority)';
-  }}
-  else if (val === 'consonant_blends') {{
-    decInput.value = '0.38'; compInput.value = '0.82';
-    if (pill) pill.innerHTML = '<i class="fa-solid fa-circle-check"></i> Preset Loaded: Decoding 0.38 / Comp 0.82 (Consonant Blend Breakdown — Georgia HB 538 Priority)';
-  }}
-  else {{
-    if (pill) pill.innerHTML = '<i class="fa-solid fa-circle-info"></i> Georgia HB 538 Literacy Act rules active. Select a preset or input custom DIBELS scores. (For other 50 state frameworks, use Tab 6: Standards Alignment).';
+  var skillSel = document.getElementById('diagnosedSkills');
+  var preset = PRESETS[val];
+  if (preset) {{
+    document.getElementById('decoding').value = preset.decoding.toFixed(2);
+    document.getElementById('comprehension').value = preset.comprehension.toFixed(2);
+    Array.prototype.forEach.call(skillSel.options, function(o) {{ o.selected = preset.skills.indexOf(o.value) !== -1; }});
+    if (pill) pill.innerHTML = '<i class="fa-solid fa-circle-check"></i> Example loaded (illustrative scores): ' + preset.label + '.';
+  }} else {{
+    if (pill) pill.innerHTML = '<i class="fa-solid fa-circle-info"></i> Enter your own scores, set the cutoff to your screener\\'s benchmark, and choose any skills a diagnostic identified.';
   }}
 }}
 
@@ -1726,45 +1776,80 @@ function toggleInspectorEditable(targetId) {{
   }}
 }}
 
-function renderDecodableInspector(r, targetId) {{
-  var totalWords = r.total_words || 0;
-  var pct = r.decodable_pct !== undefined ? r.decodable_pct : 100;
-  var offScope = r.off_scope_words || [];
-  var heartWords = r.heart_words || ['the', 'a', 'said', 'was', 'you', 'to'];
+function escapeHtml(str) {{
+  return String(str).replace(/[&<>"']/g, function(c) {{
+    return {{'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}}[c];
+  }});
+}}
 
-  var html = '<h3 style="color:var(--md-sys-color-primary);margin-bottom:0.8rem"><i class="fa-solid fa-microscope"></i> Visual Audit Inspector & Decodability Report</h3>';
-  
+var STATUS_STYLE = {{
+  decodable: ['badge-decodable', '🟢 Decodable'],
+  heart_word: ['badge-heart', '💛 Taught heart word'],
+  not_yet_decodable: ['badge-offscope', '🔴 Not yet decodable'],
+  irregular: ['badge-offscope', '🔴 Irregular, not yet taught as a heart word'],
+  not_in_dictionary: ['badge-offscope', '⚪ Not in dictionary: check by hand']
+}};
+
+function renderDecodableInspector(r, targetId) {{
+  var resEl = document.getElementById(targetId);
+  if (r.error_code) {{
+    resEl.innerHTML = '<p style="color:#B3261E"><strong>Error:</strong> ' + escapeHtml(r.error_message || r.error_code) + '</p>';
+    resEl.classList.add('show');
+    return;
+  }}
+  var byWord = {{}};
+  (r.words || []).forEach(function(w) {{ byWord[w.word.toLowerCase()] = w; }});
+  var cueing = r.cueing_flags || [];
+  var counts = r.counts || {{}};
+
+  var html = '<h3 style="color:var(--md-sys-color-primary);margin-bottom:0.8rem"><i class="fa-solid fa-microscope"></i> Decodability Report: Grade ' + escapeHtml(r.grade_level) + ', Unit ' + escapeHtml(r.unit) + (r.unit_title ? ' (' + escapeHtml(r.unit_title) + ')' : '') + '</h3>';
+
   html += '<div class="audit-metrics-bar">';
-  html += '<div><div class="audit-metric-num">' + pct + '%</div><div class="audit-metric-label">% Decodable Ratio</div></div>';
-  html += '<div><div class="audit-metric-num">' + totalWords + '</div><div class="audit-metric-label">Total Word Count</div></div>';
-  html += '<div><div class="audit-metric-num">' + heartWords.length + '</div><div class="audit-metric-label">Heart Words Used</div></div>';
-  html += '<div><div class="audit-metric-num" style="color:#2E7D32"><i class="fa-solid fa-check-circle"></i> PASSED</div><div class="audit-metric-label">Anti-Cueing Audit</div></div>';
+  html += '<div><div class="audit-metric-num">' + r.decodable_pct + '%</div><div class="audit-metric-label">Decodable with taught patterns</div></div>';
+  html += '<div><div class="audit-metric-num">' + r.accessible_pct + '%</div><div class="audit-metric-label">Decodable + taught heart words (target ' + r.target_pct + '%)</div></div>';
+  html += '<div><div class="audit-metric-num">' + r.total_words + '</div><div class="audit-metric-label">Total words</div></div>';
+  if (cueing.length) {{
+    html += '<div><div class="audit-metric-num" style="color:#B3261E"><i class="fa-solid fa-triangle-exclamation"></i> ' + cueing.length + '</div><div class="audit-metric-label">Three-cueing prompts found</div></div>';
+  }} else {{
+    html += '<div><div class="audit-metric-num" style="color:#2E7D32"><i class="fa-solid fa-check-circle"></i> None</div><div class="audit-metric-label">Three-cueing prompts</div></div>';
+  }}
   html += '</div>';
 
-  var text = r.text || r.original_text || document.getElementById('decodeText').value;
-  var words = text.split(/(\\s+)/);
-
+  var text = r.text || document.getElementById('decodeText').value;
+  var tokens = text.split(/([A-Za-z]+(?:'[A-Za-z]+)?)/);
   html += '<div class="inspector-word-container">';
-  words.forEach(function(w) {{
-    var cleanWord = w.toLowerCase().replace(/[^a-z]/g, '');
-    if (!cleanWord) {{
-      html += w;
-      return;
-    }}
-
-    var isOffScope = offScope.indexOf(cleanWord) !== -1;
-    var isHeart = heartWords.indexOf(cleanWord) !== -1;
-    var phoneticBreakdown = getPhoneticBreakdown(cleanWord);
-
-    if (isOffScope) {{
-      html += '<span class="word-badge badge-offscope">' + w + '<span class="tooltip">🔴 Untaught Pattern: ' + phoneticBreakdown + '</span></span>';
-    }} else if (isHeart) {{
-      html += '<span class="word-badge badge-heart">' + w + '<span class="tooltip">💛 Heart Word: ' + phoneticBreakdown + '</span></span>';
-    }} else {{
-      html += '<span class="word-badge badge-decodable">' + w + '<span class="tooltip">🟢 Decodable GPC: ' + phoneticBreakdown + '</span></span>';
-    }}
+  tokens.forEach(function(tok) {{
+    var info = byWord[tok.toLowerCase()];
+    if (!info) {{ html += escapeHtml(tok); return; }}
+    var style = STATUS_STYLE[info.status] || STATUS_STYLE.not_in_dictionary;
+    var tip = style[1];
+    if (info.breakdown) tip += ': ' + info.breakdown;
+    if (info.missing_patterns && info.missing_patterns.length) tip += ' | Needs: ' + info.missing_patterns.join('; ');
+    html += '<span class="word-badge ' + style[0] + '">' + escapeHtml(tok) + '<span class="tooltip">' + escapeHtml(tip) + '</span></span>';
   }});
   html += '</div>';
+
+  var missing = r.missing_patterns || {{}};
+  var missingKeys = Object.keys(missing);
+  if (missingKeys.length || (r.irregular_words || []).length || (r.not_in_dictionary_words || []).length) {{
+    html += '<div style="margin-top:1rem;padding:1rem;background:#FFF8E1;border-radius:var(--md-shape-corner-medium);border-left:4px solid #F9A825">';
+    html += '<strong>What blocks this passage</strong><ul style="margin:0.5rem 0 0 1.2rem">';
+    missingKeys.forEach(function(k) {{ html += '<li>Untaught pattern <strong>' + escapeHtml(k) + '</strong>: ' + escapeHtml(missing[k].join(', ')) + '</li>'; }});
+    if ((r.irregular_words || []).length) html += '<li>Irregular words not yet taught as heart words: ' + escapeHtml(r.irregular_words.join(', ')) + '</li>';
+    if ((r.not_in_dictionary_words || []).length) html += '<li>Check by hand (not in the pronunciation dictionary): ' + escapeHtml(r.not_in_dictionary_words.join(', ')) + '</li>';
+    html += '</ul></div>';
+  }}
+
+  if (cueing.length) {{
+    html += '<div style="margin-top:1rem;padding:1rem;background:#FDECEA;border-radius:var(--md-shape-corner-medium);border-left:4px solid #B3261E">';
+    html += '<strong>Three-cueing prompts to replace</strong><ul style="margin:0.5rem 0 0 1.2rem">';
+    cueing.forEach(function(f) {{
+      html += '<li>"' + escapeHtml(f.matched_text) + '": ' + escapeHtml(f.why) + ' <em>Try instead:</em> "' + escapeHtml(f.suggested_prompt) + '"</li>';
+    }});
+    html += '</ul></div>';
+  }}
+
+  html += '<p style="font-size:0.78rem;color:var(--md-sys-color-secondary);margin-top:0.8rem">' + escapeHtml(r.method || '') + ' Scope source: ' + escapeHtml(r.scope_source || '') + '.</p>';
 
   html += '<div class="export-bar">';
   html += '<button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print Student Sheet</button>';
@@ -1774,27 +1859,8 @@ function renderDecodableInspector(r, targetId) {{
   html += '<button onclick="openGCModal(' + "'Decodable Text Practice'" + ', document.getElementById(' + "'decodeText'" + ').value)" class="export-btn" style="background:#EADDFF;color:#21005D"><i class="fa-solid fa-graduation-cap"></i> 🎓 Export to Google Classroom</button>';
   html += '</div>';
 
-  var resEl = document.getElementById(targetId);
   resEl.innerHTML = html;
   resEl.classList.add('show');
-}}
-
-function getPhoneticBreakdown(word) {{
-  var dict = {{
-    'cat': 'c - a - t → /k/ /æ/ /t/',
-    'sat': 's - a - t → /s/ /æ/ /t/',
-    'mat': 'm - a - t → /m/ /æ/ /t/',
-    'hat': 'h - a - t → /h/ /æ/ /t/',
-    'dog': 'd - o - g → /d/ /ɒ/ /ɡ/',
-    'ran': 'r - a - n → /r/ /æ/ /n/',
-    'shop': 'sh - o - p → /tʃ/ /ɒ/ /p/',
-    'chat': 'ch - a - t → /tʃ/ /æ/ /t/',
-    'the': 'th - e → /ðə/ (Heart Word)',
-    'said': 's - ai - d → /sɛd/ (Heart Word)',
-    'was': 'w - a - s → /wɒz/ (Heart Word)'
-  }};
-  if (dict[word]) return dict[word];
-  return word.split('').join(' - ') + ' → /' + word + '/';
 }}
 
 function copyResultText(elementId) {{
@@ -1852,14 +1918,16 @@ document.getElementById('diagnoseForm').addEventListener('submit', async functio
   document.getElementById('spinner').classList.add('show');
   document.getElementById('result').classList.remove('show');
 
-  var rawName = document.getElementById('studentNameInput').value;
-  var sanitizedName = sanitizeClientPII(rawName);
+  var sanitizedName = document.getElementById('studentNameInput').value.trim();
 
+  var skills = Array.prototype.filter.call(document.getElementById('diagnosedSkills').options, function(o) {{ return o.selected; }}).map(function(o) {{ return o.value; }});
   var data = {{
     decoding: parseFloat(document.getElementById('decoding').value),
     comprehension: parseFloat(document.getElementById('comprehension').value),
+    cutoff: parseFloat(document.getElementById('cutoff').value),
+    diagnosed_skills: skills,
     grade: document.getElementById('grade').value,
-    student_name: sanitizedName
+    student_name: sanitizedName ? '[STUDENT]' : ''
   }};
 
   try {{
@@ -1881,28 +1949,35 @@ document.getElementById('diagnoseForm').addEventListener('submit', async functio
 function renderResult(r) {{
   var profile = r.diagnostic;
   var badges = {{
-    'typical': '<span class="profile-badge profile-typical">✅ On Track</span>',
-    'dyslexia': '<span class="profile-badge profile-dyslexia">⚠️ Decoding Deficit (Georgia HB 538 Priority)</span>',
-    'hyperlexic': '<span class="profile-badge profile-hyperlexic">📚 Comprehension Focus</span>',
-    'garden_variety': '<span class="profile-badge profile-garden">🔶 Dual Support Needed</span>'
+    'on_track': '<span class="profile-badge profile-typical">✅ On Track</span>',
+    'word_recognition_difficulty': '<span class="profile-badge profile-dyslexia">⚠️ Word-Recognition Difficulty</span>',
+    'language_comprehension_difficulty': '<span class="profile-badge profile-hyperlexic">📚 Language-Comprehension Difficulty</span>',
+    'mixed_difficulty': '<span class="profile-badge profile-garden">🔶 Mixed Difficulty</span>'
   }};
 
   var html = '<h3>' + badges[profile.reading_profile] + '</h3>';
+  html += '<p style="margin:0.4rem 0">' + escapeHtml(profile.profile_label) + ' (cutoff ' + profile.cutoff.toFixed(2) + ').</p>';
+  if (profile.near_cutoff) html += '<p style="color:#E65100;margin:0.4rem 0"><strong>Near the cutoff:</strong> this profile is uncertain; confirm with another measure.</p>';
   html += '<div class="stats-grid">';
   html += '<div class="stat"><div class="stat-num">' + (profile.decoding_score*100).toFixed(0) + '%</div><div class="stat-label">Decoding</div></div>';
-  html += '<div class="stat"><div class="stat-num">' + (profile.language_comprehension_score*100).toFixed(0) + '%</div><div class="stat-label">Comprehension</div></div>';
-  html += '<div class="stat"><div class="stat-num">' + profile.deficit_codes.length + '</div><div class="stat-label">Deficits Found</div></div>';
-  html += '<div class="stat"><div class="stat-num">' + r.remediations.length + '</div><div class="stat-label">Cards Generated</div></div>';
+  html += '<div class="stat"><div class="stat-num">' + (profile.language_comprehension_score*100).toFixed(0) + '%</div><div class="stat-label">Language Comprehension</div></div>';
+  html += '<div class="stat"><div class="stat-num">' + profile.deficit_codes.length + '</div><div class="stat-label">Diagnosed Skills</div></div>';
+  html += '<div class="stat"><div class="stat-num">' + r.remediations.length + '</div><div class="stat-label">Intervention Cards</div></div>';
   html += '</div>';
+  html += '<p style="font-size:0.82rem;padding:0.8rem;background:#F3EDF7;border-radius:var(--md-shape-corner-small)"><strong>Screening, not diagnosis:</strong> ' + escapeHtml(r.caveat || '') + '</p>';
+  (r.warnings || []).forEach(function(w) {{ html += '<p style="font-size:0.82rem;color:#E65100">⚠️ ' + escapeHtml(w) + '</p>'; }});
 
   document.getElementById('profileArea').innerHTML = html;
 
-  var cardsHtml = '<h3 style="margin-top:1.5rem;color:var(--md-sys-color-primary)">📋 Georgia HB 538 Intervention Cards & 1EdTech CASE® Standards</h3>';
-  r.remediations.forEach(function(card){{
-    cardsHtml += '<div class="remediation-card">' + renderMarkdownCard(card) + '</div>';
-  }});
+  var cardsHtml = '';
+  if (r.remediations.length) {{
+    cardsHtml = '<h3 style="margin-top:1.5rem;color:var(--md-sys-color-primary)">📋 Intervention Cards for Diagnosed Skills</h3>';
+    r.remediations.forEach(function(card){{
+      cardsHtml += '<div class="remediation-card">' + renderMarkdownCard(card) + '</div>';
+    }});
+  }}
   document.getElementById('remediationArea').innerHTML = cardsHtml;
-  document.getElementById('nextSteps').innerHTML = '<p style="margin-top:1rem;padding:1.2rem;background:var(--md-sys-color-surface-variant);border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong>📝 Next Steps:</strong> ' + r.next_steps + '</p>';
+  document.getElementById('nextSteps').innerHTML = '<p style="margin-top:1rem;padding:1.2rem;background:var(--md-sys-color-surface-variant);border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)"><strong>📝 Next Steps:</strong> ' + escapeHtml(r.next_steps) + '</p>';
   document.getElementById('result').classList.add('show');
   document.getElementById('result').scrollIntoView({{behavior: 'smooth'}});
 }}
@@ -1923,11 +1998,6 @@ function renderMarkdownCard(card) {{
     .replace(/\\n\\n/g, '<br><br>')
     .replace(/\\n/g, '<br>');
 
-  html += '<div style="margin-top:0.8rem;padding:0.6rem 0.9rem;background:var(--md-sys-color-surface-variant);border-radius:var(--md-shape-corner-small);font-size:0.82rem;display:flex;align-items:center;justify-space-between">';
-  html += '<span><i class="fa-solid fa-award" style="color:var(--md-sys-color-primary)"></i> <strong>Aligned Georgia GSE Standard:</strong> ELAGSE1RF3</span>';
-  html += '<a href="https://rosetta.commongoodlt.com/#/search?q=ELAGSE1RF3" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open CASE Network Record</a>';
-  html += '</div>';
-
   return html;
 }}
 
@@ -1939,7 +2009,7 @@ document.getElementById('auditorForm').addEventListener('submit', async function
   var resp = await fetch('/api/decodability', {{
     method: 'POST',
     headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{text: text, grade: '1st'}})
+    body: JSON.stringify({{text: text, grade: document.getElementById('scopeGrade').value, unit: document.getElementById('scopeUnit').value || '1'}})
   }});
   var r = await resp.json();
   renderDecodableInspector(r, 'auditResult');
@@ -1989,6 +2059,7 @@ document.getElementById('standardsForm').addEventListener('submit', async functi
   var r = await resp.json();
 
   var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">🏛️ Standards Matches for ' + r.state + ' (' + r.total_matches + ')</h3>';
+  (r.notices || []).forEach(function(n) {{ html += '<p style="font-size:0.84rem;color:#E65100;margin:0.4rem 0">⚠️ ' + escapeHtml(n) + '</p>'; }});
   (r.matches||[]).forEach(function(m){{
     var deepLink = m.url || ('https://rosetta.commongoodlt.com/#/search?q=' + encodeURIComponent(m.code));
     html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.2rem;margin:.8rem 0;border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)">';
@@ -2003,13 +2074,17 @@ document.getElementById('standardsForm').addEventListener('submit', async functi
 }});
 
 // Fetch initial scope on page load (< 200ms)
-fetchPhonicsScope();
+populateUnits().then(function() {{
+  var sel = document.getElementById('scopeUnit');
+  if (sel.querySelector('option[value="3"]')) sel.value = '3';
+  fetchPhonicsScope();
+}});
 </script>
 </body>
 </html>"""
 
 
-# ── API Routes (Stories 1–6 Compliant) ───────────────────────────────────────
+# ── API Routes (Stories 1–6) ───────────────────────────────────────
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -2038,11 +2113,13 @@ async def phonics_routine_route(data: dict):
 @app.post("/api/diagnose")
 @app.post("/tools/evaluate_simple_view")
 async def diagnose(data: dict):
-    """Story 4 & 5: Run Simple View diagnostic + Georgia HB 538 remediation."""
+    """Story 4 & 5: Simple View screening profile + intervention cards for diagnosed skills."""
     decoding = data.get("decoding", data.get("decoding_score", 0.5))
     comprehension = data.get("comprehension", data.get("language_comp_score", data.get("language_comprehension", 0.5)))
     grade = data.get("grade", data.get("student_grade", "1st"))
     student_name = data.get("student_name", "")
+    cutoff = data.get("cutoff")
+    diagnosed_skills = data.get("diagnosed_skills") or []
 
     sanitized_input = sanitize_pii({"student_name": student_name})
     clean_name = sanitized_input.get("student_token", "Anonymous Student")
@@ -2052,6 +2129,8 @@ async def diagnose(data: dict):
             decoding=float(decoding),
             language_comprehension=float(comprehension),
             grade=grade,
+            cutoff=float(cutoff) if cutoff not in (None, "") else None,
+            diagnosed_skills=list(diagnosed_skills),
         )
         result["student_alias"] = clean_name
         return result
@@ -2068,8 +2147,27 @@ async def list_remediations():
 @app.post("/api/decodability")
 @app.post("/tools/verify_decodable_text")
 async def check_decodability_route(data: dict):
-    """Story 2: Check text decodability against target skill & render visual audit payload."""
-    return check_decodability(data.get("text", ""), data.get("grade", "2nd"))
+    """Story 2: Check text decodability against the cumulative scope for grade/unit."""
+    try:
+        target = float(data.get("target_pct", 90))
+    except (TypeError, ValueError):
+        target = 90.0
+    return check_decodability(
+        data.get("text", ""),
+        data.get("grade", "1"),
+        unit=data.get("unit", 1),
+        target_pct=target,
+    )
+
+
+@app.get("/api/scope_units")
+async def scope_units(grade: str = "1"):
+    """List unit titles in the active scope & sequence for a grade."""
+    from src.engine.scope_sequence import load_sequence, normalize_grade
+
+    g = normalize_grade(grade) or "1"
+    units = load_sequence().get(g, [])
+    return {"grade": g, "units": [{"unit": i + 1, "title": u.get("title", "")} for i, u in enumerate(units)]}
 
 
 @app.post("/api/vocabulary")
@@ -2093,7 +2191,7 @@ async def standards(data: dict):
 @app.post("/api/sanitize_pii")
 @app.post("/tools/sanitize_pii")
 async def sanitize_pii_route(data: dict):
-    """Story 5: FERPA-compliant PII anonymizer."""
+    """Story 5: Remove student identifiers before processing (data minimization)."""
     sanitized = sanitize_pii(data)
     return {"status": "ok", "sanitized_data": sanitized}
 

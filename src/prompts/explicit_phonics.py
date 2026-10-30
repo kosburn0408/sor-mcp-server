@@ -80,8 +80,8 @@ def build_explicit_phonics_routine(
         "examples": phoneme_examples,
         "framework_notes": (
             "Explicit Instruction (Archer & Hughes, 2011): I Do (modeling), "
-            "We Do (guided practice), You Do (independent practice) yields "
-            "effect sizes of d=0.57-0.69. NRP Phonics: systematic, explicit "
+            "We Do (guided practice), You Do (independent practice) with immediate "
+            "corrective feedback. NRP / Ehri et al. (2001): systematic, explicit "
             "instruction is significantly more effective than incidental teaching."
         ),
         "corrective_feedback": _get_corrective_feedback(skill_lower),

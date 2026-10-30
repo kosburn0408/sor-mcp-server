@@ -1,13 +1,26 @@
 """Privacy/PII sanitizer for Science of Reading MCP server.
 
-FERPA-compliant PII anonymization. All student PII is stripped at the
-MCP boundary before any LLM sees it. Re-identification happens only at
-output rendering time — the LLM operates exclusively on synthetic tokens.
+Data-minimization helper: removes known student identifiers before data is
+passed to a language model.
+
+- Named PII fields (names, IDs, contact details) are dropped and replaced by a
+  pseudonymous token derived with a per-process secret key, so tokens cannot be
+  recomputed from a class roster.
+- Free-text fields are scrubbed of the student's name parts and of patterns
+  that look like identifiers (long digit runs such as GTIDs, emails, phone
+  numbers, dates).
+
+Pattern-based scrubbing cannot catch every identifier (for example a
+classmate's name typed into a note). It reduces risk; it does not make a
+system FERPA-compliant on its own. Districts remain responsible for their own
+privacy review and data agreements.
 """
 
 from __future__ import annotations
 
 import hashlib
+import hmac
+import re
 import secrets
 import threading
 import time
@@ -56,6 +69,38 @@ ACADEMIC_FIELDS: set[str] = {
     "attendance_pct",
     "student_token",
 }
+
+
+_TOKEN_KEY = secrets.token_bytes(32)
+
+_ID_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+"), "[EMAIL_REDACTED]"),
+    (re.compile(r"\b(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}\b"), "[PHONE_REDACTED]"),
+    (re.compile(r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b"), "[DATE_REDACTED]"),
+    (re.compile(r"\b[A-Z]{2,3}-?\d{4,}\b"), "[ID_REDACTED]"),
+    (re.compile(r"\b\d{6,}\b"), "[ID_REDACTED]"),
+]
+
+
+def scrub_text(text: str, names: list[str] | tuple[str, ...] = ()) -> tuple[str, list[str]]:
+    """Remove a student's name parts and identifier-like patterns from text.
+
+    Returns (scrubbed_text, list of redaction kinds applied).
+    """
+    applied: list[str] = []
+    out = text
+    parts = sorted({p for n in names for p in re.split(r"[\s,]+", str(n)) if len(p) >= 2}, key=len, reverse=True)
+    for rx, repl in _ID_PATTERNS:
+        if rx.search(out):
+            out = rx.sub(repl, out)
+            applied.append(repl.strip("[]").lower())
+    for part in parts:
+        rx = re.compile(r"\b" + re.escape(part) + r"\b", re.IGNORECASE)
+        if rx.search(out):
+            out = rx.sub("[STUDENT]", out)
+            if "name" not in applied:
+                applied.append("name")
+    return out, applied
 
 
 class PrivacyAuditLogger:
@@ -125,14 +170,14 @@ class PIIManager:
                 log_privacy_event("session_destroyed", "success", f"Session {session_id[:12]}... destroyed ({count} records purged)")
 
     def anonymize_student_record(self, data: dict[str, Any]) -> dict[str, Any]:
-        raw_name = data.get("first_name", "") + data.get("last_name", "")
-        raw_id = data.get("state_student_id", data.get("ssid", ""))
-        token_seed = raw_name + raw_id
+        raw_name = str(data.get("first_name", "")) + str(data.get("last_name", "")) + str(data.get("student_name", "")) + str(data.get("full_name", ""))
+        raw_id = str(data.get("state_student_id", data.get("ssid", "")))
+        token_seed = (raw_name + raw_id).strip().lower()
 
-        if not token_seed.strip():
+        if not token_seed:
             student_token = f"std_{secrets.token_hex(4)}"
         else:
-            student_token = f"std_{hashlib.sha256(token_seed.encode()).hexdigest()[:8]}"
+            student_token = "std_" + hmac.new(_TOKEN_KEY, token_seed.encode(), hashlib.sha256).hexdigest()[:10]
 
         pii_store: dict[str, str] = {}
         for field in PII_FIELDS:
@@ -145,13 +190,28 @@ class PIIManager:
             with self._lock:
                 self._sessions[session_id][student_token] = pii_store
 
+        name_values = [v for k, v in pii_store.items() if "name" in k]
         cleaned: dict[str, Any] = {"student_token": student_token}
+        redactions: list[str] = []
 
         for key, value in data.items():
             if key in PII_FIELDS or key.startswith("_"):
                 continue
+            if isinstance(value, str):
+                value, applied = scrub_text(value, name_values)
+                redactions.extend(applied)
+            elif isinstance(value, list):
+                new_list = []
+                for item in value:
+                    if isinstance(item, str):
+                        item, applied = scrub_text(item, name_values)
+                        redactions.extend(applied)
+                    new_list.append(item)
+                value = new_list
             cleaned[key] = value
 
+        if redactions:
+            log_privacy_event("free_text_scrubbed", "success", ", ".join(sorted(set(redactions))))
         return cleaned
 
     def anonymize_batch(self, records: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -190,11 +250,11 @@ class PIIManager:
             "retained_fields": sorted(ACADEMIC_FIELDS),
             "audit": _audit.get_summary(),
             "status": "operational",
-            "compliance": {
-                "ferpa": "compliant",
-                "coppa": "compliant",
-                "gdpr_right_to_erasure": "zdr_by_default",
-            },
+            "limitations": (
+                "Pattern-based scrubbing reduces but cannot eliminate identifiers in free text. "
+                "This tool has not been independently audited; districts must complete their own "
+                "FERPA/COPPA review before use with student data."
+            ),
         }
 
 

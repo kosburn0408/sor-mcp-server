@@ -23,7 +23,8 @@ async def test_decodable_prompt_generation() -> None:
     assert "get_phonics_scope" in result
     assert "verify_decodable_text" in result
     assert "decodable_pct ≥ 95%" in result.replace("\u2265", "≥") or "decodable_pct" in result
-    assert "no off-scope words" in result.lower() or "off_scope_words" in result
+    assert "not_yet_decodable_words" in result
+    assert "meets_target" in result
 
 
 @pytest.mark.asyncio
