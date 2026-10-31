@@ -31,6 +31,7 @@ def check_decodability(
     grade_level: str = "1",
     unit: str | int = 1,
     target_pct: float = 90.0,
+    min_decodable_pct: float | None = None,
     taught_gpcs: Iterable[str] | None = None,
     taught_heart_words: Iterable[str] | None = None,
     target_skill: str | None = None,  # retained for backward compatibility; unused
@@ -56,7 +57,7 @@ def check_decodability(
     gpcs = list(taught_gpcs) if taught_gpcs is not None else scope["taught_gpcs"]
     hearts = list(taught_heart_words) if taught_heart_words is not None else scope["heart_words"]
 
-    result = analyze_text(text, gpcs, hearts, target_pct=target_pct)
+    result = analyze_text(text, gpcs, hearts, target_pct=target_pct, min_decodable_pct=min_decodable_pct)
     if result["total_words"] == 0:
         return format_api_error(SoRAPIErrorCode.ERR_INVALID_INPUT, detail="no words found")
 
@@ -88,10 +89,13 @@ def check_decodability(
 def _recommendation(result: dict[str, Any], cueing: list[dict[str, Any]]) -> str:
     parts: list[str] = []
     pct, target = result["accessible_pct"], result["target_pct"]
-    if result["meets_target"]:
-        parts.append(f"{pct:.0f}% of words are decodable or taught heart words (target {target:.0f}%).")
-    else:
-        parts.append(f"Only {pct:.0f}% of words are decodable or taught heart words (target {target:.0f}%).")
+    ok = "meets" if pct >= target else "below"
+    parts.append(f"{pct:.0f}% of words are decodable or taught heart words ({ok} the {target:.0f}% target).")
+    min_dec = result.get("min_decodable_pct")
+    if min_dec is not None:
+        dec = result["decodable_pct"]
+        ok = "meets" if dec >= min_dec else "below"
+        parts.append(f"{dec:.0f}% are decodable from taught patterns alone ({ok} the {min_dec:.0f}% minimum).")
     if result["missing_patterns"]:
         top = sorted(result["missing_patterns"].items(), key=lambda kv: -len(kv[1]))[:3]
         parts.append(
@@ -117,6 +121,7 @@ async def verify_decodable_text(
     grade_level: str,
     unit: str = "1",
     target_pct: float = 90.0,
+    min_decodable_pct: float | None = None,
     taught_gpcs: list[str] | None = None,
     taught_heart_words: list[str] | None = None,
     client: SoRClient | None = None,  # kept for interface compatibility; analysis is local
@@ -128,6 +133,7 @@ async def verify_decodable_text(
         grade_level,
         unit=unit,
         target_pct=target_pct,
+        min_decodable_pct=min_decodable_pct,
         taught_gpcs=taught_gpcs,
         taught_heart_words=taught_heart_words,
     )

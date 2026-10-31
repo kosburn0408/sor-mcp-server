@@ -196,6 +196,33 @@ Create a JSON file shaped like `DEFAULT_SEQUENCE` in `src/engine/scope_sequence.
 
 and set `SOR_SCOPE_PATH=/path/to/scope.json`. GPC ids are listed in `src/engine/gpc.py`; unknown ids are rejected at load time.
 
+Easier: type the program's lessons into a spreadsheet and convert it.
+
+```bash
+# Start from the default sequence as a template (one row per unit)
+python3 scripts/build_scope.py --export-default -o scopes/my_program.csv
+# Edit in Sheets/Excel: grade, unit, title, patterns ("m; a; sh; a_e; -ed"), heart_words ("the; said")
+python3 scripts/build_scope.py scopes/my_program.csv -o scopes/my_program.json
+SOR_SCOPE_PATH=scopes/my_program.json python3 webapp.py
+```
+
+Patterns can be GPC ids or teacher notation (a single vowel = its short sound, `a_e` = silent-e, `-ed`, `open syllable`, `schwa`). The script warns about ambiguous spellings such as `ea` and about patterns introduced twice.
+
+### Decodability targets
+
+States and programs set different criteria, and research on the ideal proportion is limited. For example, California's instructional-materials criteria call for at least 75–80% of words made only of previously taught sound-spellings, with the remaining 20–25% previously taught irregular high-frequency words and story words. To apply a criterion like that, pass `min_decodable_pct=80` along with `target_pct` (the share that must be decodable or taught heart words).
+
+### Checking the engine with a literacy coach
+
+```bash
+python3 scripts/coach_review.py prepare scopes/example_passages.csv -o review.csv   # passage_id,grade,unit,text
+# Coach fills coach_agrees (Y/N), coach_status, coach_notes for each word in Sheets/Excel
+python3 scripts/coach_review.py ingest review.csv                                     # agreement report + test cases
+python3 -m pytest tests/test_coach_cases.py
+```
+
+Every disagreement is saved to `tests/fixtures/coach_cases.json` and becomes a regression test. Some disagreements mean the engine needs a fix; others mean the scope file doesn't match what the program teaches, so fix the scope file first. Set `SOR_SCOPE_PATH` to the district's scope before both steps.
+
 ---
 
 ## Limitations
@@ -204,7 +231,7 @@ and set `SOR_SCOPE_PATH=/path/to/scope.json`. GPC ids are listed in `src/engine/
 - **Pronunciation dictionary.** Names and rare words may be missing (reported as `not_in_dictionary` for a teacher to check). Dictionary pronunciations reflect General American English.
 - **Screening, not diagnosis.** `evaluate_simple_view` cannot identify dyslexia or any disability. The default cutoff (0.60) is a placeholder.
 - **Privacy.** Pattern-based scrubbing reduces but cannot guarantee removal of every identifier, and this project has not been independently audited. It does not by itself make a deployment FERPA or COPPA compliant; districts should complete their own privacy review and data agreements.
-- **Georgia standards.** Bundled GA codes are the legacy ELAGSE set, replaced by Georgia's K–12 ELA standards in 2025–26. Pulling current standards from Georgia's CASE repository is a planned next step.
+- **Georgia standards.** Georgia lookups use the current K–12 ELA standards from Georgia's CASE repository (`src/tools/ga_case.py`), searching the K–3 Foundations strands and caching the framework for a week. If the repository can't be reached and there's no cache, the bundled legacy ELAGSE codes are returned with a notice. Matching is by keyword, so confirm the best match.
 - **Research database.** The evidence table is a small curated set. Check original sources before citing.
 
 ---

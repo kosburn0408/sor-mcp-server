@@ -1,0 +1,19 @@
+{
+  "CFDocument": {
+    "identifier": "391c3abe-c1ec-4a4a-a942-c9e152b35102",
+    "title": "English Language Arts - Georgia Department of Education",
+    "adoptionStatus": "Adopted",
+    "lastChangeDateTime": "2026-07-09T13:12:32+00:00"
+  },
+  "CFItems": [
+    {"identifier": "b938fc05-a649-4fc4-b42a-ee9b86d0461c", "uri": "https://case.georgiastandards.org/ims/case/v1p1/CFItems/b938fc05-a649-4fc4-b42a-ee9b86d0461c", "humanCodingScheme": "K.F", "CFItemType": "Domain", "fullStatement": "**Foundations** FIXTURE domain text."},
+    {"identifier": "7ecb48bf-bc5f-4873-863f-a32f0688e65f", "uri": "https://case.georgiastandards.org/ims/case/v1p1/CFItems/7ecb48bf-bc5f-4873-863f-a32f0688e65f", "humanCodingScheme": "K.F.P", "CFItemType": "Big Idea", "fullStatement": "**III. BIG IDEA: Phonics** FIXTURE big idea text."},
+    {"identifier": "2ed8370b-6dd1-4962-b800-43557889278b", "uri": "https://case.georgiastandards.org/ims/case/v1p1/CFItems/2ed8370b-6dd1-4962-b800-43557889278b", "humanCodingScheme": "K.F.P.1", "CFItemType": "Standard", "fullStatement": "**Phoneme-Grapheme Correspondences** FIXTURE: letter-sound correspondences."},
+    {"identifier": "831276dc-ca0d-4a1a-aff1-9b71a10e733b", "uri": "https://case.georgiastandards.org/ims/case/v1p1/CFItems/831276dc-ca0d-4a1a-aff1-9b71a10e733b", "humanCodingScheme": "K.F.P.2", "CFItemType": "Standard", "fullStatement": "**Decoding words** FIXTURE: decode CVC words."},
+    {"identifier": "fixture-k-pa-1", "uri": "https://case.georgiastandards.org/ims/case/v1p1/CFItems/fixture-k-pa-1", "humanCodingScheme": "K.F.PA.1", "CFItemType": "Standard", "fullStatement": "**Phonological awareness** FIXTURE: segment and blend phonemes in spoken words."},
+    {"identifier": "fixture-1-p-2", "uri": "https://case.georgiastandards.org/ims/case/v1p1/CFItems/fixture-1-p-2", "humanCodingScheme": "1.F.P.2", "CFItemType": "Standard", "fullStatement": "**Decoding words** FIXTURE: decode words with silent e and vowel teams."},
+    {"identifier": "fixture-1-p-2-1", "uri": "https://case.georgiastandards.org/ims/case/v1p1/CFItems/fixture-1-p-2-1", "humanCodingScheme": "1.F.P.2.1", "CFItemType": "Skill", "fullStatement": "FIXTURE: silent e skill."},
+    {"identifier": "fixture-2-f-1", "uri": "https://case.georgiastandards.org/ims/case/v1p1/CFItems/fixture-2-f-1", "humanCodingScheme": "2.F.F.1", "CFItemType": "Standard", "fullStatement": "**Fluency** FIXTURE: read with accuracy, rate and expression."},
+    {"identifier": "fixture-k-lgc-1", "uri": "https://case.georgiastandards.org/ims/case/v1p1/CFItems/fixture-k-lgc-1", "humanCodingScheme": "K.L.GC.1", "CFItemType": "Standard", "fullStatement": "FIXTURE language standard (not Foundations)."}
+  ]
+}

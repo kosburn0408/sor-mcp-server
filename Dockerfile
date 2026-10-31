@@ -36,6 +36,7 @@ COPY --chown=sor:sor webapp.py .
 COPY --chown=sor:sor src/ ./src/
 COPY --chown=sor:sor db/ ./db/
 COPY --chown=sor:sor tests/ ./tests/
+COPY --chown=sor:sor scopes/ ./scopes/
 
 # Create data directory with proper permissions
 RUN mkdir -p /data && chown sor:sor /data /app
@@ -45,6 +46,10 @@ ENV PYTHONPATH=/app/packages:.
 ENV PATH="/app/packages/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 ENV SOR_DB_PATH=/data/sor_evidence.duckdb
+# Georgia CASE framework cache lives on the data volume so it survives restarts
+ENV SOR_GA_CASE_CACHE=/data/ga_ela_case_package.json
+# Optional: district scope & sequence, e.g. /app/scopes/my_program.json
+# ENV SOR_SCOPE_PATH=/app/scopes/my_program.json
 
 # Drop to non-root user
 USER sor

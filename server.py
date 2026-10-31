@@ -71,7 +71,8 @@ async def get_phonics_scope_tool(grade_level: str, unit: str = "1") -> dict[str,
         "Returns per-word status, the untaught patterns blocking each word, irregular words that need to be "
         "taught as heart words, and any three-cueing prompts. Use this to check every generated decodable "
         "passage and revise until meets_target is true. Optionally pass taught_gpcs / taught_heart_words to "
-        "check against a district's own program."
+        "check against a district's own program. Optionally set min_decodable_pct for criteria that also "
+        "require a minimum share of words decodable from taught patterns alone (e.g. California's 75-80%)."
     ),
 )
 async def verify_decodable_text_tool(
@@ -79,6 +80,7 @@ async def verify_decodable_text_tool(
     grade_level: str,
     unit: str = "1",
     target_pct: float = 90.0,
+    min_decodable_pct: float | None = None,
     taught_gpcs: list[str] | None = None,
     taught_heart_words: list[str] | None = None,
 ) -> dict[str, Any]:
@@ -88,6 +90,7 @@ async def verify_decodable_text_tool(
         grade_level=grade_level,
         unit=unit,
         target_pct=target_pct,
+        min_decodable_pct=min_decodable_pct,
         taught_gpcs=taught_gpcs,
         taught_heart_words=taught_heart_words,
     )

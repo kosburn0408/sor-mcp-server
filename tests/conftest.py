@@ -181,3 +181,10 @@ def error_api(respx_mock: respx.MockRouter) -> respx.MockRouter:
     respx_mock.get(f"{MOCK_BASE}/orthography/map").mock(return_value=Response(500, json={"error": "Internal Server Error"}))
     respx_mock.get(f"{MOCK_BASE}/standards/competency").mock(return_value=Response(403, json={"error": "Forbidden"}))
     return respx_mock
+
+
+@pytest.fixture(autouse=True)
+def _ga_case_offline(monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory) -> None:
+    """Never hit Georgia's CASE repository in tests; start with no cache."""
+    monkeypatch.setenv("SOR_GA_CASE_OFFLINE", "1")
+    monkeypatch.setenv("SOR_GA_CASE_CACHE", str(tmp_path_factory.mktemp("gacase") / "none.json"))

@@ -1,0 +1,31 @@
+grade,unit,title,patterns,heart_words
+K,1,"m, s, t, p, short a",m; s; t; p; short_a,the; a; I
+K,2,"n, c, d, short i",n; c; d; short_i,to; is
+K,3,"f, h, g, b, short o",f; h; g; b; short_o,of; said
+K,4,"l, r, k, short e, s as /z/",l; r; k; short_e; s_z,was; you
+K,5,"short u, j, w, v, y",short_u; j; w; v; y,he; we; me; be; she; do
+K,6,"x, qu, z",x; qu; z,are; for; go; no; so
+K,7,"FLOSS rule, ck",floss; ck,they; what; my; by
+K,8,"sh, th",sh; th,one; two; come; some
+K,9,"ch, wh",ch; wh,from; put; want
+K,10,"welded sounds: ng, nk",ng; nk,here; there; where; were; have; give; live
+1,1,"tch, consonant blends review",tch,does; done; again
+1,2,"silent-e: a_e, i_e",vce_a; vce_i,who; whose
+1,3,"silent-e: o_e, u_e, e_e",vce_o; vce_u; vce_e,could; would; should
+1,4,"soft c, soft g, dge",soft_c; soft_g; dge,many; any
+1,5,"open syllables, y as a vowel",open_syllable; y_vowel,once; only
+1,6,"inflectional endings -ed, -es",suffix_ed; suffix_es,their; friend
+1,7,"r-controlled: ar, or, ore",r_ar; r_or,because; laugh
+1,8,"r-controlled: er, ir, ur",r_er,eye; buy
+1,9,"vowel teams: ai/ay, ee/ea, oa/ow/oe",vt_ai; vt_ee; vt_oa,people; pretty
+1,10,"two-syllable words: doubled consonants, schwa",double_consonant; schwa,water; busy
+2,1,"igh, ie",vt_igh,though; through
+2,2,"oo, ew, ue",vt_oo; vt_ew,enough; touch
+2,3,"ou/ow, oi/oy",diph_ou; diph_oi,ocean; young
+2,4,"au/aw, all",vt_au,machine; piece
+2,5,consonant-le,c_le,early; learn
+2,6,"silent letters: kn, wr, gn, mb",silent_kn; silent_wr; silent_gn; silent_mb,island; answer
+2,7,"ph, short ea",ph; ea_short,great; break
+2,8,final ve and se; ou as /oo/; ie as /ē/,final_ve; final_se; ou_oo; ie_ee,sure; sugar
+3,1,"-tion, -sion",suffix_tion,special; ancient
+3,2,-ture,suffix_ture,certain; mountain
