@@ -1353,7 +1353,7 @@ input:focus, select:focus, textarea:focus {{
           <div class="form-group">
             <label>State Framework</label>
             <select id="standardsState">
-              <option value="GA" selected>Georgia (legacy GSE codes)</option>
+              <option value="GA" selected>Georgia (current K-12 ELA, via SuitCASE)</option>
               <option value="CA">California (CCSS-CA)</option>
               <option value="TX">Texas (TEKS)</option>
               <option value="FL">Florida (B.E.S.T.)</option>
@@ -2063,9 +2063,9 @@ document.getElementById('standardsForm').addEventListener('submit', async functi
   (r.matches||[]).forEach(function(m){{
     var deepLink = m.url || ('https://rosetta.commongoodlt.com/#/search?q=' + encodeURIComponent(m.code));
     html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.2rem;margin:.8rem 0;border-radius:var(--md-shape-corner-medium);border-left:4px solid var(--md-sys-color-primary)">';
-    html += '<strong style="color:#1C1B1F;font-size:1.1rem">' + m.code + '</strong>';
-    html += '<p style="font-size:.95rem;color:#333;margin-top:.4rem">' + m.description + '</p>';
-    html += '<a href="' + deepLink + '" target="_blank" class="export-btn" style="margin-top:0.6rem;display:inline-flex"><i class="fa-solid fa-award"></i> Open 1EdTech CASE® Record (' + m.code + ')</a>';
+    html += '<strong style="color:#1C1B1F;font-size:1.1rem">' + escapeHtml(m.code) + (m.title ? ' — ' + escapeHtml(m.title) : '') + '</strong>';
+    html += '<p style="font-size:.95rem;color:#333;margin-top:.4rem">' + escapeHtml(m.description) + '</p>';
+    html += '<a href="' + deepLink + '" target="_blank" class="export-btn" style="margin-top:0.6rem;display:inline-flex"><i class="fa-solid fa-award"></i> Open 1EdTech CASE® Record (' + escapeHtml(m.code) + ')</a>';
     html += '</div>';
   }});
 

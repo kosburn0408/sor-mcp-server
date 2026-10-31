@@ -9,3 +9,4 @@ build/
 .env
 .DS_Store
 db/sor_evidence.duckdb
+db/ga_ela_case_package.json

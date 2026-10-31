@@ -6,6 +6,7 @@ embedded in DuckDB, with optional upstream API fallbacks.
 
 from __future__ import annotations
 
+import os
 import re
 import urllib.parse
 from typing import Any
@@ -227,11 +228,16 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
     if not description or not description.strip():
         return {"error": "No description provided", "matches": []}
 
-    from db.database import get_connection
-    conn = get_connection()
-
     state_input = str(state).strip().upper()
     state_code = STATE_ALIASES.get(state_input, state_input)
+
+    if state_code == "GA":
+        live = _align_georgia_live(description, grade)
+        if live is not None:
+            return live
+
+    from db.database import get_connection
+    conn = get_connection()
 
     desc_lower = description.lower()
     matched_frameworks = []
@@ -297,9 +303,9 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
         )
     if state_code == "GA":
         notices.append(
-            "Georgia codes here are the legacy Georgia Standards of Excellence (ELAGSE). Georgia's new K-12 "
-            "ELA standards replaced them in the 2025-26 school year; look up current standards in Georgia's "
-            "CASE repository (case.georgiastandards.org)."
+            "Georgia's CASE repository could not be reached and no cached copy exists, so these are the legacy "
+            "Georgia Standards of Excellence (ELAGSE) codes, replaced in the 2025-26 school year. Look up "
+            "current standards at case.georgiastandards.org."
         )
 
     return {
@@ -315,6 +321,57 @@ def align_standards(description: str, state: str = "GA", grade: str | None = Non
             "case_api_base": "https://rosetta.commongoodlt.com/ims/case/v1p1/",
             "google_classroom_export": True,
         },
+        "total_matches": len(matches),
+        "matches": matches,
+    }
+
+
+def _align_georgia_live(description: str, grade: str | None) -> dict[str, Any] | None:
+    """Current Georgia K-3 Foundations standards from Georgia's CASE repository."""
+    from src.tools.ga_case import search_ga_foundations
+
+    try:
+        result = search_ga_foundations(description, grade)
+    except Exception:
+        return None
+    if not result or not result["matches"]:
+        return None
+
+    fw = result["framework"]
+    matches = [
+        {
+            "state": "GA",
+            "grade": m["grade"],
+            "code": m["code"],
+            "title": m["title"],
+            "description": m["statement"],
+            "framework": m["strand_name"],
+            "item_type": m["item_type"],
+            "provider": "Georgia Department of Education",
+            "portal": "Georgia SuitCASE",
+            "url": m["case_uri"],
+            "case_identifier": m["identifier"],
+            "exchange": "Georgia CASE repository (1EdTech CASE v1.1)",
+            "is_crosswalk": False,
+        }
+        for m in result["matches"]
+    ]
+    source_note = {
+        "live": "retrieved live",
+        "cache": "from a cached copy (refreshed weekly)",
+        "stale_cache": "from an older cached copy because the repository could not be reached",
+    }.get(result["source"], result["source"])
+    return {
+        "description": description,
+        "state": "GA",
+        "notices": [
+            f"Current Georgia K-12 ELA standards ({fw['title']}, {fw['adoption_status'] or 'status unknown'}), "
+            f"{source_note}. Searched the Foundations strand(s): {', '.join(result['strands_searched'])}. "
+            "Confirm the best match; keyword matching can rank imperfectly."
+        ],
+        "grade_filter": grade,
+        "framework": fw,
+        "case_api_base": os.environ.get("SOR_GA_CASE_BASE_URL", "https://case.georgiastandards.org/ims/case/v1p1"),
         "total_matches": len(matches),
         "matches": matches,
     }

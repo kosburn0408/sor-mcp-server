@@ -204,7 +204,7 @@ and set `SOR_SCOPE_PATH=/path/to/scope.json`. GPC ids are listed in `src/engine/
 - **Pronunciation dictionary.** Names and rare words may be missing (reported as `not_in_dictionary` for a teacher to check). Dictionary pronunciations reflect General American English.
 - **Screening, not diagnosis.** `evaluate_simple_view` cannot identify dyslexia or any disability. The default cutoff (0.60) is a placeholder.
 - **Privacy.** Pattern-based scrubbing reduces but cannot guarantee removal of every identifier, and this project has not been independently audited. It does not by itself make a deployment FERPA or COPPA compliant; districts should complete their own privacy review and data agreements.
-- **Georgia standards.** Bundled GA codes are the legacy ELAGSE set, replaced by Georgia's K–12 ELA standards in 2025–26. Pulling current standards from Georgia's CASE repository is a planned next step.
+- **Georgia standards.** Georgia lookups use the current K–12 ELA standards from Georgia's CASE repository (`src/tools/ga_case.py`), searching the K–3 Foundations strands and caching the framework for a week. If the repository can't be reached and there's no cache, the bundled legacy ELAGSE codes are returned with a notice. Matching is by keyword, so confirm the best match.
 - **Research database.** The evidence table is a small curated set. Check original sources before citing.
 
 ---
