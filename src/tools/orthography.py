@@ -1,6 +1,7 @@
 """MCP Tool: map_orthography — phoneme-grapheme mapping.
 
-Bridges to GET /api/v1/orthography/map on sor.edtechlabs.dev with local fallback.
+Uses the local GPC alignment engine (src/engine/decoder.py); the client
+parameter is kept for interface compatibility.
 """
 
 from __future__ import annotations
@@ -16,31 +17,43 @@ from src.errors import (
 )
 
 
+def _syllable_type(chunk: str) -> str:
+    c = chunk.lower()
+    if re.search(r"[aeiou][^aeiouwxy]e$", c):
+        return "VCe"
+    if re.search(r"[aeiou]r", c):
+        return "r_controlled"
+    if re.search(r"(ai|ay|ee|ea|oa|oe|ie|igh|oo|ou|ow|oi|oy|au|aw|ew|ue)", c):
+        return "vowel_team"
+    if re.search(r"[^aeiou]le$", c):
+        return "consonant_le"
+    if re.search(r"[aeiouy]$", c):
+        return "open"
+    return "closed"
+
+
 def _local_orthography_mapper(word: str) -> dict[str, Any]:
-    w = word.lower().strip()
-    # Simple heuristic mapping for fallback
-    vowels = re.findall(r"[aeiouy]+", w)
-    syllable_count = max(1, len(vowels))
+    """Map a word to graphemes and phonemes using the GPC alignment engine.
 
-    # Basic grapheme split
-    graphemes = re.findall(r"sh|ch|th|wh|ph|ck|ng|ai|ay|ee|ea|oa|oo|ou|ow|oi|oy|[a-z]", w)
-    phonemes = [f"/{g}/" for g in graphemes]
+    Alignment is against the CMU Pronouncing Dictionary with every catalogued
+    pattern allowed, so it reflects the word itself rather than any scope.
+    """
+    from src.engine.decoder import analyze_word
+    from src.engine.gpc import ALL_GPC_IDS
 
-    if w.endswith("e") and len(w) > 3 and not w.endswith("ee"):
-        s_type = "VCe"
-    elif any(v in w for v in ["ai", "ay", "ee", "ea", "oa", "oo", "ou"]):
-        s_type = "vowel_team"
-    elif w.endswith("er") or w.endswith("ar") or w.endswith("or"):
-        s_type = "r_controlled"
-    else:
-        s_type = "closed"
-
+    result = analyze_word(word, ALL_GPC_IDS)
+    graphemes = [m["grapheme"] for m in result["mapping"]]
+    phonemes = [m["sound"] for m in result["mapping"]]
+    found = bool(result["mapping"])
     return {
         "word": word,
         "phonemes": phonemes,
         "graphemes": graphemes,
-        "syllable_breaks": [w],
-        "syllable_types": [s_type],
+        "breakdown": result["breakdown"],
+        "patterns": [m["pattern"] for m in result["mapping"]],
+        "syllable_breaks": [word.lower()],
+        "syllable_types": [_syllable_type(word)],
+        "status": "mapped" if found else ("irregular" if result["status"] == "irregular" else "not_in_dictionary"),
     }
 
 
@@ -61,27 +74,6 @@ async def map_orthography(
             SoRAPIErrorCode.ERR_INVALID_INPUT,
             detail=f"maximum 50 words allowed, got {len(words)}",
         )
-
-    if client is not None:
-        try:
-            mappings = await client.map_orthography(words)
-            return {
-                "status": "ok",
-                "total": len(mappings),
-                "words": [
-                    {
-                        "word": m.word,
-                        "phonemes": m.phonemes,
-                        "graphemes": m.graphemes,
-                        "syllable_breaks": m.syllable_breaks,
-                        "syllable_types": m.syllable_types,
-                    }
-                    for m in mappings
-                ],
-                "source": "sor.edtechlabs.dev",
-            }
-        except Exception:
-            pass  # Fall through to local fallback
 
     mapped = [_local_orthography_mapper(w) for w in words]
     return {

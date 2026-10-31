@@ -19,12 +19,16 @@ repo_root = Path(__file__).resolve().parent.parent
 if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
-from db.database import get_connection, get_db_path
+from db.database import SCHEMA_PATH, get_db_path
 
 
 def seed_database(db_path: Path | None = None) -> Any:
     """Seed DuckDB with theoretical frameworks, research papers, vocabulary, and standards."""
-    conn = get_connection(db_path)
+    import duckdb
+
+    path = str(db_path or get_db_path())
+    conn = duckdb.connect(path)
+    conn.execute(SCHEMA_PATH.read_text())
 
     # Clear existing data for fresh seed
     conn.execute("DELETE FROM theoretical_frameworks")
@@ -42,7 +46,7 @@ def seed_database(db_path: Path | None = None) -> Any:
             1986,
             "Reading Comprehension = Decoding (D) x Language Comprehension (LC). Both components are necessary; neither is sufficient alone.",
             "decoding, language_comprehension, reading_comprehension",
-            "https://doi.org/10.1007/BF00888399",
+            "https://doi.org/10.1177/074193258600700104",
         ),
         (
             2,
@@ -72,12 +76,12 @@ def seed_database(db_path: Path | None = None) -> Any:
     papers = [
         (
             1,
-            "National Reading Panel Meta-Analysis on Phonics Instruction",
+            "Systematic Phonics Instruction Helps Students Learn to Read: Evidence from the National Reading Panel's Meta-Analysis",
             "Ehri, L. C., Nunes, S. R., Stahl, S. A., & Willows, D. M.",
             2001,
             "phonics",
-            "Systematic phonics instruction produces significant benefits for K-1 students and struggling readers (d = 0.44 overall, d = 0.74 for K-1).",
-            0.44,
+            "Systematic phonics instruction outperformed unsystematic or no phonics (d = 0.41 overall). Effects were larger when instruction began in kindergarten or first grade (d = 0.55) than after first grade (d = 0.27).",
+            0.41,
             "National Reading Panel / Review of Educational Research",
             "https://doi.org/10.3102/00346543071003393",
         ),
@@ -94,58 +98,69 @@ def seed_database(db_path: Path | None = None) -> Any:
         ),
         (
             3,
-            "Repeated Reading and Fluency Interventions for Struggling Readers",
+            "A Synthesis of Research on Effective Interventions for Building Reading Fluency with Elementary Students with Learning Disabilities",
             "Chard, D. J., Vaughn, S., & Tyler, B. J.",
             2002,
             "fluency",
-            "Guided oral repeated reading with feedback produces substantial gains in reading rate, accuracy, and comprehension (d = 0.68).",
-            0.68,
+            "Synthesis of 24 studies: repeated reading with a model, corrective feedback and a performance criterion improved fluency for students with learning disabilities. No single pooled effect size is reported here; see the source.",
+            None,
             "Journal of Learning Disabilities",
             "https://doi.org/10.1177/00222194020350050101",
         ),
         (
             4,
-            "Explicit Vocabulary Instruction Meta-Analysis",
+            "The Effects of Vocabulary Intervention on Young Children's Word Learning: A Meta-Analysis",
             "Marulis, L. M., & Neuman, S. B.",
             2010,
             "vocabulary",
-            "Explicit vocabulary instruction targeting Tier 2 words produces very large effect sizes (d = 0.88) for word learning in young children.",
+            "Vocabulary interventions for pre-K and kindergarten children (67 studies) improved word learning (g = 0.88). This is general vocabulary intervention, not Tier 2 instruction specifically.",
             0.88,
             "Review of Educational Research",
             "https://doi.org/10.3102/0034654310377077",
         ),
         (
             5,
-            "Comprehension Strategy Instruction Meta-Analysis",
+            "Improving Reading Comprehension in Kindergarten Through 3rd Grade (WWC Practice Guide, NCEE 2010-4038)",
             "Shanahan, T., et al. (WWC)",
             2010,
             "comprehension",
-            "Teaching multiple comprehension strategies (graphic organizers, question generation, summarizing) improves text comprehension (d = 0.55).",
-            0.55,
+            "Recommends teaching comprehension strategies (rated strong evidence). WWC practice guides rate the strength of evidence for each recommendation rather than reporting one pooled effect size.",
+            None,
             "What Works Clearinghouse Practice Guide",
             "https://ies.ed.gov/ncee/wwc/PracticeGuide/14",
         ),
         (
             6,
-            "Multisyllabic Word Reading Interventions for Upper Elementary",
+            "Decoding and Fluency: Foundation Skills for Struggling Older Readers",
             "Archer, A. L., Gleason, M. M., & Vachon, V. L.",
             2003,
             "phonics",
-            "Explicit instruction in syllable types and morphemic analysis significantly improves multisyllabic word reading for grades 3-5 (d = 0.62).",
-            0.62,
+            "Practice article describing explicit instruction in decoding multisyllabic words (word parts, syllable strategies) and fluency for older struggling readers. Not a meta-analysis; no effect size.",
+            None,
             "Learning Disability Quarterly",
-            "https://doi.org/10.2307/1593644",
+            "https://www.jstor.org/journal/learndisaquar",
         ),
         (
             7,
-            "Best Evidence Encyclopedia: Elementary Reading Programs",
-            "Slavin, R. E., Lake, C., Chambers, B., et al.",
-            2009,
+            "Effective Reading Programs for the Elementary Grades: A Best-Evidence Synthesis",
+            "Slavin, R. E., Lake, C., Chambers, B., Cheung, A., & Davis, S.",
+            2010,
             "simple_view",
-            "Programs combining systematic phonics with structured cooperative learning yield strongest overall reading gains (d = 0.47).",
-            0.47,
-            "Best Evidence Encyclopedia / Review of Educational Research",
-            "https://www.bestevidence.org/reading/elem_read.htm",
+            "Instructional-process programs that change daily teaching (e.g., cooperative learning, structured phonics, tutoring) had the strongest effects: mean ES +0.37 in beginning reading, versus +0.12 for curricula and +0.09 for technology.",
+            0.37,
+            "Best Evidence Encyclopedia, Johns Hopkins University (ERIC ED527637)",
+            "https://files.eric.ed.gov/fulltext/ED527637.pdf",
+        ),
+        (
+            8,
+            "Foundational Skills to Support Reading for Understanding in Kindergarten Through 3rd Grade (WWC Practice Guide, NCEE 2016-4008)",
+            "Foorman, B., Beyler, N., Borradaile, K., et al.",
+            2016,
+            "phonics",
+            "Four recommendations: teach academic language; develop awareness of the segments of sounds in speech and how they link to letters; teach students to decode words, analyze word parts, and write and recognize words (strong evidence); ensure each student reads connected text every day. Evidence ratings are per recommendation, not a pooled effect size.",
+            None,
+            "What Works Clearinghouse Practice Guide",
+            "https://ies.ed.gov/ncee/wwc/PracticeGuide/21",
         ),
     ]
     conn.executemany(
@@ -286,8 +301,7 @@ def seed_database(db_path: Path | None = None) -> Any:
     )
 
     conn.commit()
-    db_path_str = db_path or get_db_path()
-    print(f"Database seeded successfully at {db_path_str}")
+    print(f"Database seeded successfully at {path}")
     print(f"  Frameworks: {conn.execute('SELECT count(*) FROM theoretical_frameworks').fetchone()[0]}")
     print(f"  Research papers: {conn.execute('SELECT count(*) FROM research_papers').fetchone()[0]}")
     print(f"  Vocabulary entries: {conn.execute('SELECT count(*) FROM vocabulary_corpus').fetchone()[0]}")

@@ -33,7 +33,7 @@ mcp = FastMCP(
     instructions=(
         "The Science of Reading MCP server provides evidence-based literacy analysis "
         "tools grounded in reading research (Simple View of Reading, Scarborough's Reading Rope, "
-        "Five Pillars). Provides tools for decodability checking, Lexile estimation, vocabulary "
+        "Five Pillars). Provides tools for decodability checking, readability estimation, vocabulary "
         "tier classification, research evidence lookup, standards alignment, diagnostics, "
         "remediation, orthographic mapping, and PII anonymization."
     ),
@@ -65,11 +65,32 @@ async def get_phonics_scope_tool(grade_level: str, unit: str = "1") -> dict[str,
 
 @mcp.tool(
     name="verify_decodable_text",
-    description="Verify text decodability against a phonics scope with anti-cueing guardrails and decodable substitutions.",
+    description=(
+        "Check whether a passage is decodable for students at a given grade and unit. Each word is aligned "
+        "sound by sound to its dictionary pronunciation using only the phonics patterns taught so far. "
+        "Returns per-word status, the untaught patterns blocking each word, irregular words that need to be "
+        "taught as heart words, and any three-cueing prompts. Use this to check every generated decodable "
+        "passage and revise until meets_target is true. Optionally pass taught_gpcs / taught_heart_words to "
+        "check against a district's own program."
+    ),
 )
-async def verify_decodable_text_tool(text: str, grade_level: str, unit: str = "1") -> dict[str, Any]:
+async def verify_decodable_text_tool(
+    text: str,
+    grade_level: str,
+    unit: str = "1",
+    target_pct: float = 90.0,
+    taught_gpcs: list[str] | None = None,
+    taught_heart_words: list[str] | None = None,
+) -> dict[str, Any]:
     from src.tools.decodability import verify_decodable_text
-    return await verify_decodable_text(text=text, grade_level=grade_level, unit=unit, client=get_client(), settings=settings)
+    return await verify_decodable_text(
+        text=text,
+        grade_level=grade_level,
+        unit=unit,
+        target_pct=target_pct,
+        taught_gpcs=taught_gpcs,
+        taught_heart_words=taught_heart_words,
+    )
 
 
 @mcp.tool(
@@ -91,12 +112,12 @@ async def lookup_competency_tool(skill: str, state: str = "GA") -> dict[str, Any
 
 
 @mcp.tool(
-    name="analyze_lexile",
-    description="Estimate Lexile score, word count, sentence complexity, and grade level for a text.",
+    name="estimate_readability",
+    description="Estimate text difficulty with the Flesch-Kincaid Grade Level formula (not a Lexile measure). For K-2 text, use verify_decodable_text instead.",
 )
-def analyze_lexile_tool(text: str) -> dict[str, Any]:
-    from src.tools.diagnostics import analyze_lexile
-    return analyze_lexile(text=text)
+def estimate_readability_tool(text: str) -> dict[str, Any]:
+    from src.tools.diagnostics import estimate_readability
+    return estimate_readability(text=text)
 
 
 @mcp.tool(
@@ -155,18 +176,26 @@ def align_standards_tool(description: str, state: str = "GA", grade: str | None 
 
 @mcp.tool(
     name="evaluate_simple_view",
-    description="Diagnostic evaluation based on the Simple View of Reading (Decoding x Language Comprehension = Reading Comprehension).",
+    description=(
+        "Screening profile based on the Simple View of Reading (decoding x language comprehension). "
+        "Not a diagnosis. Set cutoff to your screener's benchmark; pass diagnosed_skills from a phonics "
+        "diagnostic to attach intervention cards."
+    ),
 )
 def evaluate_simple_view_tool(
     decoding_score: float,
     language_comp_score: float,
     student_grade: str = "1",
+    cutoff: float | None = None,
+    diagnosed_skills: list[str] | None = None,
 ) -> dict[str, Any]:
     from src.tools.diagnostics import evaluate_simple_view
     return evaluate_simple_view(
-        decoding_score=decoding_score,
-        language_comp_score=language_comp_score,
-        student_grade=student_grade,
+        decoding=decoding_score,
+        language_comprehension=language_comp_score,
+        grade=student_grade,
+        cutoff=cutoff,
+        diagnosed_skills=diagnosed_skills,
     )
 
 
@@ -181,7 +210,7 @@ def get_instructional_remediation_tool(deficit_code: str, grade_level: str = "1"
 
 @mcp.tool(
     name="sanitize_pii",
-    description="FERPA-compliant student PII anonymizer. Strips names, student IDs, and emails before LLM processing.",
+    description="Remove student identifiers (names, IDs such as GTIDs, emails, phone numbers, dates) from a record before LLM processing. Pattern-based; reduces but cannot guarantee removal of all identifiers.",
 )
 def sanitize_pii_tool(data: dict[str, Any]) -> dict[str, Any]:
     from src.tools.privacy import sanitize_pii
@@ -337,7 +366,7 @@ def _register_all(server: FastMCP) -> None:
     server.tool(name="verify_decodable_text")(verify_decodable_text_tool)
     server.tool(name="map_orthography")(map_orthography_tool)
     server.tool(name="lookup_competency")(lookup_competency_tool)
-    server.tool(name="analyze_lexile")(analyze_lexile_tool)
+    server.tool(name="estimate_readability")(estimate_readability_tool)
     server.tool(name="classify_vocabulary")(classify_vocabulary_tool)
     server.tool(name="match_word")(match_word_tool)
     server.tool(name="search_evidence")(search_evidence_tool)

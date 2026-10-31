@@ -156,8 +156,32 @@ def test_verify_privacy_status() -> None:
     assert status["pii_on_disk"] is False
     assert status["pii_in_logs"] is False
     assert status["status"] == "operational"
-    assert status["compliance"]["ferpa"] == "compliant"
-    assert status["compliance"]["coppa"] == "compliant"
+    assert "compliance" not in status
+    assert "not been independently audited" in status["limitations"]
+
+
+def test_free_text_is_scrubbed() -> None:
+    """Names and identifier-like patterns are removed from free-text fields."""
+    from src.tools.privacy import sanitize_pii
+
+    out = sanitize_pii({
+        "student_name": "Jayden Brooks",
+        "notes": "Jayden Brooks GTID 1234567890 struggles with blends. Call 404-555-1212.",
+    })
+    text = str(out)
+    assert "Jayden" not in text and "Brooks" not in text
+    assert "1234567890" not in text
+    assert "404-555-1212" not in text
+    assert "struggles with blends" in out["notes"]
+
+
+def test_tokens_not_recomputable_from_roster() -> None:
+    """Tokens use a secret key, so a plain hash of the name does not match."""
+    import hashlib
+    from src.tools.privacy import sanitize_pii
+
+    token = sanitize_pii({"first_name": "Ana", "last_name": "Lee"})["student_token"]
+    assert hashlib.sha256(b"AnaLee").hexdigest()[:8] not in token
 
 
 def run_all() -> bool:

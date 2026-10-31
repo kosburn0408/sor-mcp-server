@@ -14,80 +14,57 @@ from src.errors import (
     format_api_error,
 )
 
-DEFAULT_SCOPES: dict[str, dict[str, Any]] = {
-    "K": {
-        "target_phonemes": ["/m/", "/a/", "/t/", "/s/", "/p/", "/i/", "/n/"],
-        "taught_graphemes": ["m", "a", "t", "s", "p", "i", "n"],
-        "heart_words": [{"word": "the"}, {"word": "a"}, {"word": "is"}, {"word": "to"}],
-        "unit_objectives": ["Identify letter-sound correspondences for single consonants and short vowels"],
-        "prerequisite_skills": ["Phonemic isolation"],
-    },
-    "1": {
-        "target_phonemes": ["/a/", "/e/", "/i/", "/o/", "/u/", "/sh/", "/ch/", "/th/"],
-        "taught_graphemes": ["a", "e", "i", "o", "u", "sh", "ch", "th", "wh", "ck"],
-        "heart_words": [{"word": "the"}, {"word": "said"}, {"word": "was"}, {"word": "you"}],
-        "unit_objectives": ["Decode CVC words, digraphs, and short vowel blends"],
-        "prerequisite_skills": ["CVC decoding"],
-    },
-    "2": {
-        "target_phonemes": ["/ai/", "/ee/", "/oa/", "/oo/", "/ou/"],
-        "taught_graphemes": ["ai", "ay", "ee", "ea", "oa", "ow", "oo", "ou", "oi", "oy"],
-        "heart_words": [{"word": "because"}, {"word": "their"}, {"word": "would"}],
-        "unit_objectives": ["Decode vowel teams, r-controlled vowels, and 2-syllable words"],
-        "prerequisite_skills": ["CVCe and digraphs"],
-    },
-    "3": {
-        "target_phonemes": ["/tion/", "/sion/", "/ture/"],
-        "taught_graphemes": ["tion", "sion", "ture", "able", "ible"],
-        "heart_words": [{"word": "together"}, {"word": "enough"}],
-        "unit_objectives": ["Decode multisyllabic words with derivational affixes"],
-        "prerequisite_skills": ["Vowel teams and 2-syllable division"],
-    },
-}
+from src.engine.gpc import gpc_label
+from src.engine.scope_sequence import describe_scope, normalize_grade, resolve_scope
+
+
+def _graphemes_for(gpc_ids: list[str]) -> list[str]:
+    from src.engine.gpc import CATALOG, SPECIAL_GPCS
+
+    out: list[str] = []
+    for gid in gpc_ids:
+        if gid.startswith("vce_"):
+            out.append(f"{gid[-1]}_e")
+        elif gid in SPECIAL_GPCS:
+            out.append(gid.replace("_", " "))
+        else:
+            out.extend(g.grapheme for g in CATALOG if g.id == gid)
+    return list(dict.fromkeys(out))
 
 
 async def get_phonics_scope(
     grade_level: str,
     unit: str = "1",
-    client: SoRClient | None = None,
+    client: SoRClient | None = None,  # kept for interface compatibility; scope is local
     settings: Settings | None = None,
 ) -> dict[str, Any]:
-    """Fetch the phonics scope and sequence for a given grade and unit."""
-    valid_grades = {"K", "1", "2", "3", "4", "5"}
-    if grade_level not in valid_grades:
-        return format_api_error(
-            SoRAPIErrorCode.ERR_INVALID_GRADE_BAND,
-            grade=grade_level,
-        )
+    """Return the cumulative phonics scope through a grade and unit.
 
-    if client is not None:
-        try:
-            scope = await client.get_phonics_scope(grade_level, unit)
-            return {
-                "status": "ok",
-                "grade_level": scope.grade_level,
-                "unit": scope.unit,
-                "target_phonemes": scope.target_phonemes,
-                "taught_graphemes": scope.taught_graphemes,
-                "heart_words": scope.heart_words,
-                "unit_objectives": scope.unit_objectives,
-                "prerequisite_skills": scope.prerequisite_skills,
-                "source": "sor.edtechlabs.dev",
-                "cached": True,
-            }
-        except Exception:
-            pass  # Fall through to local fallback
+    Uses the default illustrative sequence, or the district sequence in
+    ``SOR_SCOPE_PATH``. See ``src/engine/scope_sequence.py``.
+    """
+    grade = normalize_grade(grade_level)
+    if grade is None:
+        return format_api_error(SoRAPIErrorCode.ERR_INVALID_GRADE_BAND, grade=grade_level)
 
-    scope_data = DEFAULT_SCOPES.get(grade_level, DEFAULT_SCOPES["1"])
+    scope = describe_scope(resolve_scope(grade, unit))
     return {
         "status": "ok",
-        "grade_level": grade_level,
-        "unit": unit,
-        "target_phonemes": scope_data["target_phonemes"],
-        "taught_graphemes": scope_data["taught_graphemes"],
-        "heart_words": scope_data["heart_words"],
-        "unit_objectives": scope_data["unit_objectives"],
-        "prerequisite_skills": scope_data["prerequisite_skills"],
-        "source": "local_scope_repository",
+        "grade_level": grade,
+        "unit": str(scope["unit"]),
+        "unit_title": scope["unit_title"],
+        "new_patterns": scope["new_patterns"],
+        "target_phonemes": [gpc_label(g) for g in scope["new_gpcs"]],
+        "taught_graphemes": _graphemes_for(scope["taught_gpcs"]),
+        "taught_gpc_ids": scope["taught_gpcs"],
+        "heart_words": [{"word": w, "note": scope["heart_word_notes"].get(w, "")} for w in scope["heart_words"]],
+        "new_heart_words": scope["new_heart_words"],
+        "unit_objectives": [f"Decode words with: {', '.join(scope['new_patterns'])}"] if scope["new_patterns"] else [],
+        "prerequisite_skills": scope["taught_patterns"][: max(0, len(scope["taught_patterns"]) - len(scope["new_patterns"]))][-6:],
+        "source": scope["source"],
+        "note": (
+            "Default sequence is illustrative, not a specific published program. "
+            "Set SOR_SCOPE_PATH to your district's adopted scope & sequence."
+        ),
         "cached": True,
     }

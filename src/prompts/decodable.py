@@ -4,7 +4,7 @@ Returns an MCP prompt message that instructs the LLM to:
 1. Fetch the phonics scope from get_phonics_scope
 2. Draft a 4-6 sentence story using only taught graphemes + heart words
 3. Run verify_decodable_text to check decodability
-4. Self-correct any off-scope words
+4. Revise any words the verifier flags, re-verifying until it passes
 5. Return the final passage
 """
 
@@ -20,42 +20,35 @@ Follow these steps EXACTLY:
 
 STEP 1 — FETCH SCOPE:
 Call get_phonics_scope(grade_level="{grade}", unit="{unit}") to retrieve:
-- target_phonemes (sounds students are learning)
-- taught_graphemes (letter patterns mastered)
-- heart_words (irregular words to include sparingly)
+- new_patterns (what this unit adds) and taught_graphemes (everything taught so far)
+- heart_words (irregular words already taught; use sparingly)
 
 STEP 2 — DRAFT PASSAGE:
-Write a 4-6 sentence story using ONLY:
-- Words built from the taught_graphemes
-- Up to 2-3 heart_words from the scope (no more)
-- CVC, CVCC, CCVC patterns appropriate for the grade level
-- NO off-scope words or untaught patterns
-
-CRITICAL RULES:
-- No multisyllabic words unless all syllable types are taught
-- No words with silent letters unless explicitly taught
-- No words ending in -ing, -ed unless that suffix is taught
-- Keep sentences short (5-8 words max for K-1, 8-12 for 2-3)
+Write a 4-6 sentence story that practices the new_patterns, using ONLY:
+- Words built from the taught patterns
+- Up to 2-3 of the taught heart_words (no others)
+- Short sentences (5-8 words for K-1, 8-12 for 2-3)
 
 STEP 3 — VERIFY:
-Call verify_decodable_text(text=<your passage>, grade_level="{grade}", unit="{unit}")
-to check:
-- decodable_pct (must be ≥ 95%)
-- off_scope_words (must be empty)
-- cueing_flags (must be empty — NO 3-cueing language)
+Call verify_decodable_text(text=<your passage>, grade_level="{grade}", unit="{unit}").
+The tool aligns every word to its dictionary pronunciation using only taught patterns. Check:
+- meets_target (accessible_pct must reach target_pct)
+- not_yet_decodable_words and missing_patterns (which untaught pattern blocks each word)
+- irregular_words (irregular words not yet taught as heart words)
+- not_in_dictionary_words (only character names are acceptable here)
+- cueing_flags (must be empty)
 
-STEP 4 — SELF-CORRECT:
-If decodable_pct < 95% OR off_scope_words is not empty:
-- Replace off-scope words using the substitutions from the verification result
-- If no substitution is provided, rephrase the sentence to avoid that word
-- Re-verify until decodable_pct ≥ 95%
+STEP 4 — REVISE:
+Replace every word listed in not_yet_decodable_words or irregular_words with a word
+built only from taught patterns, or rephrase the sentence. Call verify_decodable_text
+again. Repeat until meets_target is true and those lists are empty.
+Never claim a passage is decodable without a passing verification result.
 
 STEP 5 — RETURN:
-Output only the final passage text with:
-- The passage title: "Decodable Story: Grade {grade}, Unit {unit}"
+- Title: "Decodable Story: Grade {grade}, Unit {unit}"
 - The passage text (4-6 sentences)
-- A teacher note listing any heart words used
-- The final decodability percentage
+- Teacher note: heart words used, and the new_patterns the story practices
+- The final decodable_pct and accessible_pct from the last verification
 
 DO NOT include cueing language like "look at the picture", "does it make sense",
 "guess the word", or "skip and go on". Every word must be sounded out."""

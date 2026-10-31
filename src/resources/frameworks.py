@@ -71,15 +71,17 @@ FRAMEWORKS: list[dict[str, Any]] = [
             "reading instruction through meta-analysis of empirical studies."
         ),
         "pillars": [
-            {"name": "Phonemic Awareness", "effect_size": 0.53,
+            {"name": "Phonemic Awareness", "effect_size": 0.53,  # Ehri et al. (2001), reading outcomes
+            
              "description": "Ability to hear, identify, and manipulate individual sounds in spoken words."},
-            {"name": "Phonics", "effect_size": 0.41,
+            {"name": "Phonics", "effect_size": 0.41,  # Ehri et al. (2001), overall
+            
              "description": "Relationship between letters (graphemes) and sounds (phonemes) in written language."},
-            {"name": "Fluency", "effect_size": 0.44,
+            {"name": "Fluency", "effect_size": None,
              "description": "Ability to read text accurately, quickly, and with proper expression."},
-            {"name": "Vocabulary", "effect_size": 0.47,
+            {"name": "Vocabulary", "effect_size": None,
              "description": "Knowledge of word meanings needed for comprehension."},
-            {"name": "Comprehension", "effect_size": 0.49,
+            {"name": "Comprehension", "effect_size": None,
              "description": "Ability to understand, remember, and communicate meaning from text."},
         ],
         "url": "https://www.nichd.nih.gov/publications/pubs/nrp/smallbook",

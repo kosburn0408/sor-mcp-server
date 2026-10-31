@@ -43,7 +43,9 @@ def test_story1_workspace_quadrant_selector_rendered() -> None:
     assert response.status_code == 200
     html = response.text
     assert "quadrant-grid" in html
-    assert "Decodable Text Generator" in html
+    assert "Decodable Text Checker" in html
+    assert "FERPA Compliant" not in html
+    assert "HB 538 Priority" not in html
     assert "Explicit Phonics Routine Builder" in html
     assert "MTSS Screener" in html
     assert "Visual Audit Inspector" in html
@@ -84,21 +86,29 @@ def test_story3_print_stylesheet_and_export_buttons() -> None:
 
 # ── Story 4: HB 538 Remediation & 1EdTech CASE Standards Mapper ──────────────
 
-def test_story4_georgia_hb538_remediation_and_case_deep_links() -> None:
-    """Story 4: Screener evaluation outputs 5-day remediation cards and CASE Rosetta links."""
+def test_story4_screening_profile_remediation_and_case_deep_links() -> None:
+    """Story 4: Screening profile + cards for diagnosed skills + CASE Rosetta links."""
     payload = {
         "decoding": 0.35,
         "comprehension": 0.80,
+        "cutoff": 0.60,
+        "diagnosed_skills": ["cvc_mixed", "vowel_teams"],
         "grade": "1st",
-        "student_name": "Marcus Williams"
+        "student_name": "[STUDENT]"
     }
     response = client.post("/tools/evaluate_simple_view", json=payload)
 
     assert response.status_code == 200
     data = response.json()
     assert "diagnostic" in data
-    assert data["diagnostic"]["reading_profile"] == "dyslexia"
-    assert len(data["remediations"]) > 0
+    assert data["diagnostic"]["reading_profile"] == "word_recognition_difficulty"
+    assert "not a diagnosis" in data["caveat"]
+    assert len(data["remediations"]) == 2
+
+    # Without diagnosed skills, no cards are guessed from the score alone.
+    bare = client.post("/tools/evaluate_simple_view", json={"decoding": 0.35, "comprehension": 0.80}).json()
+    assert bare["remediations"] == []
+    assert bare["available_skills"]
 
     std_response = client.post("/api/standards", json={"description": "decode words with silent e", "state": "GA"})
     assert std_response.status_code == 200

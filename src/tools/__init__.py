@@ -1,17 +1,17 @@
 """Tools for the Science of Reading MCP server.
 
 Organized by domain:
-  diagnostics.py   — Lexile analysis, Simple View evaluation
+  diagnostics.py   — readability estimate, Simple View screening profile
   remediation.py   — Instructional remediation cards (lookup table)
   decodability.py  — Anti-cueing decodability verifier (API + DuckDB)
   standards.py     — CASE/JSON-LD standards alignment + API competency lookup
-  privacy.py       — FERPA PII sanitizer
+  privacy.py       — student identifier scrubbing (data minimization)
   phonics.py       — API: get_phonics_scope
   orthography.py   — API: map_orthography
 """
 
 from src.tools.diagnostics import (
-    analyze_lexile,
+    estimate_readability,
     evaluate_simple_view,
 )
 from src.tools.remediation import (
@@ -40,7 +40,7 @@ from src.tools.orthography import (
 
 __all__ = [
     # diagnostics
-    "analyze_lexile",
+    "estimate_readability",
     "evaluate_simple_view",
     # remediation
     "get_instructional_remediation",

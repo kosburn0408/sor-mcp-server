@@ -9,7 +9,7 @@ class MicroPD(BaseModel):
     """Two-sentence explainer of the orthographic/phonological principle."""
     principle: str = Field(description="Principle name, e.g. 'Silent-e Rule'")
     explanation: str = Field(description="Two sentences in plain teacher language")
-    research_basis: str = Field(description="One-line citation, e.g. 'NRP Phonics (d=0.41)'")
+    research_basis: str = Field(description="One-line citation, e.g. 'Ehri et al. (2001) phonics meta-analysis'")
 
 
 class TeacherScript(BaseModel):

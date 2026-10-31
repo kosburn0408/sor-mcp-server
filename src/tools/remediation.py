@@ -10,7 +10,7 @@ Theoretical basis:
 - Orton-Gillingham multisensory structured literacy
 - Explicit Instruction (Archer & Hughes, 2011)
 - WWC Foundational Skills Practice Guide (2016)
-- NRP Phonics findings (d=0.41-0.60)
+- Ehri et al. (2001) phonics meta-analysis (d = 0.41 overall; 0.55 when begun in K–1)
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
                 "first vowel sound taught because it is the most stable and "
                 "frequent short vowel in early decodable text."
             ),
-            "research_basis": "NRP Phonics (d=0.41); Ehri's Phases of Word Reading (1995)",
+            "research_basis": "Ehri et al. (2001) phonics meta-analysis (d = 0.41 overall); Ehri's Phases of Word Reading (1995)",
         },
         "teacher_script": {
             "i_do": (
@@ -159,7 +159,7 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
                 "preceding vowel to say its long sound (its 'name'). The 'e' does "
                 "not represent a phoneme — it is a marker."
             ),
-            "research_basis": "NRP Phonics (d=0.48); Moats (2020) Speech to Print",
+            "research_basis": "Ehri et al. (2001) phonics meta-analysis; Moats (2020) Speech to Print",
         },
         "teacher_script": {
             "i_do": (
@@ -214,7 +214,7 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
                 "each sound. Unlike digraphs (sh, ch, th) where two letters make "
                 "one new sound, in 'st' in 'stop', you hear /s/ and /t/ separately."
             ),
-            "research_basis": "NRP Phonics (d=0.44); BEE Beginning Reading (Slavin et al., 2008, d=0.32)",
+            "research_basis": "Ehri et al. (2001) phonics meta-analysis; Foorman et al. (2016) WWC Foundational Skills guide, Rec. 3",
         },
         "teacher_script": {
             "i_do": (
@@ -245,8 +245,8 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
             "verbal_anchor": "Tap each sound. Now slide them together.",
         },
         "word_chain": {
-            "chain": ["stop", "step", "stem", "steam", "stream"],
-            "target_pattern": "s-blends → st- → str- (building complexity)",
+            "chain": ["lip", "slip", "slap", "clap", "clamp", "cramp"],
+            "target_pattern": "Add, change, or remove one consonant in a blend at a time",
             "non_example": "ship (sh is a digraph — two letters make one sound)",
         },
         "corrective_feedback": {
@@ -268,7 +268,7 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
                 "make ONE completely new sound. 'S' and 'h' together don't say "
                 "/s/+/h/ — they say /sh/."
             ),
-            "research_basis": "NRP Phonics (d=0.41); Ehri's Consolidated Phase",
+            "research_basis": "Ehri et al. (2001) phonics meta-analysis; Ehri's Consolidated Alphabetic Phase",
         },
         "teacher_script": {
             "i_do": (
@@ -322,7 +322,7 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
                 "its individual sounds (phonemes). This is a critical phonemic "
                 "awareness skill that directly predicts later reading success."
             ),
-            "research_basis": "NRP Phonemic Awareness (d=0.53); Kilpatrick (2015)",
+            "research_basis": "Ehri et al. (2001) phonemic awareness meta-analysis (d = 0.53 on reading); Kilpatrick (2015)",
         },
         "teacher_script": {
             "i_do": (
@@ -367,6 +367,107 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
         },
         "connected_text": "Nan can pat the cat on the mat.",
     },
+    "vowel_teams": {
+        "skill_name": "Vowel Teams (ai/ay, ee/ea, oa/ow)",
+        "grade_levels": ["1st", "2nd"],
+        "micro_pd": {
+            "principle": "Vowel Teams — Two or More Letters, One Vowel Sound",
+            "explanation": (
+                "A vowel team is two or more letters that together spell one vowel "
+                "sound. Teach each team as a unit with its sound and its usual "
+                "position: ai and oa usually appear inside a word, ay and ow often "
+                "at the end (rain/play, boat/snow). Avoid the 'when two vowels go "
+                "walking' rule; it fails for many common words."
+            ),
+            "research_basis": "Ehri et al. (2001) phonics meta-analysis; Foorman et al. (2016) WWC Foundational Skills guide, Rec. 3",
+        },
+        "teacher_script": {
+            "i_do": (
+                "This is a vowel team: a-i. These two letters work together to spell "
+                "one sound, /ā/. Watch: /r/ /ā/ /n/... rain. I touch under 'ai' only "
+                "once, because it is one sound."
+            ),
+            "we_do": (
+                "Let's read together. Touch under each sound: /t/ /r/ /ā/ /n/, train. "
+                "/p/ /l/ /ā/, play. Remember, the team gets one touch."
+            ),
+            "you_do": "Read these on your own, touching each sound: rain, play, wait, stay, paint.",
+            "time_per_stage": "~1-2 min each",
+        },
+        "multisensory_cue": {
+            "name": "Sound Boxes with Vowel-Team Tiles",
+            "materials": "Letter tiles, with each vowel team printed on a single tile",
+            "procedure": (
+                "1. Say 'rain'. Student pushes one tile per sound into the boxes: r, ai, n. "
+                "2. Student notices that 4 letters make 3 sounds. "
+                "3. Student slides a finger under the boxes while blending the word."
+            ),
+            "verbal_anchor": "Two letters, one sound.",
+        },
+        "word_chain": {
+            "chain": ["rain", "main", "maid", "paid", "pail", "tail"],
+            "target_pattern": "ai → /ā/ — change one sound at a time",
+            "non_example": "said (ai says /ĕ/ here, so it is taught as a heart word)",
+        },
+        "corrective_feedback": {
+            "error_response": (
+                "These two letters are a team, so they make one sound. What sound "
+                "does 'ai' make? Now blend the whole word."
+            ),
+            "praise_response": "You read the vowel team as one sound!",
+        },
+        "connected_text": "Jay and Gail wait for the train in the rain.",
+    },
+    "r_controlled": {
+        "skill_name": "R-Controlled Vowels (ar, or, er/ir/ur)",
+        "grade_levels": ["1st", "2nd"],
+        "micro_pd": {
+            "principle": "R-Controlled Vowels — The R Changes the Vowel Sound",
+            "explanation": (
+                "When r follows a vowel in the same syllable, the vowel no longer "
+                "makes its short sound: ar says /ar/ (car), or says /or/ (fork), and "
+                "er, ir and ur usually all say /er/ (her, bird, fur). Teach each as a "
+                "unit. Because er, ir and ur spell the same sound, spelling them "
+                "needs extra practice."
+            ),
+            "research_basis": "Ehri et al. (2001) phonics meta-analysis; Moats (2020) Speech to Print",
+        },
+        "teacher_script": {
+            "i_do": (
+                "Look at this word: c-ar. The r changes the a. It doesn't say /ă/ "
+                "anymore; a and r together say /ar/. Car. Watch again: /f/ /ar/ /m/, farm."
+            ),
+            "we_do": (
+                "Let's read together, touching the vowel and r as one sound: "
+                "/s/ /t/ /ar/, star. /f/ /or/ /k/, fork. /h/ /er/, her. /b/ /er/ /d/, bird."
+            ),
+            "you_do": "Read these by yourself: park, corn, fern, girl, burn.",
+            "time_per_stage": "~1-2 min each",
+        },
+        "multisensory_cue": {
+            "name": "R-Controlled Sound Boxes",
+            "materials": "Whiteboard and marker",
+            "procedure": (
+                "1. Draw one box per sound in 'farm': f | ar | m. "
+                "2. Write the vowel and the r together in one box. "
+                "3. Student touches each box while saying its sound, then blends."
+            ),
+            "verbal_anchor": "Vowel and r: one box, one sound.",
+        },
+        "word_chain": {
+            "chain": ["car", "card", "cart", "part", "port", "sport"],
+            "target_pattern": "ar → or — change one sound at a time",
+            "non_example": "cat (no r after the vowel, so the a is short)",
+        },
+        "corrective_feedback": {
+            "error_response": (
+                "The r changes that vowel. What sound do these two letters make "
+                "together? Blend the word again."
+            ),
+            "praise_response": "You heard how the r changed the vowel!",
+        },
+        "connected_text": "Mark and Bert sort the corn in the barn.",
+    },
     "prefix_un": {
         "skill_name": "Prefix un- (Meaning 'not' or 'opposite of')",
         "grade_levels": ["2nd", "3rd"],
@@ -376,7 +477,7 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
                 "A prefix is a word part added to the beginning of a base word "
                 "that changes its meaning. 'un-' means 'not' or 'the opposite of.'"
             ),
-            "research_basis": "NRP Vocabulary (d=0.47); Bowers & Kirby (2010)",
+            "research_basis": "Bowers, Kirby & Deacon (2010) review of morphological instruction; Foorman et al. (2016) Rec. 3",
         },
         "teacher_script": {
             "i_do": (

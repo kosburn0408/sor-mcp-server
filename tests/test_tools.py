@@ -20,10 +20,10 @@ async def test_get_phonics_scope_success(mock_api) -> None:
         assert result["status"] == "ok"
         assert result["grade_level"] == "1"
         assert result["unit"] == "1"
-        assert "/a/" in result["target_phonemes"]
+        assert "short_a" in result["taught_gpc_ids"]
+        assert "tch" in result["taught_graphemes"]
         assert "the" in [hw["word"] for hw in result["heart_words"]]
-        assert result["source"] == "sor.edtechlabs.dev"
-        assert result["cached"] is True
+        assert result["source"] == "default_illustrative_sequence"
     finally:
         await client.close()
 
@@ -65,11 +65,11 @@ async def test_verify_decodable_text_success(mock_api) -> None:
             "The cat sat on the mat.", "1", "1", client=client,
         )
         assert result["status"] == "ok"
-        assert result["decodable_pct"] == 96.0
-        assert result["total_words"] == 25
+        assert result["total_words"] == 6
+        assert result["accessible_pct"] == 100.0
         assert result["off_scope_words"] == []
-        assert result["instructional_level"] == "independent"
-        assert result["source"] == "sor.edtechlabs.dev"
+        assert result["meets_target"] is True
+        assert result["source"] == "local_scope_engine"
     finally:
         await client.close()
 
@@ -123,9 +123,11 @@ async def test_map_orthography_success(mock_api) -> None:
         assert result["status"] == "ok"
         assert result["total"] == 3
         assert result["words"][0]["word"] == "cat"
-        assert result["words"][0]["phonemes"] == ["/k/", "/a/", "/t/"]
+        assert result["words"][0]["phonemes"] == ["/k/", "/ă/", "/t/"]
+        assert result["words"][1]["graphemes"] == ["ch", "a", "t"]
+        assert result["words"][2]["graphemes"] == ["l", "igh", "t"]
         assert result["words"][0]["syllable_types"] == ["closed"]
-        assert result["source"] == "sor.edtechlabs.dev"
+        assert result["source"] == "local_orthography_engine"
     finally:
         await client.close()
 
