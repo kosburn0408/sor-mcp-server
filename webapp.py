@@ -3,7 +3,7 @@
 EPIC-SOR-01 Implementation & Usability Polish:
   - Step 1: MTSS Screener (Simple View screening profile + intervention cards for diagnosed skills)
   - Step 2: Decodable Text Checker (scope & sequence + pronunciation-dictionary alignment)
-  - Step 3: Explicit Phonics Routine Builder (5-Day I Do / We Do / You Do scripts with multisensory cues)
+  - Step 3: Explicit Phonics Routine Builder (deterministic I Do / We Do / You Do scripts per skill)
   - Step 4: Visual Audit Inspector & Anti-Cueing Shield (Color-coded badges & hover tooltips)
   - Classroom Exports: Print-First CSS (@media print, Atkinson Hyperlegible) & Google Classroom export (pasted access token)
 
@@ -82,7 +82,6 @@ from src.tools.remediation import get_instructional_remediation, list_available_
 from src.tools.diagnostics import evaluate_simple_view
 from src.tools.decodability import check_decodability
 from src.tools.phonics import get_phonics_scope
-from src.prompts.phonics import explicit_phonics_routine
 from src.tools.privacy import sanitize_pii
 
 # ── Sidebar Data Loader ─────────────────────────────────────────────────────
@@ -1090,7 +1089,7 @@ input:focus, select:focus, textarea:focus {{
       <div class="quadrant-icon"><i class="fa-solid fa-puzzle-piece"></i></div>
       <div>
         <div class="quadrant-title">🧩 Explicit Phonics Routine Builder</div>
-        <div class="quadrant-desc">Generate 5-day I Do / We Do / You Do scripts with multisensory cues.</div>
+        <div class="quadrant-desc">Ready-to-teach I Do / We Do / You Do scripts with word chains and multisensory cues.</div>
       </div>
     </div>
     <div class="quadrant-card" id="quadrant-auditor" onclick="switchTab('tab-auditor')">
@@ -1098,7 +1097,7 @@ input:focus, select:focus, textarea:focus {{
       <div class="quadrant-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
       <div>
         <div class="quadrant-title">🔍 Visual Audit & Anti-Cueing Shield</div>
-        <div class="quadrant-desc">Visual proof inspector with color badges & Google Classroom export.</div>
+        <div class="quadrant-desc">Flag three-cueing prompts and untaught patterns in passages and lesson scripts.</div>
       </div>
     </div>
   </div>
@@ -1274,25 +1273,35 @@ input:focus, select:focus, textarea:focus {{
   <div class="tab-pane" id="tab-phonics">
     <div class="m3-card">
       <div class="m3-card-title"><i class="fa-solid fa-puzzle-piece"></i> Step 3: Explicit Phonics Routine Builder</div>
-      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Generate a 5-day explicit phonics routine (I Do / We Do / You Do) with word chains and multisensory cues.</p>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Choose a skill to get a ready-to-teach explicit routine for one small-group session (about 5–7 minutes): a short teacher brief, I Do / We Do / You Do script, word chain, multisensory cue, corrective feedback and a connected sentence. Repeat it across several days as students need.</p>
       
       <form id="phonicsRoutineForm">
         <div class="row">
           <div class="form-group">
-            <label>Target Phoneme / Skill</label>
-            <input type="text" id="targetPhoneme" placeholder="e.g. /sh/, /ch/, /ai/, /silent_e/..." value="/sh/" required>
+            <label>Skill</label>
+            <select id="routineSkill">
+              <option value="phoneme_segmentation">Phoneme segmentation</option>
+              <option value="cvc_short_a">Short a (CVC words)</option>
+              <option value="cvc_mixed">Mixed short vowels (CVC words)</option>
+              <option value="consonant_blends">Consonant blends</option>
+              <option value="consonant_digraphs" selected>Consonant digraphs (sh, ch, th, wh, ck)</option>
+              <option value="cvce_silent_e">Silent-e (a_e, i_e, o_e, u_e)</option>
+              <option value="r_controlled">R-controlled vowels (ar, or, er/ir/ur)</option>
+              <option value="vowel_teams">Vowel teams (ai/ay, ee/ea, oa/ow)</option>
+              <option value="prefix_un">Prefix un-</option>
+            </select>
           </div>
           <div class="form-group">
-            <label>Multisensory Cue Technique</label>
-            <select id="multisensoryCue">
-              <option value="finger tapping" selected>Finger Tapping (Phoneme Segmentation)</option>
-              <option value="Elkonin boxes">Elkonin Sound Boxes</option>
-              <option value="sky writing">Sky Writing / Arm Tapping</option>
-              <option value="magic e wand">Magic-E Wand</option>
+            <label>Grade Level</label>
+            <select id="routineGrade">
+              <option value="K">Kindergarten</option>
+              <option value="1st" selected>1st Grade</option>
+              <option value="2nd">2nd Grade</option>
+              <option value="3rd">3rd Grade</option>
             </select>
           </div>
         </div>
-        <button type="submit" class="m3-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Step 3: Build 5-Day Scripted Routine</button>
+        <button type="submit" class="m3-btn"><i class="fa-solid fa-wand-magic-sparkles"></i> Step 3: Show Explicit Routine</button>
       </form>
 
       <div class="result" id="phonicsRoutineResult"></div>
@@ -1322,7 +1331,7 @@ input:focus, select:focus, textarea:focus {{
   <div class="tab-pane" id="tab-vocab">
     <div class="m3-card">
       <div class="m3-card-title"><i class="fa-solid fa-layer-group"></i> Three-Tier Vocabulary Classifier</div>
-      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Analyze text passages using Beck's 3-Tier vocabulary framework to highlight high-utility Tier 2 academic words.</p>
+      <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">Paste a read-aloud or passage to find Tier 2 candidates (Beck, McKeown &amp; Kucan) worth pre-teaching. Tiers are estimated from word frequency, so review the candidates: frequency can't tell an everyday word like <em>frog</em> from an academic word like <em>reluctant</em> when both are uncommon.</p>
       <form id="vocabForm">
         <div class="form-group">
           <label>Text Selection</label>
@@ -1895,22 +1904,27 @@ document.getElementById('decodableGeneratorForm').addEventListener('submit', asy
 
 document.getElementById('phonicsRoutineForm').addEventListener('submit', async function(e){{
   e.preventDefault();
-  var rawPhoneme = document.getElementById('targetPhoneme').value;
-  var phoneme = sanitizeClientPII(rawPhoneme);
-  var cue = document.getElementById('multisensoryCue').value;
+  var skill = document.getElementById('routineSkill').value;
+  var grade = document.getElementById('routineGrade').value;
+  var resEl = document.getElementById('phonicsRoutineResult');
 
   var resp = await fetch('/api/phonics_routine', {{
     method: 'POST',
     headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{target_phoneme: phoneme, grade: '1st', multisensory: cue}})
+    body: JSON.stringify({{skill: skill, grade: grade}})
   }});
   var r = await resp.json();
-  
-  var html = '<h3 style="color:var(--md-sys-color-primary);margin-bottom:1rem"><i class="fa-solid fa-puzzle-piece"></i> 5-Day Explicit Phonics Routine Script</h3>';
-  html += '<div style="background:var(--md-sys-color-surface-variant);padding:1.4rem;border-radius:var(--md-shape-corner-medium);white-space:pre-wrap;font-family:monospace;line-height:1.6">' + r.routine + '</div>';
-  html += '<div class="export-bar"><button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print Student Sheet</button><button onclick="copyResultText(' + "'phonicsRoutineResult'" + ')" class="export-btn"><i class="fa-solid fa-copy"></i> 📋 Copy Plain Text</button><button onclick="openGCModal(' + "'Explicit Phonics Routine'" + ', r.routine)" class="export-btn" style="background:#EADDFF;color:#21005D"><i class="fa-solid fa-graduation-cap"></i> 🎓 Export to Google Classroom</button></div>';
+  if (r.status !== 'ok') {{
+    resEl.innerHTML = '<p style="color:#B3261E">' + escapeHtml(r.error || 'Could not load that routine.') + '</p>';
+    resEl.classList.add('show');
+    return;
+  }}
+  window.lastRoutineText = r.routine;
 
-  var resEl = document.getElementById('phonicsRoutineResult');
+  var html = '<h3 style="color:var(--md-sys-color-primary);margin-bottom:1rem"><i class="fa-solid fa-puzzle-piece"></i> Explicit Routine: ' + escapeHtml(r.skill_name) + '</h3>';
+  html += '<div class="remediation-card">' + renderMarkdownCard(r.routine) + '</div>';
+  html += '<div class="export-bar"><button onclick="window.print()" class="export-btn"><i class="fa-solid fa-print"></i> 🖨️ Print</button><button onclick="copyResultText(' + "'phonicsRoutineResult'" + ')" class="export-btn"><i class="fa-solid fa-copy"></i> 📋 Copy Plain Text</button><button onclick="openGCModal(' + "'Explicit Phonics Routine'" + ', window.lastRoutineText)" class="export-btn" style="background:#EADDFF;color:#21005D"><i class="fa-solid fa-graduation-cap"></i> 🎓 Export to Google Classroom</button></div>';
+
   resEl.innerHTML = html;
   resEl.classList.add('show');
 }});
@@ -1987,6 +2001,9 @@ function renderResult(r) {{
 function renderMarkdownCard(card) {{
   var md = typeof card === 'string' ? card : card.markdown || JSON.stringify(card);
   var html = md
+    .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid var(--md-sys-color-outline-variant);margin:0.8rem 0">')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/(^|[\\s(])_([^_\\n]+)_(?=[\\s.,;:)]|$)/gm, '$1<em>$2</em>')
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     .replace(/^## (.+)$/gm, '<h3>$1</h3>')
     .replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>')
@@ -2029,24 +2046,27 @@ document.getElementById('vocabForm').addEventListener('submit', async function(e
   }});
   var r = await resp.json();
 
-  var summary = r.tier_summary || {{}};
-  var t1Count = summary.tier_1 ? summary.tier_1.count : (r.tier_counts ? r.tier_counts.tier_1 : 0);
-  var t2Count = summary.tier_2 ? summary.tier_2.count : (r.tier_counts ? r.tier_counts.tier_2 : 0);
-  var t3Count = summary.tier_3 ? summary.tier_3.count : (r.tier_counts ? r.tier_counts.tier_3 : 0);
+  var counts = r.tier_counts || {{}};
   var totalWords = r.total_words || 0;
 
-  var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">📚 Three-Tier Vocabulary Breakdown</h3>';
+  var html = '<h3 style="margin-top:1rem;color:var(--md-sys-color-primary)">📚 Three-Tier Vocabulary Estimate</h3>';
   html += '<div class="stats-grid">';
-  html += '<div class="stat"><div class="stat-num">' + t1Count + '</div><div class="stat-label">Tier 1 (Basic)</div></div>';
-  html += '<div class="stat"><div class="stat-num">' + t2Count + '</div><div class="stat-label">Tier 2 (Academic)</div></div>';
-  html += '<div class="stat"><div class="stat-num">' + t3Count + '</div><div class="stat-label">Tier 3 (Domain)</div></div>';
+  html += '<div class="stat"><div class="stat-num">' + (counts.tier_1 || 0) + '</div><div class="stat-label">Tier 1 (Everyday)</div></div>';
+  html += '<div class="stat"><div class="stat-num">' + (counts.tier_2 || 0) + '</div><div class="stat-label">Tier 2 candidates</div></div>';
+  html += '<div class="stat"><div class="stat-num">' + (counts.tier_3 || 0) + '</div><div class="stat-label">Tier 3 (Rare / Technical)</div></div>';
   html += '<div class="stat"><div class="stat-num">' + totalWords + '</div><div class="stat-label">Total Words</div></div>';
   html += '</div>';
 
   if (r.tier_2_words && r.tier_2_words.length > 0) {{
-    var t2List = r.tier_2_words.map(function(w){{ return '<strong>' + w.word + '</strong> (x' + w.count + ')'; }}).join(', ');
-    html += '<p style="color:var(--md-sys-color-primary);margin-top:0.8rem;padding:0.9rem;background:var(--md-sys-color-primary-container);border-radius:var(--md-shape-corner-medium)"><strong>🎯 Tier 2 (Academic) Words to Pre-Teach:</strong> ' + t2List + '</p>';
+    var t2List = r.tier_2_words.map(function(w){{ return '<strong>' + escapeHtml(w.word) + '</strong>' + (w.count > 1 ? ' (x' + w.count + ')' : ''); }}).join(', ');
+    html += '<p style="color:var(--md-sys-color-primary);margin-top:0.8rem;padding:0.9rem;background:var(--md-sys-color-primary-container);border-radius:var(--md-shape-corner-medium)"><strong>🎯 Tier 2 candidates to review (most useful first):</strong> ' + t2List + '</p>';
   }}
+  if (r.tier_3_words && r.tier_3_words.length > 0) {{
+    html += '<p style="margin-top:0.6rem"><strong>Tier 3 (rare or technical):</strong> ' + r.tier_3_words.map(function(w){{ return escapeHtml(w.word); }}).join(', ') + '</p>';
+  }}
+  var extra = (r.names || []).map(function(w){{ return escapeHtml(w.word); }}).concat((r.unclassified_words || []).map(function(w){{ return escapeHtml(w.word); }}));
+  if (extra.length) html += '<p style="margin-top:0.6rem;font-size:0.85rem">Names or words without frequency data (not classified): ' + extra.join(', ') + '</p>';
+  html += '<p style="font-size:0.78rem;color:var(--md-sys-color-secondary);margin-top:0.8rem">' + escapeHtml(r.method || '') + '</p>';
   document.getElementById('vocabResult').innerHTML = html;
   document.getElementById('vocabResult').classList.add('show');
 }});
@@ -2101,15 +2121,52 @@ async def phonics_scope_route(grade: str = "1", unit: str = "1"):
     return await get_phonics_scope(grade_level=grade, unit=unit)
 
 
+# Target sounds/patterns a teacher might type → intervention card.
+_ROUTINE_ALIASES: dict[str, str] = {
+    "sh": "consonant_digraphs", "ch": "consonant_digraphs", "th": "consonant_digraphs",
+    "wh": "consonant_digraphs", "ck": "consonant_digraphs", "digraph": "consonant_digraphs",
+    "digraphs": "consonant_digraphs",
+    "a": "cvc_short_a", "short a": "cvc_short_a",
+    "e": "cvc_mixed", "i": "cvc_mixed", "o": "cvc_mixed", "u": "cvc_mixed", "short vowels": "cvc_mixed", "cvc": "cvc_mixed",
+    "silent e": "cvce_silent_e", "silent_e": "cvce_silent_e", "a_e": "cvce_silent_e", "i_e": "cvce_silent_e",
+    "o_e": "cvce_silent_e", "u_e": "cvce_silent_e", "vce": "cvce_silent_e", "cvce": "cvce_silent_e",
+    "ai": "vowel_teams", "ay": "vowel_teams", "ee": "vowel_teams", "ea": "vowel_teams", "oa": "vowel_teams",
+    "ow": "vowel_teams", "vowel teams": "vowel_teams",
+    "ar": "r_controlled", "or": "r_controlled", "er": "r_controlled", "ir": "r_controlled", "ur": "r_controlled",
+    "blends": "consonant_blends", "blend": "consonant_blends",
+    "segmentation": "phoneme_segmentation", "phoneme segmentation": "phoneme_segmentation",
+    "un": "prefix_un", "un-": "prefix_un",
+}
+
+
 @app.post("/api/phonics_routine")
 @app.post("/tools/explicit_phonics_routine")
 async def phonics_routine_route(data: dict):
-    """Story 1 & 3: Generate explicit phonics routine."""
-    target_phoneme = data.get("target_phoneme", "/sh/")
+    """Story 1 & 3: Return the explicit intervention script for a skill.
+
+    Uses the deterministic cards in src/tools/remediation.py, so teachers get a
+    ready-to-teach script rather than instructions meant for an AI model.
+    Accepts ``skill`` (a card code) or ``target_phoneme`` (e.g. "/sh/", "ai").
+    """
+    from src.tools.remediation import DEFICIT_TO_REMEDIATION, REMEDIATION_TABLE
+
+    skill = str(data.get("skill") or "").strip()
+    if not skill:
+        key = str(data.get("target_phoneme", "")).strip().lower().strip("/").replace("-", " ").strip()
+        skill = _ROUTINE_ALIASES.get(key) or _ROUTINE_ALIASES.get(key.replace("_", " ")) or ""
+    resolved = DEFICIT_TO_REMEDIATION.get(skill, skill)
+    if resolved not in REMEDIATION_TABLE:
+        return JSONResponse(
+            {
+                "status": "error",
+                "error": "No script for that skill yet. Choose one of the listed skills.",
+                "available_skills": list_available_remediations()["remediations"],
+            },
+            status_code=400,
+        )
     grade = data.get("grade", "1st")
-    multisensory = data.get("multisensory", "finger tapping")
-    routine = await explicit_phonics_routine(target_phoneme=target_phoneme, grade=grade, multisensory=multisensory)
-    return {"status": "ok", "routine": routine}
+    card = get_instructional_remediation(resolved, grade)
+    return {"status": "ok", "skill": resolved, "skill_name": card.skill_name, "routine": card.to_markdown()}
 
 
 @app.post("/api/diagnose")

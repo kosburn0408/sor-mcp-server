@@ -128,7 +128,7 @@ python3 server.py
 | `map_orthography` | Map words to grapheme/phoneme sequences (dictionary-aligned) and syllable types |
 | `lookup_competency` | Alias of `align_standards`, kept for existing clients |
 | `estimate_readability` | Flesch-Kincaid Grade Level estimate (not a Lexile measure; unreliable for K–2 text) |
-| `classify_vocabulary` | Classify text into Beck Tier 1/2/3 with instructional recommendations |
+| `classify_vocabulary` | Estimate Beck Tier 1/2/3 from word frequency; returns Tier 2 candidates for a teacher to review |
 | `match_word` | One word: vocabulary tier (if in the small corpus) and scope-aware decodability: decodable by the end of a grade, first unit where it becomes decodable, missing patterns |
 | `search_evidence` | Query a small curated research database by topic (effect sizes reported per source, not averaged) |
 | `list_frameworks` | Enumerate theoretical frameworks and the 5 Pillars of Reading |
@@ -270,7 +270,7 @@ Every disagreement is saved to `tests/fixtures/coach_cases.json` and becomes a r
 - **Privacy.** Pattern-based scrubbing reduces but cannot guarantee removal of every identifier, and this project has not been independently audited. It does not by itself make a deployment FERPA or COPPA compliant; districts should complete their own privacy review and data agreements.
 - **Georgia standards.** Georgia lookups use the current K–12 ELA standards from Georgia's CASE repository (`src/tools/ga_case.py`), searching the K–3 Foundations strands and caching the framework for a week. If the repository can't be reached and there's no cache, the bundled legacy ELAGSE codes are returned with a notice. Matching is by keyword, so confirm the best match.
 - **Research database.** The evidence table is a small curated set. Check original sources before citing.
-- **Vocabulary tiers.** The tier corpus has only a few dozen words; other words fall back to a short academic-word list, and unknown words get no tier.
+- **Vocabulary tiers are estimates.** Tiers come from word frequency (the `wordfreq` package), a small hand-built corpus and an academic word list. Frequency can't separate an everyday word like *frog* from an academic word like *reluctant* when both are uncommon, so Tier 2 results are candidates for a teacher to review. A capitalized word at the start of a sentence may be a name that isn't recognized as one.
 - **Other states' standards.** Outside Georgia, standards come from a small sample of codes, not complete frameworks.
 - **Google Classroom.** Export needs a pasted access token; there's no built-in Google sign-in yet.
 
@@ -278,4 +278,4 @@ Every disagreement is saved to `tests/fixtures/coach_cases.json` and becomes a r
 
 ## License
 
-© 2026 EdTech Labs. All rights reserved. The CMU Pronouncing Dictionary is used under its BSD license.
+© 2026 EdTech Labs. All rights reserved. The CMU Pronouncing Dictionary is used under its BSD license. Word frequencies come from [wordfreq](https://github.com/rspeer/wordfreq) (code Apache-2.0; data CC BY-SA 4.0).

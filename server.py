@@ -125,7 +125,7 @@ def estimate_readability_tool(text: str) -> dict[str, Any]:
 
 @mcp.tool(
     name="classify_vocabulary",
-    description="Classify text into Beck's Tier 1/2/3 vocabulary with instructional recommendations.",
+    description="Estimate Beck Tier 1/2/3 vocabulary for a passage from word frequency, a small tier corpus and an academic word list. Returns Tier 2 candidates (most useful first) for a teacher to review, plus names and unclassified words.",
 )
 def classify_vocabulary_tool(text: str, domain: str | None = None) -> dict[str, Any]:
     from src.tools.vocabulary import classify_vocabulary
