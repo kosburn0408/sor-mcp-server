@@ -2089,7 +2089,7 @@ populateUnits().then(function() {{
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    return build_frontend()
+    return HTMLResponse(content=build_frontend(), headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/api/phonics_scope")

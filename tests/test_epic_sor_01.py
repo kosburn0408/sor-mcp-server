@@ -37,6 +37,13 @@ def test_story1_phonics_scope_fetching_under_200ms() -> None:
     assert elapsed_ms < 200, f"Scope fetch took {elapsed_ms:.2f}ms (> 200ms target)"
 
 
+def test_homepage_cache_control_no_cache() -> None:
+    """Homepage must not be cached by intermediaries (stale-HTML incident fix)."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.headers.get("cache-control") == "no-cache"
+
+
 def test_story1_workspace_quadrant_selector_rendered() -> None:
     """Story 1: HTML frontend contains 4-Quadrant Workspace Selector UI."""
     response = client.get("/")
