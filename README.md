@@ -196,6 +196,33 @@ Create a JSON file shaped like `DEFAULT_SEQUENCE` in `src/engine/scope_sequence.
 
 and set `SOR_SCOPE_PATH=/path/to/scope.json`. GPC ids are listed in `src/engine/gpc.py`; unknown ids are rejected at load time.
 
+Easier: type the program's lessons into a spreadsheet and convert it.
+
+```bash
+# Start from the default sequence as a template (one row per unit)
+python3 scripts/build_scope.py --export-default -o scopes/my_program.csv
+# Edit in Sheets/Excel: grade, unit, title, patterns ("m; a; sh; a_e; -ed"), heart_words ("the; said")
+python3 scripts/build_scope.py scopes/my_program.csv -o scopes/my_program.json
+SOR_SCOPE_PATH=scopes/my_program.json python3 webapp.py
+```
+
+Patterns can be GPC ids or teacher notation (a single vowel = its short sound, `a_e` = silent-e, `-ed`, `open syllable`, `schwa`). The script warns about ambiguous spellings such as `ea` and about patterns introduced twice.
+
+### Decodability targets
+
+States and programs set different criteria, and research on the ideal proportion is limited. For example, California's instructional-materials criteria call for at least 75–80% of words made only of previously taught sound-spellings, with the remaining 20–25% previously taught irregular high-frequency words and story words. To apply a criterion like that, pass `min_decodable_pct=80` along with `target_pct` (the share that must be decodable or taught heart words).
+
+### Checking the engine with a literacy coach
+
+```bash
+python3 scripts/coach_review.py prepare scopes/example_passages.csv -o review.csv   # passage_id,grade,unit,text
+# Coach fills coach_agrees (Y/N), coach_status, coach_notes for each word in Sheets/Excel
+python3 scripts/coach_review.py ingest review.csv                                     # agreement report + test cases
+python3 -m pytest tests/test_coach_cases.py
+```
+
+Every disagreement is saved to `tests/fixtures/coach_cases.json` and becomes a regression test. Some disagreements mean the engine needs a fix; others mean the scope file doesn't match what the program teaches, so fix the scope file first. Set `SOR_SCOPE_PATH` to the district's scope before both steps.
+
 ---
 
 ## Limitations

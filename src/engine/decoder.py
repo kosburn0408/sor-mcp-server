@@ -258,6 +258,7 @@ def analyze_text(
     taught_gpcs: Iterable[str],
     heart_words: Iterable[str] = (),
     target_pct: float = 90.0,
+    min_decodable_pct: float | None = None,
 ) -> dict[str, Any]:
     taught = list(taught_gpcs)
     hearts = [w.lower() for w in heart_words]
@@ -292,7 +293,9 @@ def analyze_text(
         "decodable_pct": decodable_pct,
         "accessible_pct": accessible_pct,
         "target_pct": target_pct,
-        "meets_target": accessible_pct >= target_pct,
+        "min_decodable_pct": min_decodable_pct,
+        "meets_target": accessible_pct >= target_pct
+        and (min_decodable_pct is None or decodable_pct >= min_decodable_pct),
         "heart_words": unique("heart_word"),
         "not_yet_decodable_words": unique("not_yet_decodable"),
         "irregular_words": unique("irregular"),
