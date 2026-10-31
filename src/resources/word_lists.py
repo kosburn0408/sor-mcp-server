@@ -185,7 +185,7 @@ def list_word_lists() -> dict[str, Any]:
                 "total_words": sum(len(v) for v in HEART_WORDS.values()),
             },
             "dolch": {
-                "description": "Dolch Sight Words — classic high-frequency word lists (pre-primer through grade 3)",
+                "description": "Dolch high-frequency word lists (pre-primer through grade 3). Most of these words are decodable and are best taught through phonics; only their irregular parts need to be learned as heart words.",
                 "levels": list(DOLCH_LISTS.keys()),
                 "total_words": sum(len(v) for v in DOLCH_LISTS.values()),
             },

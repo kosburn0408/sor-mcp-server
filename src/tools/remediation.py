@@ -191,9 +191,9 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
             "verbal_anchor": "Magic E taps the vowel: 'Say your name!'",
         },
         "word_chain": {
-            "chain": ["cap", "cape", "tape", "tap", "tape", "shape"],
+            "chain": ["can", "cane", "cape", "cap", "cop", "cope"],
             "target_pattern": "CVC ↔ CVCe — toggling short and long vowels",
-            "non_example": "have (Even with silent-e, the 'a' stays short — it's a rule breaker!)",
+            "non_example": "have (the e is there because English words don't end in v; the a stays short)",
         },
         "corrective_feedback": {
             "error_response": (
@@ -301,7 +301,7 @@ REMEDIATION_TABLE: dict[str, dict[str, Any]] = {
         "word_chain": {
             "chain": ["ship", "chip", "chin", "thin", "thick", "chick"],
             "target_pattern": "sh ↔ ch ↔ th discrimination",
-            "non_example": "sip (s and h are NOT a digraph here)",
+            "non_example": "mishap (s and h are in different syllables, mis-hap, so they are not a digraph)",
         },
         "corrective_feedback": {
             "error_response": (

@@ -166,15 +166,13 @@ async def test_lookup_competency_success(mock_api) -> None:
     client = make_client()
     try:
         from src.tools.standards import lookup_competency
-        result = await lookup_competency("consonant_digraphs", "GA", client=client)
+        result = await lookup_competency("decode words with consonant digraphs", "GA", client=client)
         assert result["status"] == "ok"
-        assert result["skill"] == "consonant_digraphs"
         assert result["state"] == "GA"
-        assert result["total_matches"] == 2
-        assert result["matches"][0]["state_code"] == "ELAGSE1RF3a"
-        assert result["matches"][0]["grade"] == "1"
-        assert result["source"] == "sor.edtechlabs.dev"
-        assert result["cached"] is True
+        assert result["total_matches"] > 0
+        assert result["source"] == "align_standards"
+        # Offline in tests with no SuitCASE cache, so legacy codes come back with a notice.
+        assert any("legacy" in n for n in result["notices"])
     finally:
         await client.close()
 
@@ -201,3 +199,25 @@ async def test_lookup_competency_empty_skill(mock_api) -> None:
         assert result["error_code"] == "ERR_INVALID_INPUT"
     finally:
         await client.close()
+
+
+def test_match_word_uses_scope_engine() -> None:
+    """match_word decodability comes from the same engine as verify_decodable_text."""
+    from src.tools.vocabulary import match_word
+
+    early = match_word("night", "1")
+    later = match_word("night", "2")
+    assert early["decodable"] is False and any("igh" in p for p in early["missing_patterns"])
+    assert later["decodable"] is True
+    assert later["first_decodable_at"]["grade"] == "2"
+    assert match_word("describe")["tier"] == 2  # found in the vocabulary corpus
+
+
+def test_classroom_courses_ignores_token_in_url() -> None:
+    """Tokens are accepted only in the Authorization header, never the query string."""
+    from fastapi.testclient import TestClient
+    from webapp import app
+
+    client = TestClient(app)
+    r = client.get("/api/v1/google-classroom/courses?token=should-not-be-used")
+    assert r.json()["demo_mode"] is True

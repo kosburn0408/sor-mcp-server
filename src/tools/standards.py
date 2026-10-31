@@ -50,34 +50,34 @@ async def lookup_competency(
             detail=f"unknown state '{state}'. Supported: {sorted(valid_states)}",
         )
 
-    if client is None:
-        client = SoRClient(settings or Settings())
+    # The remote /api/v1/standards/competency endpoint was never implemented in
+    # webapp.py, so this tool now uses the same local lookup as align_standards
+    # (live SuitCASE data for Georgia). Kept as an alias for existing clients.
+    from src.tools.evidence import align_standards
 
-    try:
-        matches = await client.lookup_competency(skill, state)
-        return {
-            "status": "ok",
-            "skill": skill,
-            "state": state,
-            "total_matches": len(matches),
-            "matches": [
-                {
-                    "case_guid": m.case_guid,
-                    "state_code": m.state_code,
-                    "grade": m.grade,
-                    "description": m.description,
-                    "strand": m.strand,
-                }
-                for m in matches
-            ],
-            "source": "sor.edtechlabs.dev",
-            "cached": True,
-        }
-    except Exception as exc:
-        return format_api_error(
-            SoRAPIErrorCode.ERR_UPSTREAM_REGISTRY_UNAVAILABLE,
-            detail=str(exc),
-        )
+    result = align_standards(description=skill, state=state)
+    if result.get("error"):
+        return format_api_error(SoRAPIErrorCode.ERR_INVALID_INPUT, detail=result["error"])
+    return {
+        "status": "ok",
+        "skill": skill,
+        "state": result.get("state", state),
+        "total_matches": result.get("total_matches", 0),
+        "matches": [
+            {
+                "case_guid": m.get("case_identifier", ""),
+                "state_code": m.get("code", ""),
+                "grade": m.get("grade", ""),
+                "description": m.get("description", ""),
+                "strand": m.get("framework", ""),
+                "url": m.get("url", ""),
+            }
+            for m in result.get("matches", [])
+        ],
+        "notices": result.get("notices", []),
+        "source": "align_standards",
+        "note": "Alias of align_standards; prefer align_standards in new integrations.",
+    }
 
 
 # ── Legacy CASE alignment (DuckDB-backed, kept for backward compat) ────

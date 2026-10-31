@@ -176,3 +176,18 @@ def test_story6_google_classroom_publish_endpoint() -> None:
     assert data["status"] == "published"
     assert "alternateLink" in data
     assert "classroom.google.com" in data["alternateLink"]
+
+
+def test_story3_phonics_routine_returns_teachable_script() -> None:
+    """Step 3 returns a deterministic teaching script, not instructions for an AI model."""
+    r = client.post("/api/phonics_routine", json={"skill": "consonant_digraphs", "grade": "1st"}).json()
+    assert r["status"] == "ok"
+    assert "I DO" in r["routine"] and "Word Chain" in r["routine"]
+    assert "You are a" not in r["routine"]
+    # Backward compatible: a typed target sound maps to the matching card.
+    legacy = client.post("/api/phonics_routine", json={"target_phoneme": "/sh/"}).json()
+    assert legacy["skill"] == "consonant_digraphs"
+    bad = client.post("/api/phonics_routine", json={"target_phoneme": "/zzz/"})
+    assert bad.status_code == 400 and bad.json()["available_skills"]
+    page = client.get("/").text
+    assert "5-Day" not in page and "5-day" not in page

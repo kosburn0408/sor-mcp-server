@@ -57,7 +57,7 @@ class RemediationCard(BaseModel):
         """Render as teacher-friendly Markdown."""
         return (
             f"## 🎯 Instructional Remediation Card: {self.skill_name}\n\n"
-            f"**Deficit Code:** `{self.deficit_code}`  |  "
+            f"**Skill code:** `{self.deficit_code}`  |  "
             f"**Grade:** {self.grade_level}\n\n"
             f"---\n\n"
             f"### 1. Pedagogy Brief (Micro-PD)\n\n"
