@@ -6,7 +6,8 @@ import React, { useState, useEffect } from 'react';
  * and publish decodable reading assignments directly to classroom.google.com.
  */
 export default function GoogleClassroomExportModal({ isOpen, onClose, initialTitle = '', initialContent = '' }) {
-  const [token, setToken] = useState(localStorage.getItem('gc_access_token') || '');
+  // The access token is kept in memory only, never in localStorage.
+  const [token, setToken] = useState('');
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState('');
   const [title, setTitle] = useState(initialTitle);
@@ -55,13 +56,14 @@ export default function GoogleClassroomExportModal({ isOpen, onClose, initialTit
         course_id: selectedCourse,
         title: title,
         description: description,
-        points: Number(points),
-        access_token: token
+        points: Number(points)
       };
 
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch('/api/v1/google-classroom/publish', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(payload)
       });
       const data = await res.json();
@@ -71,9 +73,6 @@ export default function GoogleClassroomExportModal({ isOpen, onClose, initialTit
       }
 
       setPublishedUrl(data.alternateLink || 'https://classroom.google.com');
-      if (token) {
-        localStorage.setItem('gc_access_token', token);
-      }
     } catch (err) {
       setError(err.message);
     } finally {

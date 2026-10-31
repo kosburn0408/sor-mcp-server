@@ -107,7 +107,7 @@ async def map_orthography_tool(words: list[str]) -> dict[str, Any]:
 
 @mcp.tool(
     name="lookup_competency",
-    description="Look up CASE framework and state academic standards for a phonics skill.",
+    description="Alias of align_standards (kept for existing clients). Prefer align_standards.",
 )
 async def lookup_competency_tool(skill: str, state: str = "GA") -> dict[str, Any]:
     from src.tools.standards import lookup_competency
@@ -134,7 +134,7 @@ def classify_vocabulary_tool(text: str, domain: str | None = None) -> dict[str, 
 
 @mcp.tool(
     name="match_word",
-    description="Single-word lookup in the vocabulary corpus (tier, frequency, decodability, grade level).",
+    description="Single-word lookup: vocabulary tier (if in the corpus) and scope-aware decodability: whether the word is decodable by the end of a grade, the first unit where it becomes decodable, and missing patterns.",
 )
 def match_word_tool(word: str, grade: str | None = None) -> dict[str, Any]:
     from src.tools.vocabulary import match_word
@@ -170,7 +170,7 @@ def list_assessments_tool(tool_type: str | None = None) -> dict[str, Any]:
 
 @mcp.tool(
     name="align_standards",
-    description="Map text/skills description to academic standards across 50 state frameworks with Standards Satchel (CASE®) deep links.",
+    description="Find academic standards for a skill description. Georgia: current K-12 ELA standards from Georgia's CASE repository (SuitCASE). Other states: a small sample (CA, FL, IL, NC, NY, OH, PA, TX, VA) with Common Core as a crosswalk.",
 )
 def align_standards_tool(description: str, state: str = "GA", grade: str | None = None) -> dict[str, Any]:
     from src.tools.evidence import align_standards

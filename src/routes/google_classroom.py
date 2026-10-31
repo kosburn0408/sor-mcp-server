@@ -25,9 +25,13 @@ class CourseworkPublishRequest(BaseModel):
 
 
 @router.get("/courses")
-async def get_courses_route(authorization: str | None = Header(None), token: str | None = None) -> dict[str, Any]:
-    """Fetch active Google Classroom courses where user is a teacher."""
-    access_token = token
+async def get_courses_route(authorization: str | None = Header(None)) -> dict[str, Any]:
+    """Fetch active Google Classroom courses where user is a teacher.
+
+    The access token is accepted only in the Authorization header, never in the
+    URL, so it does not end up in server or proxy logs.
+    """
+    access_token = None
     if authorization and authorization.startswith("Bearer "):
         access_token = authorization.split("Bearer ", 1)[1]
 

@@ -145,11 +145,11 @@ Georgia's Early Literacy Act (HB 538) requires universal screening in K–3; fol
 ---
 
 ### Workspace 6: State Standards Alignment (CASE® Network)
-**Goal:** Find aligned learning standards across **all 50 U.S. states** powered by Standards Satchel (Rosetta).
+**Goal:** Find the standard a lesson or skill addresses. Georgia results come live from Georgia's CASE repository (SuitCASE) and use the current K–12 ELA standards (codes like `1.F.P.2`). Nine other states have only a small sample of codes, with Common Core as a crosswalk.
 
 1. **Enter Learning Goal / Skill:** e.g., `"decode words with silent e"`.
-2. **Select State Framework:** Georgia (GSE), California (CCSS-CA), Texas (TEKS), Florida (B.E.S.T.), New York, North Carolina, Ohio, Pennsylvania, Virginia, etc.
-3. **Click "Find Standards":** Displays matching standard codes, descriptions, and direct links to the official 1EdTech CASE® record.
+2. **Select State:** Georgia (current K-12 ELA, via SuitCASE), or California, Texas, Florida, New York, North Carolina, Ohio, Pennsylvania, Virginia or Illinois (sample codes only).
+3. **Click "Find Standards":** Displays matching codes, descriptions and links to each CASE® record. Read the notice above the results: it says whether the codes are current or a fallback. Matching is by keyword, so confirm the best match.
 
 ---
 
@@ -179,7 +179,7 @@ You can publish decodable passages and phonics routines directly to your Google 
 
 1. Click **`🎓 Export to Google Classroom`** on any generated passage or routine.
 2. An interactive Google Classroom modal opens:
-   - **Google OAuth Access Token:** Paste your Google OAuth bearer token (or leave blank to test in instant Demo Mode).
+   - **Google Access Token:** Paste a Google access token with Classroom permissions, or leave it blank to try Demo Mode with sample courses. The token is sent only in the request header and is never stored. There is no built-in Google sign-in yet.
    - **Select Course:** Choose your target active class (e.g., *1st Grade Reading — Unit 3*).
    - **Assignment Title & Instructions:** Pre-filled with your decodable story or 5-day routine script.
    - **Points:** Set maximum points (default: 100).
@@ -278,11 +278,10 @@ Add the following to your workspace or Hermes `mcp.json`:
   "mcpServers": {
     "science-of-reading": {
       "command": "/root/sor-mcp-server/.venv/bin/python3",
-      "args": ["/root/agentic-edu/mcp-servers/science-of-reading/server.py"],
-      "cwd": "/root/agentic-edu/mcp-servers/science-of-reading",
+      "args": ["/root/sor-mcp-server/server.py"],
+      "cwd": "/root/sor-mcp-server",
       "env": {
-        "SOR_API_BASE_URL": "http://localhost:8093/api/v1",
-        "SOR_DB_PATH": "/root/agentic-edu/mcp-servers/science-of-reading/db/sor_evidence.duckdb"
+        "SOR_DB_PATH": "/root/sor-mcp-server/db/sor_evidence.duckdb"
       }
     }
   }

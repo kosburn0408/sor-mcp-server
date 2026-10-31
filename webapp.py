@@ -5,7 +5,7 @@ EPIC-SOR-01 Implementation & Usability Polish:
   - Step 2: Decodable Text Checker (scope & sequence + pronunciation-dictionary alignment)
   - Step 3: Explicit Phonics Routine Builder (5-Day I Do / We Do / You Do scripts with multisensory cues)
   - Step 4: Visual Audit Inspector & Anti-Cueing Shield (Color-coded badges & hover tooltips)
-  - Classroom Exports: Print-First CSS (@media print, Atkinson Hyperlegible) & Google Classroom OAuth2 v1
+  - Classroom Exports: Print-First CSS (@media print, Atkinson Hyperlegible) & Google Classroom export (pasted access token)
 
 Usability Improvements Implemented:
   1. Inline (?) Score Conversion Tooltips for DIBELS NWF & Maze raw-to-decimal scores.
@@ -974,7 +974,7 @@ input:focus, select:focus, textarea:focus {{
 
   <form id="gcPublishForm">
     <div class="form-group">
-      <label>Google OAuth Access Token (Optional for Demo Mode)</label>
+      <label>Google Access Token (leave blank for Demo Mode; sent only in the request header, never stored)</label>
       <input type="password" id="gcAccessToken" oninput="updateGCConnectionStatus()" placeholder="Paste Bearer Token or leave blank for demo">
     </div>
     <div class="form-group">
@@ -1041,7 +1041,7 @@ input:focus, select:focus, textarea:focus {{
       <i class="fa-solid fa-layer-group"></i> Classify Vocabulary <span style="font-size:0.68rem;opacity:0.85;background:rgba(0,0,0,0.08);padding:0.1rem 0.4rem;border-radius:4px;margin-left:0.2rem">Standalone</span>
     </button>
     <button class="m3-tab-btn" data-tab="tab-standards" onclick="switchTab('tab-standards')">
-      <i class="fa-solid fa-award"></i> Standards Alignment <span style="font-size:0.68rem;opacity:0.85;background:rgba(0,0,0,0.08);padding:0.1rem 0.4rem;border-radius:4px;margin-left:0.2rem">50 States</span>
+      <i class="fa-solid fa-award"></i> Standards Alignment <span style="font-size:0.68rem;opacity:0.85;background:rgba(0,0,0,0.08);padding:0.1rem 0.4rem;border-radius:4px;margin-left:0.2rem">GA live</span>
     </button>
   </nav>
 </div>
@@ -1339,10 +1339,10 @@ input:focus, select:focus, textarea:focus {{
     <div class="m3-card">
       <div class="m3-card-title"><i class="fa-solid fa-award"></i> State Standards Alignment Lookup</div>
       <p style="color:var(--md-sys-color-secondary);margin-bottom:1.2rem">
-        Find academic standards across <strong>all 50 U.S. states</strong> powered by
-        <a href="https://rosetta.commongoodlt.com/" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline">
-          Standards Satchel (Rosetta)
-        </a> CASE® Network.
+        Find the standard a skill addresses. Georgia uses the current K–12 ELA standards, live from
+        <a href="https://case.georgiastandards.org/" target="_blank" style="color:var(--md-sys-color-primary);font-weight:700;text-decoration:underline">
+          Georgia's CASE repository (SuitCASE)
+        </a>. Other states have only a small sample of codes, with Common Core as a crosswalk.
       </p>
       <form id="standardsForm">
         <div class="row">
@@ -1584,13 +1584,15 @@ document.getElementById('gcPublishForm').addEventListener('submit', async functi
     course_id: document.getElementById('gcCourseSelect').value,
     title: document.getElementById('gcTitle').value,
     description: document.getElementById('gcContent').value,
-    points: parseFloat(document.getElementById('gcPoints').value),
-    access_token: document.getElementById('gcAccessToken').value
+    points: parseFloat(document.getElementById('gcPoints').value)
   }};
+  var gcToken = document.getElementById('gcAccessToken').value;
+  var gcHeaders = {{'Content-Type': 'application/json'}};
+  if (gcToken) gcHeaders['Authorization'] = 'Bearer ' + gcToken;
 
   var resp = await fetch('/api/v1/google-classroom/publish', {{
     method: 'POST',
-    headers: {{'Content-Type': 'application/json'}},
+    headers: gcHeaders,
     body: JSON.stringify(payload)
   }});
   var r = await resp.json();

@@ -61,15 +61,14 @@ def classify_text(text: str, domain: str | None = None) -> dict[str, Any]:
         from db.database import get_connection
         conn = get_connection()
         rows = conn.execute(
-            "SELECT word, tier, frequency_per_million, decodable, grade_level FROM vocabulary_corpus"
+            "SELECT word, tier, frequency, grade FROM vocabulary_corpus"
         ).fetchall()
         for r in rows:
             db_words[r[0].lower()] = {
                 "word": r[0],
                 "tier": r[1],
                 "frequency": r[2],
-                "decodable": bool(r[3]),
-                "grade_level": r[4],
+                "grade_level": "K" if r[3] == 0 else str(r[3]),
             }
     except Exception:
         pass
@@ -137,44 +136,81 @@ def classify_vocabulary(text: str, domain: str | None = None) -> dict[str, Any]:
     return classify_text(text=text, domain=domain)
 
 
+def _decodability_info(word: str, grade: str | None) -> dict[str, Any]:
+    """Decodability from the scope-aware engine (same logic as verify_decodable_text)."""
+    from src.engine.decoder import analyze_word
+    from src.engine.gpc import ALL_GPC_IDS
+    from src.engine.scope_sequence import GRADE_ORDER, load_sequence, normalize_grade, resolve_scope
+
+    info: dict[str, Any] = {}
+    overall = analyze_word(word, ALL_GPC_IDS)
+    info["decoding_status"] = (
+        "decodable_with_catalogued_patterns" if overall["status"] == "decodable" else overall["status"]
+    )
+    info["breakdown"] = overall["breakdown"]
+
+    first = None
+    seq = load_sequence()
+    for g in GRADE_ORDER:
+        for u in range(1, len(seq.get(g, [])) + 1):
+            scope = resolve_scope(g, u)
+            if analyze_word(word, scope["taught_gpcs"])["status"] == "decodable":
+                first = {"grade": g, "unit": u, "unit_title": scope["unit_title"]}
+                break
+        if first:
+            break
+    info["first_decodable_at"] = first
+
+    g = normalize_grade(grade) if grade else None
+    if g:
+        end_scope = resolve_scope(g, 99)
+        r = analyze_word(word, end_scope["taught_gpcs"], end_scope["heart_words"])
+        info["decodable"] = r["status"] == "decodable"
+        info["status_by_end_of_grade"] = r["status"]
+        info["missing_patterns"] = r["missing_patterns"]
+    else:
+        info["decodable"] = None
+        info["note"] = "Pass grade to check decodability against that grade's scope; see first_decodable_at."
+    return info
+
+
 def match_word(word: str, grade: str | None = None) -> dict[str, Any]:
-    """Look up a single word in the vocabulary corpus."""
+    """Look up a single word: vocabulary tier plus scope-aware decodability.
+
+    Decodability comes from the same engine as verify_decodable_text, judged
+    against the (default or SOR_SCOPE_PATH) scope by the end of ``grade``.
+    """
     word_clean = word.strip().lower()
+    result: dict[str, Any] = {"word": word_clean}
+    tier_found = False
     try:
         from db.database import get_connection
         conn = get_connection()
-        query = "SELECT word, tier, frequency_per_million, decodable, grade_level FROM vocabulary_corpus WHERE LOWER(word) = ?"
+        query = "SELECT word, tier, frequency, grade FROM vocabulary_corpus WHERE LOWER(word) = ? ORDER BY grade LIMIT 1"
         row = conn.execute(query, [word_clean]).fetchone()
         if row:
-            return {
-                "word": row[0],
+            result.update({
                 "tier": row[1],
-                "frequency_per_million": row[2],
-                "decodable": bool(row[3]),
-                "grade_level": row[4],
+                "frequency": row[2],
+                "grade_level": "K" if row[3] == 0 else str(row[3]),
                 "found": True,
-            }
+            })
+            tier_found = True
     except Exception:
         pass
 
-    for base, variants in TIER_2_PATTERNS.items():
-        if word_clean in variants or word_clean == base:
-            return {
-                "word": word_clean,
-                "tier": 2,
-                "frequency_per_million": 100.0,
-                "decodable": True,
-                "grade_level": grade or "3-5",
-                "found": True,
-                "note": "Derived from academic word list",
-            }
+    if not tier_found:
+        for base, variants in TIER_2_PATTERNS.items():
+            if word_clean in variants or word_clean == base:
+                result.update({"tier": 2, "found": True, "note_tier": "Derived from academic word list"})
+                tier_found = True
+                break
+    if not tier_found:
+        result.update({
+            "tier": None,
+            "found": False,
+            "note_tier": "Not in the vocabulary corpus; tier not determined.",
+        })
 
-    return {
-        "word": word_clean,
-        "tier": 1 if len(word_clean) <= 4 else 3,
-        "frequency_per_million": 10.0,
-        "decodable": True,
-        "grade_level": grade or "K-3",
-        "found": False,
-        "note": "Heuristic tier classification",
-    }
+    result.update(_decodability_info(word_clean, grade))
+    return result
